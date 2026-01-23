@@ -182,6 +182,7 @@ struct MediaPlayerView: View {
 		.padding()
 		.navigationTitle("Odtwarzacz")
 		.onAppear {
+			guard !ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
 			audioPlayer.play(url: podcast, title: title, subtitle: subtitle, isLiveStream: canBeLive)
 		}.accessibilityAction(.magicTap) {
 			togglePlayback()

@@ -40,6 +40,16 @@
                ReferencedContainer="container:Tyflocentrum.xcodeproj">
             </BuildableReference>
          </TestableReference>
+         <TestableReference
+            skipped="NO">
+            <BuildableReference
+               BuildableIdentifier="primary"
+               BlueprintIdentifier="A1B2C3D4E5F60718293A4B5C"
+               BuildableName="TyflocentrumUITests.xctest"
+               BlueprintName="TyflocentrumUITests"
+               ReferencedContainer="container:Tyflocentrum.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
