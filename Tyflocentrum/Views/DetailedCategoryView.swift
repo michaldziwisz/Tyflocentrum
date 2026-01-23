@@ -10,10 +10,10 @@ import SwiftUI
 struct DetailedCategoryView: View {
 	let category: Category
 	@EnvironmentObject var api: TyfloAPI
-	@State private var podcasts = [Podcast]()
+	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
 	var body: some View {
 		List {
-			ForEach(podcasts) {item in
+			ForEach(viewModel.items) { item in
 				NavigationLink {
 					DetailedPodcastView(podcast: item)
 				} label: {
@@ -23,11 +23,12 @@ struct DetailedCategoryView: View {
 		}
 		.accessibilityIdentifier("categoryPodcasts.list")
 		.refreshable {
-			podcasts.removeAll(keepingCapacity: true)
-			podcasts = await api.getPodcast(for: category)
+			await viewModel.refresh { await api.getPodcast(for: category) }
 		}
 		.task {
-			podcasts = await api.getPodcast(for: category)
-		}.navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
+			await viewModel.loadIfNeeded { await api.getPodcast(for: category) }
+		}
+		.navigationTitle(category.name)
+		.navigationBarTitleDisplayMode(.inline)
 	}
 }
