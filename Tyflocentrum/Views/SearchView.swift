@@ -10,18 +10,16 @@ import SwiftUI
 
 struct SearchView: View {
 	@EnvironmentObject var api: TyfloAPI
-	@State private var podcasts = [Podcast]()
 	@State private var searchText = ""
-	@State private var performedSearch = false
+	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
 	private func performSearch() {
 		let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard !trimmed.isEmpty else { return }
-		Task {
-			podcasts = await api.getPodcasts(for: trimmed)
-			performedSearch = true
+		Task { @MainActor in
+			await viewModel.refresh { await api.getPodcasts(for: trimmed) }
 			UIAccessibility.post(
 				notification: .announcement,
-				argument: podcasts.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(podcasts.count) wyników."
+				argument: viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników."
 			)
 		}
 	}
@@ -45,17 +43,17 @@ struct SearchView: View {
 					.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 				}
 
-				Section {
-					if performedSearch && podcasts.isEmpty {
-						Text("Brak wyników wyszukiwania dla podanej frazy. Spróbuj użyć innych słów kluczowych.")
-							.foregroundColor(.secondary)
-					}
-					else {
-						ForEach(podcasts) { item in
-							NavigationLink {
-								DetailedPodcastView(podcast: item)
-							} label: {
-								ShortPodcastView(podcast: item)
+					Section {
+						if viewModel.hasLoaded && viewModel.items.isEmpty {
+							Text("Brak wyników wyszukiwania dla podanej frazy. Spróbuj użyć innych słów kluczowych.")
+								.foregroundColor(.secondary)
+						}
+						else {
+							ForEach(viewModel.items) { item in
+								NavigationLink {
+									DetailedPodcastView(podcast: item)
+								} label: {
+									ShortPodcastView(podcast: item)
 							}
 						}
 					}
