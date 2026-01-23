@@ -72,6 +72,18 @@ struct ResumePositionStore {
 	}
 }
 
+enum SeekPolicy {
+	static func clampedTime(_ seconds: Double) -> Double? {
+		guard seconds.isFinite else { return nil }
+		return max(0, seconds)
+	}
+
+	static func targetTime(elapsed: Double, delta: Double) -> Double? {
+		guard elapsed.isFinite, delta.isFinite else { return nil }
+		return max(0, elapsed + delta)
+	}
+}
+
 @MainActor
 final class AudioPlayer: ObservableObject {
 	@Published private(set) var isPlaying = false
@@ -207,8 +219,7 @@ final class AudioPlayer: ObservableObject {
 
 	func seek(to seconds: Double) {
 		guard !isLiveStream else { return }
-		guard seconds.isFinite else { return }
-		let clamped = max(0, seconds)
+		guard let clamped = SeekPolicy.clampedTime(seconds) else { return }
 		player.seek(to: CMTime(seconds: clamped, preferredTimescale: 600))
 		updateNowPlayingPlaybackInfo()
 	}
@@ -242,8 +253,7 @@ final class AudioPlayer: ObservableObject {
 		guard let currentItem = player.currentItem else { return }
 		guard currentItem.status == .readyToPlay else { return }
 
-		let currentSeconds = elapsedTime
-		let target = max(0, currentSeconds + deltaSeconds)
+		guard let target = SeekPolicy.targetTime(elapsed: elapsedTime, delta: deltaSeconds) else { return }
 		seek(to: target)
 	}
 

@@ -153,3 +153,26 @@ final class ResumePositionStoreTests: XCTestCase {
 		XCTAssertEqual(store.load(forKey: key), 10)
 	}
 }
+
+final class SeekPolicyTests: XCTestCase {
+	func testClampedTimeReturnsNilForNonFinite() {
+		XCTAssertNil(SeekPolicy.clampedTime(.nan))
+		XCTAssertNil(SeekPolicy.clampedTime(.infinity))
+		XCTAssertNil(SeekPolicy.clampedTime(-.infinity))
+	}
+
+	func testClampedTimeClampsNegativeToZero() {
+		XCTAssertEqual(SeekPolicy.clampedTime(-10), 0)
+		XCTAssertEqual(SeekPolicy.clampedTime(10), 10)
+	}
+
+	func testTargetTimeAddsDeltaAndClampsToZero() {
+		XCTAssertEqual(SeekPolicy.targetTime(elapsed: 10, delta: 30), 40)
+		XCTAssertEqual(SeekPolicy.targetTime(elapsed: 10, delta: -30), 0)
+	}
+
+	func testTargetTimeReturnsNilForNonFinite() {
+		XCTAssertNil(SeekPolicy.targetTime(elapsed: .nan, delta: 1))
+		XCTAssertNil(SeekPolicy.targetTime(elapsed: 1, delta: .nan))
+	}
+}
