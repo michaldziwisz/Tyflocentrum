@@ -13,21 +13,23 @@ struct NewsView: View {
 	@State private var podcasts = [Podcast]()
 	var body: some View {
 		NavigationView {
-			VStack {
-				List {
-					ForEach(podcasts) {item in
-						NavigationLink {
-							DetailedPodcastView(podcast: item)
-						} label: {
-							ShortPodcastView(podcast: item)
-						}
+			List {
+				ForEach(podcasts) { item in
+					NavigationLink {
+						DetailedPodcastView(podcast: item)
+					} label: {
+						ShortPodcastView(podcast: item)
 					}
-				}					}.refreshable {
-					podcasts.removeAll(keepingCapacity: true)
-					await podcasts = api.getLatestPodcasts()
-				}.task {
-					await podcasts = api.getLatestPodcasts()
-				}.navigationTitle("Nowości")
+				}
+			}
+			.refreshable {
+				podcasts.removeAll(keepingCapacity: true)
+				podcasts = await api.getLatestPodcasts()
+			}
+			.task {
+				podcasts = await api.getLatestPodcasts()
+			}
+			.navigationTitle("Nowości")
 		}
 	}
 }

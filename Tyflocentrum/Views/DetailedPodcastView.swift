@@ -11,7 +11,6 @@ import SwiftUI
 struct DetailedPodcastView: View {
 	let podcast: Podcast
 	@EnvironmentObject var api: TyfloAPI
-	@EnvironmentObject var bass: BassHelper
 	@State private var comments = [Comment]()
 	var body: some View {
 		VStack {

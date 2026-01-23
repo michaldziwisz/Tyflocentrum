@@ -9,11 +9,9 @@ import Foundation
 import SwiftUI
 struct MediaPlayerView: View {
 	@EnvironmentObject var api: TyfloAPI
-	@EnvironmentObject var bass: BassHelper
+	@EnvironmentObject var audioPlayer: AudioPlayer
 	let podcast: URL
-	let shouldAutoplay = false
 	let canBeLive: Bool
-	@State private var handle: HSTREAM = 0
 	@State private var shouldShowContactForm = false
 	@State private var shouldShowNoLiveAlert = false
 	func performLiveCheck() async -> Void{
@@ -26,21 +24,21 @@ struct MediaPlayerView: View {
 		}
 	}
 	func togglePlayback() {
-		if bass.isPlaying {
-			bass.pause(handle)
-		}
-		else {
-			bass.resume(handle)
-		}
+		audioPlayer.togglePlayPause(url: podcast)
 	}
 	var body: some View {
+		let isPlayingCurrentItem = audioPlayer.isPlaying && audioPlayer.currentURL == podcast
 		HStack(alignment: .center, spacing: 20) {
 			Spacer()
 			Button {
 				togglePlayback()
 			} label: {
-				Image(systemName: bass.isPlaying ? "pause.circle.fill" : "play.circle.fill").font(.title).imageScale(.large)
-			}.accessibilityLabel(bass.isPlaying ? "Pauza" : "Odtwarzaj")
+				Image(systemName: isPlayingCurrentItem ? "pause.circle.fill" : "play.circle.fill")
+					.font(.title)
+					.imageScale(.large)
+			}
+			.accessibilityLabel(isPlayingCurrentItem ? "Pauza" : "Odtwarzaj")
+			.accessibilityValue(isPlayingCurrentItem ? "Odtwarzanie trwa" : "Odtwarzanie wstrzymane")
 			if canBeLive {
 				Button("Skontaktuj się z radiem") {
 					Task {
@@ -55,9 +53,7 @@ struct MediaPlayerView: View {
 				}
 			}
 		}.navigationTitle("Odtwarzacz").onAppear {
-			Task {
-				handle = bass.play(url: podcast)
-			}
+			audioPlayer.play(url: podcast)
 		}.accessibilityAction(.magicTap) {
 			togglePlayback()
 		}

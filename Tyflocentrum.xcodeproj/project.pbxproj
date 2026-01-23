@@ -7,8 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1E221D5F2A7E6DB000369E1C /* bass.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6D62925A353001F9A45 /* bass.xcframework */; };
-		1E221D602A7E6DB000369E1C /* bass.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6D62925A353001F9A45 /* bass.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		BC1D24D12C256E5D00FB25D3 /* readme.md in Resources */ = {isa = PBXBuildFile; fileRef = BC1D24D02C256E5D00FB25D3 /* readme.md */; };
 		BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
 		BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
@@ -36,8 +34,7 @@
 		BED6A4792926DE4700BA378B /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6C62925A221001F9A45 /* CFNetwork.framework */; };
 		BED6A47A2926DE5C00BA378B /* Accelerate.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6D22925A327001F9A45 /* Accelerate.framework */; };
 		BED6A47B2926DE8000BA378B /* AVFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6CE2925A2C7001F9A45 /* AVFoundation.framework */; };
-		BED6A4852926E14300BA378B /* BASSHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED6A4842926E14300BA378B /* BASSHelper.swift */; };
-		BED6A4872926F11D00BA378B /* StringHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED6A4862926F11D00BA378B /* StringHelper.swift */; };
+		BED6A4852926E14300BA378B /* AudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED6A4842926E14300BA378B /* AudioPlayer.swift */; };
 		BEDE145E292CE26E00C25C27 /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEDE145D292CE26E00C25C27 /* Comment.swift */; };
 		BEEA97B928E9D4BB0073E5AB /* TyflocentrumApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */; };
 		BEEA97BB28E9D4BB0073E5AB /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEA97BA28E9D4BB0073E5AB /* ContentView.swift */; };
@@ -53,9 +50,8 @@
 			buildActionMask = 2147483647;
 			dstPath = "";
 			dstSubfolderSpec = 10;
-			files = (
-				1E221D602A7E6DB000369E1C /* bass.xcframework in Embed Frameworks */,
-			);
+				files = (
+				);
 			name = "Embed Frameworks";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -73,7 +69,6 @@
 		BE64D6CA2925A296001F9A45 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		BE64D6CE2925A2C7001F9A45 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		BE64D6D22925A327001F9A45 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
-		BE64D6D62925A353001F9A45 /* bass.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = bass.xcframework; path = "../../../../../Downloads/bass24-ios/bass.xcframework"; sourceTree = "<group>"; };
 		BE71654029219DB700FF9A89 /* HTMLRendererHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLRendererHelper.swift; sourceTree = "<group>"; };
 		BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedArticleView.swift; sourceTree = "<group>"; };
 		BE77EE8929000AE0002087ED /* PodcastCategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastCategoriesView.swift; sourceTree = "<group>"; };
@@ -90,10 +85,7 @@
 		BEC9AB96292E56FF009907EB /* Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schedule.swift; sourceTree = "<group>"; };
 		BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortPodcastView.swift; sourceTree = "<group>"; };
 		BED1708A29200E8700F4508B /* HTMLTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLTextView.swift; sourceTree = "<group>"; };
-		BED6A4802926E06C00BA378B /* Tyflocentrum-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "Tyflocentrum-Bridging-Header.h"; sourceTree = "<group>"; };
-		BED6A4832926E0DA00BA378B /* bass.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = bass.h; sourceTree = "<group>"; };
-		BED6A4842926E14300BA378B /* BASSHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BASSHelper.swift; sourceTree = "<group>"; };
-		BED6A4862926F11D00BA378B /* StringHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StringHelper.swift; sourceTree = "<group>"; };
+		BED6A4842926E14300BA378B /* AudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayer.swift; sourceTree = "<group>"; };
 		BEDE145D292CE26E00C25C27 /* Comment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Comment.swift; sourceTree = "<group>"; };
 		BEEA97B528E9D4BB0073E5AB /* Tyflocentrum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tyflocentrum.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumApp.swift; sourceTree = "<group>"; };
@@ -109,14 +101,13 @@
 		BEEA97B228E9D4BA0073E5AB /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
-			files = (
-				BED6A4792926DE4700BA378B /* CFNetwork.framework in Frameworks */,
-				BED6A47A2926DE5C00BA378B /* Accelerate.framework in Frameworks */,
-				1E221D5F2A7E6DB000369E1C /* bass.xcframework in Frameworks */,
-				BED6A47B2926DE8000BA378B /* AVFoundation.framework in Frameworks */,
-				BED6A4782926DE2C00BA378B /* SystemConfiguration.framework in Frameworks */,
-				BED6A4772926DDFE00BA378B /* AudioToolbox.framework in Frameworks */,
-			);
+				files = (
+					BED6A4792926DE4700BA378B /* CFNetwork.framework in Frameworks */,
+					BED6A47A2926DE5C00BA378B /* Accelerate.framework in Frameworks */,
+					BED6A47B2926DE8000BA378B /* AVFoundation.framework in Frameworks */,
+					BED6A4782926DE2C00BA378B /* SystemConfiguration.framework in Frameworks */,
+					BED6A4772926DDFE00BA378B /* AudioToolbox.framework in Frameworks */,
+				);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -124,14 +115,13 @@
 /* Begin PBXGroup section */
 		BE64D6C02925A1F9001F9A45 /* Frameworks */ = {
 			isa = PBXGroup;
-			children = (
-				BE64D6D62925A353001F9A45 /* bass.xcframework */,
-				BE64D6D22925A327001F9A45 /* Accelerate.framework */,
-				BE64D6CE2925A2C7001F9A45 /* AVFoundation.framework */,
-				BE64D6CA2925A296001F9A45 /* SystemConfiguration.framework */,
-				BE64D6C62925A221001F9A45 /* CFNetwork.framework */,
-				BE64D6C12925A1F9001F9A45 /* AudioToolbox.framework */,
-			);
+				children = (
+					BE64D6D22925A327001F9A45 /* Accelerate.framework */,
+					BE64D6CE2925A2C7001F9A45 /* AVFoundation.framework */,
+					BE64D6CA2925A296001F9A45 /* SystemConfiguration.framework */,
+					BE64D6C62925A221001F9A45 /* CFNetwork.framework */,
+					BE64D6C12925A1F9001F9A45 /* AudioToolbox.framework */,
+				);
 			name = Frameworks;
 			sourceTree = "<group>";
 		};
@@ -188,27 +178,24 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		BEEA97B728E9D4BB0073E5AB /* Tyflocentrum */ = {
-			isa = PBXGroup;
-			children = (
-				BED6A4832926E0DA00BA378B /* bass.h */,
-				BEEA97C628E9D6880073E5AB /* Info.plist */,
-				BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
-				BEA9ECD129203FD700718254 /* Views */,
-				BEEA97BC28E9D4BB0073E5AB /* Assets.xcassets */,
-				BEEA97BE28E9D4BB0073E5AB /* Preview Content */,
-				BE1FDCD328F6DE7D00B9601B /* DataController.swift */,
-				BEA9ECD22920401000718254 /* Models */,
-				BE05F01029001CCA009069F7 /* TyfloAPI.swift */,
-				BED6A4802926E06C00BA378B /* Tyflocentrum-Bridging-Header.h */,
-				BED6A4842926E14300BA378B /* BASSHelper.swift */,
-				BED6A4862926F11D00BA378B /* StringHelper.swift */,
-				BE2ACFFB292B67C1001914EB /* Changelog.rtf */,
-				BC1D24D02C256E5D00FB25D3 /* readme.md */,
-			);
-			path = Tyflocentrum;
-			sourceTree = "<group>";
-		};
+			BEEA97B728E9D4BB0073E5AB /* Tyflocentrum */ = {
+				isa = PBXGroup;
+				children = (
+					BEEA97C628E9D6880073E5AB /* Info.plist */,
+					BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
+					BEA9ECD129203FD700718254 /* Views */,
+					BEEA97BC28E9D4BB0073E5AB /* Assets.xcassets */,
+					BEEA97BE28E9D4BB0073E5AB /* Preview Content */,
+					BE1FDCD328F6DE7D00B9601B /* DataController.swift */,
+					BEA9ECD22920401000718254 /* Models */,
+					BE05F01029001CCA009069F7 /* TyfloAPI.swift */,
+					BED6A4842926E14300BA378B /* AudioPlayer.swift */,
+					BE2ACFFB292B67C1001914EB /* Changelog.rtf */,
+					BC1D24D02C256E5D00FB25D3 /* readme.md */,
+				);
+				path = Tyflocentrum;
+				sourceTree = "<group>";
+			};
 		BEEA97BE28E9D4BB0073E5AB /* Preview Content */ = {
 			isa = PBXGroup;
 			children = (
@@ -291,18 +278,17 @@
 		BEEA97B128E9D4BA0073E5AB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-			files = (
-				BE9381D228EAED6400ABB964 /* Tyflocentrum.xcdatamodeld in Sources */,
-				BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */,
-				BED6A4872926F11D00BA378B /* StringHelper.swift in Sources */,
-				BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
-				BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
-				BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */,
-				BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,
-				BED6A4852926E14300BA378B /* BASSHelper.swift in Sources */,
-				BE77EE8C29000B06002087ED /* ArticlesCategoriesView.swift in Sources */,
-				BEEA97BB28E9D4BB0073E5AB /* ContentView.swift in Sources */,
-				BE77EE9029000B39002087ED /* MoreView.swift in Sources */,
+				files = (
+					BE9381D228EAED6400ABB964 /* Tyflocentrum.xcdatamodeld in Sources */,
+					BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */,
+					BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
+					BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
+					BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */,
+					BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,
+					BED6A4852926E14300BA378B /* AudioPlayer.swift in Sources */,
+					BE77EE8C29000B06002087ED /* ArticlesCategoriesView.swift in Sources */,
+					BEEA97BB28E9D4BB0073E5AB /* ContentView.swift in Sources */,
+					BE77EE9029000B39002087ED /* MoreView.swift in Sources */,
 				BEA9ECD429204CD400718254 /* DetailedArticleCategoryView.swift in Sources */,
 				BE77EE8E29000B2C002087ED /* SearchView.swift in Sources */,
 				BEC9AB97292E56FF009907EB /* Schedule.swift in Sources */,
@@ -473,7 +459,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "Tyflocentrum/Tyflocentrum-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -510,7 +495,6 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_OBJC_BRIDGING_HEADER = "Tyflocentrum/Tyflocentrum-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
