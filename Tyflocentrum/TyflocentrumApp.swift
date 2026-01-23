@@ -61,14 +61,26 @@ private final class UITestURLProtocol: URLProtocol {
 
 	override func stopLoading() {}
 
-	private static func responseData(for request: URLRequest) -> Data {
-		guard let url = request.url else {
-			return Data()
-		}
+		private static func responseData(for request: URLRequest) -> Data {
+			guard let url = request.url else {
+				return Data()
+			}
 
-		if url.host == "kontakt.tyflopodcast.net" {
-			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-			let action = components?.queryItems?.first(where: { $0.name == "ac" })?.value
+			if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/categories") {
+				return #"[{"id":10,"name":"Test podcasty","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8)
+			}
+
+			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/categories") {
+				return #"[{"id":20,"name":"Test artykuły","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8)
+			}
+
+			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
+				return #"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+			}
+
+			if url.host == "kontakt.tyflopodcast.net" {
+				let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+				let action = components?.queryItems?.first(where: { $0.name == "ac" })?.value
 
 			if action == "current" {
 				return #"{"available":false,"title":null}"#.data(using: .utf8) ?? Data()
