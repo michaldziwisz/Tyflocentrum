@@ -17,7 +17,7 @@ struct DetailedArticleCategoryView: View {
 				NavigationLink {
 					DetailedArticleView(article: item)
 				} label: {
-					ShortPodcastView(podcast: item)
+					ShortPodcastView(podcast: item, showsListenAction: false)
 				}
 			}
 		}.task {

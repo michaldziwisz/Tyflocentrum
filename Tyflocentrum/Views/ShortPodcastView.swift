@@ -10,11 +10,12 @@ import SwiftUI
 
 struct ShortPodcastView: View {
 	let podcast: Podcast
+	var showsListenAction = true
 	@EnvironmentObject var api: TyfloAPI
 	@State private var isShowingPlayer = false
 	var body: some View {
 		let excerpt = podcast.excerpt.plainText
-		VStack(alignment: .leading, spacing: 6) {
+		let row = VStack(alignment: .leading, spacing: 6) {
 			Text(podcast.title.plainText)
 				.font(.headline)
 				.foregroundColor(.primary)
@@ -33,24 +34,33 @@ struct ShortPodcastView: View {
 				.foregroundColor(.secondary)
 		}
 		.accessibilityElement(children: .combine)
-		.accessibilityAction(named: "Słuchaj") {
-			isShowingPlayer = true
-		}
-		.sheet(isPresented: $isShowingPlayer) {
-			NavigationStack {
-				MediaPlayerView(
-					podcast: api.getListenableURL(for: podcast),
-					title: podcast.title.plainText,
-					subtitle: podcast.formattedDate,
-					canBeLive: false
-				)
-				.toolbar {
-					ToolbarItem(placement: .cancellationAction) {
-						Button("Zamknij") {
-							isShowingPlayer = false
+
+		Group {
+			if showsListenAction {
+				row
+					.accessibilityAction(named: "Słuchaj") {
+						isShowingPlayer = true
+					}
+					.sheet(isPresented: $isShowingPlayer) {
+						NavigationStack {
+							MediaPlayerView(
+								podcast: api.getListenableURL(for: podcast),
+								title: podcast.title.plainText,
+								subtitle: podcast.formattedDate,
+								canBeLive: false
+							)
+							.toolbar {
+								ToolbarItem(placement: .cancellationAction) {
+									Button("Zamknij") {
+										isShowingPlayer = false
+									}
+								}
+							}
 						}
 					}
-				}
+			}
+			else {
+				row
 			}
 		}
 	}
