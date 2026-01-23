@@ -313,15 +313,15 @@ final class RemoteCommandWiringTests: XCTestCase {
 
 		XCTAssertTrue(center.play.isEnabled)
 		XCTAssertTrue(center.pause.isEnabled)
-		XCTAssertEqual(center.skipForward.preferredIntervals, [30])
-		XCTAssertEqual(center.skipBackward.preferredIntervals, [30])
+		XCTAssertEqual(center.skipForwardPreferredIntervals, [30])
+		XCTAssertEqual(center.skipBackwardPreferredIntervals, [30])
 
-		XCTAssertTrue(center.play.invoke())
-		XCTAssertTrue(center.pause.invoke())
-		XCTAssertTrue(center.skipForward.invoke(interval: 15))
-		XCTAssertTrue(center.skipBackward.invoke(interval: 30))
-		XCTAssertTrue(center.changePlaybackPosition.invoke(position: 12.5))
-		XCTAssertTrue(center.changePlaybackRate.invoke(rate: 1.5))
+		XCTAssertTrue(center.invokePlay())
+		XCTAssertTrue(center.invokePause())
+		XCTAssertTrue(center.invokeSkipForward(interval: 15))
+		XCTAssertTrue(center.invokeSkipBackward(interval: 30))
+		XCTAssertTrue(center.invokeChangePlaybackPosition(position: 12.5))
+		XCTAssertTrue(center.invokeChangePlaybackRate(rate: 1.5))
 
 		XCTAssertEqual(playCount, 1)
 		XCTAssertEqual(pauseCount, 1)
@@ -333,12 +333,35 @@ final class RemoteCommandWiringTests: XCTestCase {
 }
 
 private final class FakeRemoteCommandCenter: RemoteCommandCenterProtocol {
-	let play = FakeRemoteCommand()
-	let pause = FakeRemoteCommand()
-	let skipForward = FakeSkipIntervalRemoteCommand()
-	let skipBackward = FakeSkipIntervalRemoteCommand()
-	let changePlaybackPosition = FakeChangePlaybackPositionRemoteCommand()
-	let changePlaybackRate = FakeChangePlaybackRateRemoteCommand()
+	private let playCommand = FakeRemoteCommand()
+	private let pauseCommand = FakeRemoteCommand()
+	private let skipForwardCommand = FakeSkipIntervalRemoteCommand()
+	private let skipBackwardCommand = FakeSkipIntervalRemoteCommand()
+	private let changePlaybackPositionCommand = FakeChangePlaybackPositionRemoteCommand()
+	private let changePlaybackRateCommand = FakeChangePlaybackRateRemoteCommand()
+
+	var play: RemoteCommandProtocol { playCommand }
+	var pause: RemoteCommandProtocol { pauseCommand }
+	var skipForward: SkipIntervalRemoteCommandProtocol { skipForwardCommand }
+	var skipBackward: SkipIntervalRemoteCommandProtocol { skipBackwardCommand }
+	var changePlaybackPosition: ChangePlaybackPositionRemoteCommandProtocol { changePlaybackPositionCommand }
+	var changePlaybackRate: ChangePlaybackRateRemoteCommandProtocol { changePlaybackRateCommand }
+
+	@discardableResult
+	func invokePlay() -> Bool { playCommand.invoke() }
+	@discardableResult
+	func invokePause() -> Bool { pauseCommand.invoke() }
+	@discardableResult
+	func invokeSkipForward(interval: Double) -> Bool { skipForwardCommand.invoke(interval: interval) }
+	@discardableResult
+	func invokeSkipBackward(interval: Double) -> Bool { skipBackwardCommand.invoke(interval: interval) }
+	@discardableResult
+	func invokeChangePlaybackPosition(position: TimeInterval) -> Bool { changePlaybackPositionCommand.invoke(position: position) }
+	@discardableResult
+	func invokeChangePlaybackRate(rate: Float) -> Bool { changePlaybackRateCommand.invoke(rate: rate) }
+
+	var skipForwardPreferredIntervals: [NSNumber] { skipForwardCommand.preferredIntervals }
+	var skipBackwardPreferredIntervals: [NSNumber] { skipBackwardCommand.preferredIntervals }
 }
 
 private final class FakeRemoteCommand: RemoteCommandProtocol {
