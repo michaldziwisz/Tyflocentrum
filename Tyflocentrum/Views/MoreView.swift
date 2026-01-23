@@ -13,7 +13,12 @@ struct MoreView: View {
 		NavigationView {
 			VStack {
 				NavigationLink {
-					MediaPlayerView(podcast: URL(string: "https://radio.tyflopodcast.net/hls/stream.m3u8")!, canBeLive: true)
+					MediaPlayerView(
+						podcast: URL(string: "https://radio.tyflopodcast.net/hls/stream.m3u8")!,
+						title: "Tyfloradio",
+						subtitle: nil,
+						canBeLive: true
+					)
 				} label: {
 					Text("Posłuchaj Tyfloradia")
 				}

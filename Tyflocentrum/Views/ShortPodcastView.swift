@@ -14,7 +14,15 @@ struct ShortPodcastView: View {
 	@State private var isPlayingFromAction = false
 	var body: some View {
 		HStack {
-			NavigationLink(destination: MediaPlayerView(podcast: api.getListenableURL(for: podcast), canBeLive: false), isActive: $isPlayingFromAction) { EmptyView() }
+			NavigationLink(
+				destination: MediaPlayerView(
+					podcast: api.getListenableURL(for: podcast),
+					title: podcast.title.plainText,
+					subtitle: podcast.date,
+					canBeLive: false
+				),
+				isActive: $isPlayingFromAction
+			) { EmptyView() }
 			HTMLTextView(text: podcast.title.rendered).font(.largeTitle)
 			HTMLTextView(text: podcast.excerpt.rendered)
 		}.accessibilityElement(children: .combine).accessibilityAction(named: "Słuchaj") {

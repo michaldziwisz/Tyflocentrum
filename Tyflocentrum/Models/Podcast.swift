@@ -16,6 +16,21 @@ struct Podcast: Codable, Identifiable {
 			}
 			return NSAttributedString()
 		}
+
+		var plainText: String {
+			let data = Data(rendered.utf8)
+			let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
+				.documentType: NSAttributedString.DocumentType.html,
+				.characterEncoding: String.Encoding.utf8.rawValue,
+			]
+			if let attrString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
+				let string = attrString.string.trimmingCharacters(in: .whitespacesAndNewlines)
+				if !string.isEmpty {
+					return string
+				}
+			}
+			return rendered
+		}
 	}
 	var id: Int
 	var date: String

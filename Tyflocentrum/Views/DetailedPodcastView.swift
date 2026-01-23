@@ -26,7 +26,12 @@ struct DetailedPodcastView: View {
 		}.toolbar {
 			ShareLink("udostępnij", item: podcast.guid.rendered, message: Text("Posłuchaj audycji \(podcast.title.rendered) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"))
 			NavigationLink {
-				MediaPlayerView(podcast: api.getListenableURL(for: podcast), canBeLive: false)
+				MediaPlayerView(
+					podcast: api.getListenableURL(for: podcast),
+					title: podcast.title.plainText,
+					subtitle: podcast.date,
+					canBeLive: false
+				)
 			} label: {
 				Text("Słuchaj")
 			}
