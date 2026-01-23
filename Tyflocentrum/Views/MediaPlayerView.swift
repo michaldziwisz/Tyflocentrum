@@ -8,6 +8,22 @@
 import Foundation
 import SwiftUI
 struct MediaPlayerView: View {
+	private static let timeFormatterHMS: DateComponentsFormatter = {
+		let formatter = DateComponentsFormatter()
+		formatter.allowedUnits = [.hour, .minute, .second]
+		formatter.unitsStyle = .positional
+		formatter.zeroFormattingBehavior = [.pad]
+		return formatter
+	}()
+
+	private static let timeFormatterMS: DateComponentsFormatter = {
+		let formatter = DateComponentsFormatter()
+		formatter.allowedUnits = [.minute, .second]
+		formatter.unitsStyle = .positional
+		formatter.zeroFormattingBehavior = [.pad]
+		return formatter
+	}()
+
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject var audioPlayer: AudioPlayer
 	let podcast: URL
@@ -16,6 +32,8 @@ struct MediaPlayerView: View {
 	let canBeLive: Bool
 	@State private var shouldShowContactForm = false
 	@State private var shouldShowNoLiveAlert = false
+	@State private var isScrubbing = false
+	@State private var scrubPosition: Double = 0
 	func performLiveCheck() async -> Void{
 		let (available, _) = await api.isTPAvailable()
 		if available {
@@ -28,9 +46,15 @@ struct MediaPlayerView: View {
 	func togglePlayback() {
 		audioPlayer.togglePlayPause(url: podcast, title: title, subtitle: subtitle, isLiveStream: canBeLive)
 	}
+	func formatTime(_ seconds: TimeInterval) -> String {
+		guard seconds.isFinite, seconds >= 0 else { return "--:--" }
+		let formatter = seconds >= 3600 ? Self.timeFormatterHMS : Self.timeFormatterMS
+		return formatter.string(from: seconds) ?? "--:--"
+	}
 	var body: some View {
 		let isLiveStream = canBeLive
 		let isPlayingCurrentItem = audioPlayer.isPlaying && audioPlayer.currentURL == podcast
+		let displayedTime = isScrubbing ? scrubPosition : audioPlayer.elapsedTime
 		VStack(spacing: 24) {
 			VStack(spacing: 6) {
 				Text(title)
@@ -80,6 +104,50 @@ struct MediaPlayerView: View {
 					}
 					.accessibilityLabel("Przewiń do przodu 30 sekund")
 					.accessibilityIdentifier("player.skipForward30")
+				}
+			}
+
+			if !isLiveStream {
+				VStack(spacing: 12) {
+					if let duration = audioPlayer.duration, duration.isFinite, duration > 0 {
+						HStack {
+							Text(formatTime(displayedTime))
+								.monospacedDigit()
+								.foregroundColor(.secondary)
+							Spacer()
+							Text(formatTime(duration))
+								.monospacedDigit()
+								.foregroundColor(.secondary)
+						}
+
+						Slider(
+							value: Binding(
+								get: {
+									displayedTime
+								},
+								set: { newValue in
+									scrubPosition = newValue
+								}
+							),
+							in: 0...duration,
+							onEditingChanged: { editing in
+								isScrubbing = editing
+								if editing {
+									scrubPosition = audioPlayer.elapsedTime
+								} else {
+									audioPlayer.seek(to: scrubPosition)
+								}
+							}
+						)
+						.accessibilityLabel("Pozycja odtwarzania")
+						.accessibilityValue("\(formatTime(displayedTime)) z \(formatTime(duration))")
+						.accessibilityHint("Przesuń w lewo lub w prawo, aby przewinąć.")
+						.accessibilityIdentifier("player.position")
+					}
+					else {
+						ProgressView()
+							.accessibilityLabel("Ładowanie czasu trwania")
+					}
 				}
 			}
 
