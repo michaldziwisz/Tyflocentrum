@@ -133,6 +133,8 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
 		XCTAssertTrue(newsList.waitForExistence(timeout: 5))
+		let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(initialNewsRow.waitForExistence(timeout: 5))
 		let refreshedNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.3").firstMatch
 		pullToRefresh(newsList, untilExists: refreshedNewsRow)
 		XCTAssertEqual(refreshedNewsRow.label, "Test podcast 2")
@@ -140,6 +142,8 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		app.tabBars.buttons["Podcasty"].tap()
 		let podcastCategoriesList = app.descendants(matching: .any).matching(identifier: "podcastCategories.list").firstMatch
 		XCTAssertTrue(podcastCategoriesList.waitForExistence(timeout: 5))
+		let initialPodcastCategory = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+		XCTAssertTrue(initialPodcastCategory.waitForExistence(timeout: 5))
 		let refreshedPodcastCategory = app.descendants(matching: .any).matching(identifier: "category.row.11").firstMatch
 		pullToRefresh(podcastCategoriesList, untilExists: refreshedPodcastCategory)
 		XCTAssertEqual(refreshedPodcastCategory.label, "Test podcasty 2")
@@ -150,6 +154,8 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let categoryPodcastsList = app.descendants(matching: .any).matching(identifier: "categoryPodcasts.list").firstMatch
 		XCTAssertTrue(categoryPodcastsList.waitForExistence(timeout: 5))
+		let initialCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(initialCategoryPodcast.waitForExistence(timeout: 5))
 		let refreshedCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.4").firstMatch
 		pullToRefresh(categoryPodcastsList, untilExists: refreshedCategoryPodcast)
 		XCTAssertEqual(refreshedCategoryPodcast.label, "Test podcast w kategorii 2")
@@ -157,6 +163,8 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		app.tabBars.buttons["Artykuły"].tap()
 		let articleCategoriesList = app.descendants(matching: .any).matching(identifier: "articleCategories.list").firstMatch
 		XCTAssertTrue(articleCategoriesList.waitForExistence(timeout: 5))
+		let initialArticleCategory = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+		XCTAssertTrue(initialArticleCategory.waitForExistence(timeout: 5))
 		let refreshedArticleCategory = app.descendants(matching: .any).matching(identifier: "category.row.21").firstMatch
 		pullToRefresh(articleCategoriesList, untilExists: refreshedArticleCategory)
 		XCTAssertEqual(refreshedArticleCategory.label, "Test artykuły 2")
@@ -167,6 +175,8 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let categoryArticlesList = app.descendants(matching: .any).matching(identifier: "categoryArticles.list").firstMatch
 		XCTAssertTrue(categoryArticlesList.waitForExistence(timeout: 5))
+		let initialCategoryArticle = app.descendants(matching: .any).matching(identifier: "podcast.row.2").firstMatch
+		XCTAssertTrue(initialCategoryArticle.waitForExistence(timeout: 5))
 		let refreshedCategoryArticle = app.descendants(matching: .any).matching(identifier: "podcast.row.5").firstMatch
 		pullToRefresh(categoryArticlesList, untilExists: refreshedCategoryArticle)
 		XCTAssertEqual(refreshedCategoryArticle.label, "Test artykuł 2")
