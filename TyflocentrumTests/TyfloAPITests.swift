@@ -47,6 +47,218 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
+	func testGetLatestPodcastsUsesPerPage100() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyflopodcast.net")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, self.podcastsResponseData(ids: [1]))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getLatestPodcasts()
+
+		XCTAssertEqual(podcasts.count, 1)
+		XCTAssertEqual(podcasts.first?.id, 1)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetCategoriesUsesPerPage100() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyflopodcast.net")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/categories"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, self.categoriesResponseData())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let categories = await api.getCategories()
+
+		XCTAssertEqual(categories.count, 1)
+		XCTAssertEqual(categories.first?.id, 10)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetPodcastsForCategoryUsesCategoryId() async {
+		let requestMade = expectation(description: "request made")
+		let category = Category(name: "Test", id: 7, count: 0)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyflopodcast.net")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "categories" })?.value, "7")
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, self.podcastsResponseData(ids: [42]))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getPodcast(for: category)
+
+		XCTAssertEqual(podcasts.count, 1)
+		XCTAssertEqual(podcasts.first?.id, 42)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetArticleCategoriesUsesCorrectHost() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyfloswiat.pl")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/categories"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, self.categoriesResponseData())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let categories = await api.getArticleCategories()
+
+		XCTAssertEqual(categories.count, 1)
+		XCTAssertEqual(categories.first?.id, 10)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetArticlesForCategoryUsesCorrectHostAndCategoryId() async {
+		let requestMade = expectation(description: "request made")
+		let category = Category(name: "Test", id: 9, count: 0)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyfloswiat.pl")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "categories" })?.value, "9")
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, self.podcastsResponseData(ids: [100]))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let articles = await api.getArticles(for: category)
+
+		XCTAssertEqual(articles.count, 1)
+		XCTAssertEqual(articles.first?.id, 100)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetCommentsUsesPostIdAndPerPage100() async {
+		let requestMade = expectation(description: "request made")
+		let podcast = makePodcast(id: 123)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyflopodcast.net")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/comments"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "post" })?.value, "123")
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, self.commentsResponseData(postID: 123))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let comments = await api.getComments(for: podcast)
+
+		XCTAssertEqual(comments.count, 1)
+		XCTAssertEqual(comments.first?.post, 123)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testIsTPAvailableUsesCorrectQuery() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "kontakt.tyflopodcast.net")
+			XCTAssertEqual(request.httpMethod ?? "GET", "GET")
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "ac" })?.value, "current")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, self.availabilityResponseData(available: true, title: "Test"))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let (available, info) = await api.isTPAvailable()
+
+		XCTAssertTrue(available)
+		XCTAssertEqual(info.title, "Test")
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetLatestPodcastsReturnsEmptyOnServerError() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getLatestPodcasts()
+		XCTAssertTrue(podcasts.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
 	func testContactRadioPostsJSON() async {
 		let requestMade = expectation(description: "request made")
 
@@ -79,6 +291,54 @@ final class TyfloAPITests: XCTestCase {
 		XCTAssertNil(error)
 
 		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	private func podcastsResponseData(ids: [Int]) -> Data {
+		let items: [[String: Any]] = ids.map { id in
+			[
+				"id": id,
+				"date": "2026-01-20T00:59:40",
+				"title": ["rendered": "Title \(id)"],
+				"excerpt": ["rendered": "Excerpt \(id)"],
+				"content": ["rendered": "Content \(id)"],
+				"guid": ["rendered": "GUID \(id)"],
+			]
+		}
+
+		return (try? JSONSerialization.data(withJSONObject: items)) ?? Data()
+	}
+
+	private func categoriesResponseData() -> Data {
+		let items: [[String: Any]] = [
+			[
+				"name": "Test",
+				"id": 10,
+				"count": 5,
+			]
+		]
+		return (try? JSONSerialization.data(withJSONObject: items)) ?? Data()
+	}
+
+	private func commentsResponseData(postID: Int) -> Data {
+		let items: [[String: Any]] = [
+			[
+				"id": 1,
+				"post": postID,
+				"parent": 0,
+				"author_name": "Jan",
+				"content": ["rendered": "Test"],
+			]
+		]
+
+		return (try? JSONSerialization.data(withJSONObject: items)) ?? Data()
+	}
+
+	private func availabilityResponseData(available: Bool, title: String?) -> Data {
+		var obj: [String: Any] = ["available": available]
+		if let title {
+			obj["title"] = title
+		}
+		return (try? JSONSerialization.data(withJSONObject: obj)) ?? Data()
 	}
 
 	private func requestBodyData(from request: URLRequest) throws -> Data {
