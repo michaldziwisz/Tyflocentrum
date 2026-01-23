@@ -21,7 +21,9 @@ struct PodcastCategoriesView: View {
 						ShortCategoryView(category: item)
 					}
 				}
-			}.task {
+			}
+			.accessibilityIdentifier("podcastCategories.list")
+			.task {
 				categories = await api.getCategories()
 			}.navigationTitle("Podcasty")
 		}

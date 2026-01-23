@@ -22,6 +22,7 @@ struct NewsView: View {
 					}
 				}
 			}
+			.accessibilityIdentifier("news.list")
 			.refreshable {
 				podcasts.removeAll(keepingCapacity: true)
 				podcasts = await api.getLatestPodcasts()

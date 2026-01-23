@@ -56,6 +56,7 @@ struct MediaPlayerView: View {
 							.imageScale(.large)
 					}
 					.accessibilityLabel("Cofnij 30 sekund")
+					.accessibilityIdentifier("player.skipBackward30")
 				}
 
 				Button {
@@ -67,6 +68,7 @@ struct MediaPlayerView: View {
 				}
 				.accessibilityLabel(isPlayingCurrentItem ? "Pauza" : "Odtwarzaj")
 				.accessibilityValue(isPlayingCurrentItem ? "Odtwarzanie trwa" : "Odtwarzanie wstrzymane")
+				.accessibilityIdentifier("player.playPause")
 
 				if !isLiveStream {
 					Button {
@@ -77,6 +79,7 @@ struct MediaPlayerView: View {
 							.imageScale(.large)
 					}
 					.accessibilityLabel("Przewiń do przodu 30 sekund")
+					.accessibilityIdentifier("player.skipForward30")
 				}
 			}
 
@@ -88,6 +91,7 @@ struct MediaPlayerView: View {
 				}
 				.accessibilityLabel("Zmień prędkość odtwarzania")
 				.accessibilityValue("\(audioPlayer.playbackRate, specifier: "%.2g") razy")
+				.accessibilityIdentifier("player.speed")
 			}
 
 			if canBeLive {
@@ -95,7 +99,9 @@ struct MediaPlayerView: View {
 					Task {
 						await performLiveCheck()
 					}
-				}.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
+				}
+				.accessibilityIdentifier("player.contactRadio")
+				.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
 					Button("OK"){}
 				} message: {
 					Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")

@@ -30,8 +30,10 @@ struct ContactView: View {
 				Section {
 					TextField("Imię", text: $name)
 						.textContentType(.name)
+						.accessibilityIdentifier("contact.name")
 					TextEditor(text: $message)
 						.accessibilityLabel("Wiadomość")
+						.accessibilityIdentifier("contact.message")
 				}
 				Section {
 					Button("Wyślij") {
@@ -43,7 +45,9 @@ struct ContactView: View {
 							UIAccessibility.post(notification: .announcement, argument: "Wiadomość wysłana pomyślnie")
 							dismiss()
 						}
-					}.alert("Błąd", isPresented: $shouldShowError) {
+					}
+					.accessibilityIdentifier("contact.send")
+					.alert("Błąd", isPresented: $shouldShowError) {
 						Button("OK") {}
 					} message: {
 						Text(errorMessage)
@@ -53,6 +57,7 @@ struct ContactView: View {
 				Button("Anuluj") {
 					dismiss()
 				}
+				.accessibilityIdentifier("contact.cancel")
 			}
 		}
 	}

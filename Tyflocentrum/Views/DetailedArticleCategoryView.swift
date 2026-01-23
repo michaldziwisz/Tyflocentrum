@@ -20,7 +20,9 @@ struct DetailedArticleCategoryView: View {
 					ShortPodcastView(podcast: item, showsListenAction: false)
 				}
 			}
-		}.task {
+		}
+		.accessibilityIdentifier("categoryArticles.list")
+		.task {
 			articles = await api.getArticles(for: category)
 		}.navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
 	}

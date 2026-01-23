@@ -28,6 +28,7 @@ struct DetailedPodcastView: View {
 				Text(podcast.content.plainText)
 					.font(.body)
 					.textSelection(.enabled)
+					.accessibilityIdentifier("podcastDetail.content")
 
 				Divider()
 

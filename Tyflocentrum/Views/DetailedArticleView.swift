@@ -25,6 +25,7 @@ struct DetailedArticleView: View {
 				Text(article.content.plainText)
 					.font(.body)
 					.textSelection(.enabled)
+					.accessibilityIdentifier("articleDetail.content")
 			}
 			.padding()
 		}

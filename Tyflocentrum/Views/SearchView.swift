@@ -26,6 +26,7 @@ struct SearchView: View {
 			List {
 				Section {
 					TextField("Podaj frazę do wyszukania", text: $searchText)
+						.accessibilityIdentifier("search.field")
 						.submitLabel(.search)
 						.onSubmit {
 							performSearch()
@@ -34,6 +35,7 @@ struct SearchView: View {
 					Button("Szukaj") {
 						performSearch()
 					}
+					.accessibilityIdentifier("search.button")
 					.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 				}
 
@@ -53,6 +55,7 @@ struct SearchView: View {
 					}
 				}
 			}
+			.accessibilityIdentifier("search.list")
 			.navigationTitle("Szukaj")
 		}
 	}

@@ -20,7 +20,9 @@ struct DetailedCategoryView: View {
 					ShortPodcastView(podcast: item)
 				}
 			}
-		}.task {
+		}
+		.accessibilityIdentifier("categoryPodcasts.list")
+		.task {
 			podcasts = await api.getPodcast(for: category)
 		}.navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
 	}

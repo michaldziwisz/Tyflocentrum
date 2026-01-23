@@ -22,6 +22,7 @@ struct MoreView: View {
 				} label: {
 					Text("Posłuchaj Tyfloradia")
 				}
+				.accessibilityIdentifier("more.tyfloradio")
 			}.navigationTitle("Więcej")
 		}
 	}

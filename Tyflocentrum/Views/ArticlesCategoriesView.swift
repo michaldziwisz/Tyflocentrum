@@ -21,7 +21,9 @@ struct ArticlesCategoriesView: View {
 						ShortCategoryView(category: item)
 					}
 				}
-			}.task {
+			}
+			.accessibilityIdentifier("articleCategories.list")
+			.task {
 				categories = await api.getArticleCategories()
 			}.navigationTitle("Artykuły")
 		}

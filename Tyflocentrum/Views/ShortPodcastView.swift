@@ -34,6 +34,7 @@ struct ShortPodcastView: View {
 				.foregroundColor(.secondary)
 		}
 		.accessibilityElement(children: .combine)
+		.accessibilityIdentifier("podcast.row.\(podcast.id)")
 
 		Group {
 			if showsListenAction {
