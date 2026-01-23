@@ -62,7 +62,7 @@ final class TyfloAPITests: XCTestCase {
 			let items = components.queryItems ?? []
 			XCTAssertEqual(items.first(where: { $0.name == "ac" })?.value, "add")
 
-			let body = try requestBodyData(from: request)
+			let body = try self.requestBodyData(from: request)
 			let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
 			XCTAssertEqual(json["author"] as? String, "Jan")
 			XCTAssertEqual(json["comment"] as? String, "Test")
