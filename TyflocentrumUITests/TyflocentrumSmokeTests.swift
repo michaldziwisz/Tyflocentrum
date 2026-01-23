@@ -11,6 +11,14 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		return app
 	}
 
+	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement) {
+		list.swipeDown()
+		if !element.waitForExistence(timeout: 2) {
+			list.swipeDown()
+		}
+		XCTAssertTrue(element.waitForExistence(timeout: 5))
+	}
+
 	func testAppLaunchesAndShowsTabs() {
 		let app = makeApp()
 		app.launch()
@@ -56,6 +64,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let listenButton = app.descendants(matching: .any).matching(identifier: "podcastDetail.listen").firstMatch
 		XCTAssertTrue(listenButton.waitForExistence(timeout: 5))
+		XCTAssertEqual(listenButton.label, "Słuchaj audycji")
 		listenButton.tap()
 
 		let playPauseButton = app.descendants(matching: .any).matching(identifier: "player.playPause").firstMatch
@@ -116,6 +125,51 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let alert = app.alerts["Błąd"]
 		XCTAssertTrue(alert.waitForExistence(timeout: 5))
 		XCTAssertTrue(alert.staticTexts["Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna."].exists)
+	}
+
+	func testPullToRefreshUpdatesLists() {
+		let app = makeApp()
+		app.launch()
+
+		let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
+		XCTAssertTrue(newsList.waitForExistence(timeout: 5))
+		let refreshedNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.3").firstMatch
+		pullToRefresh(newsList, untilExists: refreshedNewsRow)
+		XCTAssertEqual(refreshedNewsRow.label, "Test podcast 2")
+
+		app.tabBars.buttons["Podcasty"].tap()
+		let podcastCategoriesList = app.descendants(matching: .any).matching(identifier: "podcastCategories.list").firstMatch
+		XCTAssertTrue(podcastCategoriesList.waitForExistence(timeout: 5))
+		let refreshedPodcastCategory = app.descendants(matching: .any).matching(identifier: "category.row.11").firstMatch
+		pullToRefresh(podcastCategoriesList, untilExists: refreshedPodcastCategory)
+		XCTAssertEqual(refreshedPodcastCategory.label, "Test podcasty 2")
+
+		let podcastCategoryRow = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+		XCTAssertTrue(podcastCategoryRow.waitForExistence(timeout: 5))
+		podcastCategoryRow.tap()
+
+		let categoryPodcastsList = app.descendants(matching: .any).matching(identifier: "categoryPodcasts.list").firstMatch
+		XCTAssertTrue(categoryPodcastsList.waitForExistence(timeout: 5))
+		let refreshedCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.4").firstMatch
+		pullToRefresh(categoryPodcastsList, untilExists: refreshedCategoryPodcast)
+		XCTAssertEqual(refreshedCategoryPodcast.label, "Test podcast w kategorii 2")
+
+		app.tabBars.buttons["Artykuły"].tap()
+		let articleCategoriesList = app.descendants(matching: .any).matching(identifier: "articleCategories.list").firstMatch
+		XCTAssertTrue(articleCategoriesList.waitForExistence(timeout: 5))
+		let refreshedArticleCategory = app.descendants(matching: .any).matching(identifier: "category.row.21").firstMatch
+		pullToRefresh(articleCategoriesList, untilExists: refreshedArticleCategory)
+		XCTAssertEqual(refreshedArticleCategory.label, "Test artykuły 2")
+
+		let articleCategoryRow = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+		XCTAssertTrue(articleCategoryRow.waitForExistence(timeout: 5))
+		articleCategoryRow.tap()
+
+		let categoryArticlesList = app.descendants(matching: .any).matching(identifier: "categoryArticles.list").firstMatch
+		XCTAssertTrue(categoryArticlesList.waitForExistence(timeout: 5))
+		let refreshedCategoryArticle = app.descendants(matching: .any).matching(identifier: "podcast.row.5").firstMatch
+		pullToRefresh(categoryArticlesList, untilExists: refreshedCategoryArticle)
+		XCTAssertEqual(refreshedCategoryArticle.label, "Test artykuł 2")
 	}
 
 	func testCanBrowsePodcastCategoriesAndOpenPodcast() {
