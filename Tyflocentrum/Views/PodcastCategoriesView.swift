@@ -23,6 +23,10 @@ struct PodcastCategoriesView: View {
 				}
 			}
 			.accessibilityIdentifier("podcastCategories.list")
+			.refreshable {
+				categories.removeAll(keepingCapacity: true)
+				categories = await api.getCategories()
+			}
 			.task {
 				categories = await api.getCategories()
 			}.navigationTitle("Podcasty")

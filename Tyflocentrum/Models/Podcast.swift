@@ -39,21 +39,23 @@ struct Podcast: Codable, Identifiable {
 	var content: PodcastTitle
 	var guid: PodcastTitle
 
-	var formattedDate: String {
-		Self.formatDate(date) ?? date
-	}
-
-	private static func formatDate(_ input: String) -> String? {
-		let parser = DateFormatter()
-		parser.locale = Locale(identifier: "en_US_POSIX")
-		parser.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
-
-		guard let parsed = parser.date(from: input) else { return nil }
-
+	private static let dateParser: DateFormatter = {
 		let formatter = DateFormatter()
-		formatter.locale = Locale.current
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
+		return formatter
+	}()
+
+	private static let dateOutputFormatter: DateFormatter = {
+		let formatter = DateFormatter()
+		formatter.locale = Locale.autoupdatingCurrent
 		formatter.dateStyle = .medium
 		formatter.timeStyle = .none
-		return formatter.string(from: parsed)
+		return formatter
+	}()
+
+	var formattedDate: String {
+		guard let parsed = Self.dateParser.date(from: date) else { return date }
+		return Self.dateOutputFormatter.string(from: parsed)
 	}
 }

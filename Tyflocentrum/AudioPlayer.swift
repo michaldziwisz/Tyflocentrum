@@ -27,7 +27,6 @@ final class AudioPlayer: ObservableObject {
 	private var endObserver: NSObjectProtocol?
 	private var interruptionObserver: NSObjectProtocol?
 	private var currentItemStatusObserver: NSKeyValueObservation?
-	private var remoteCommandTargets: [Any] = []
 
 	private var resumeKey: String?
 	private var lastResumeSave = Date.distantPast
@@ -48,6 +47,24 @@ final class AudioPlayer: ObservableObject {
 		setupRemoteCommands()
 		setupNotifications()
 		setupPeriodicTimeObserver()
+	}
+
+	deinit {
+		if let periodicTimeObserver {
+			player.removeTimeObserver(periodicTimeObserver)
+		}
+
+		if let endObserver {
+			NotificationCenter.default.removeObserver(endObserver)
+		}
+
+		if let interruptionObserver {
+			NotificationCenter.default.removeObserver(interruptionObserver)
+		}
+
+		tearDownRemoteCommands()
+		timeControlStatusObserver = nil
+		currentItemStatusObserver = nil
 	}
 
 	func play(url: URL, title: String? = nil, subtitle: String? = nil, isLiveStream: Bool = false) {
@@ -244,7 +261,7 @@ final class AudioPlayer: ObservableObject {
 	private func setupRemoteCommands() {
 		let commandCenter = MPRemoteCommandCenter.shared()
 
-		remoteCommandTargets.append(commandCenter.playCommand.addTarget { [weak self] _ in
+		commandCenter.playCommand.addTarget { [weak self] _ in
 			guard let self else { return .commandFailed }
 			Task { @MainActor in
 				guard self.currentURL != nil else { return }
@@ -257,55 +274,65 @@ final class AudioPlayer: ObservableObject {
 				self.updateNowPlayingPlaybackInfo()
 			}
 			return .success
-		})
+		}
 
-		remoteCommandTargets.append(commandCenter.pauseCommand.addTarget { [weak self] _ in
+		commandCenter.pauseCommand.addTarget { [weak self] _ in
 			guard let self else { return .commandFailed }
 			Task { @MainActor in
 				self.pause()
 			}
 			return .success
-		})
+		}
 
 		commandCenter.skipForwardCommand.preferredIntervals = [30]
-		remoteCommandTargets.append(commandCenter.skipForwardCommand.addTarget { [weak self] _ in
+		commandCenter.skipForwardCommand.addTarget { [weak self] _ in
 			guard let self else { return .commandFailed }
 			Task { @MainActor in
 				self.skipForward(seconds: 30)
 			}
 			return .success
-		})
+		}
 
 		commandCenter.skipBackwardCommand.preferredIntervals = [30]
-		remoteCommandTargets.append(commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
+		commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
 			guard let self else { return .commandFailed }
 			Task { @MainActor in
 				self.skipBackward(seconds: 30)
 			}
 			return .success
-		})
+		}
 
-		remoteCommandTargets.append(commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
+		commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
 			guard let self else { return .commandFailed }
 			guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
 			Task { @MainActor in
 				self.seek(to: event.positionTime)
 			}
 			return .success
-		})
+		}
 
-		remoteCommandTargets.append(commandCenter.changePlaybackRateCommand.addTarget { [weak self] event in
+		commandCenter.changePlaybackRateCommand.addTarget { [weak self] event in
 			guard let self else { return .commandFailed }
 			guard let event = event as? MPChangePlaybackRateCommandEvent else { return .commandFailed }
 			Task { @MainActor in
 				self.setPlaybackRate(event.playbackRate)
 			}
 			return .success
-		})
+		}
 
 		commandCenter.playCommand.isEnabled = true
 		commandCenter.pauseCommand.isEnabled = true
 		updateRemoteCommandAvailability()
+	}
+
+	private func tearDownRemoteCommands() {
+		let commandCenter = MPRemoteCommandCenter.shared()
+		commandCenter.playCommand.removeTarget(nil)
+		commandCenter.pauseCommand.removeTarget(nil)
+		commandCenter.skipForwardCommand.removeTarget(nil)
+		commandCenter.skipBackwardCommand.removeTarget(nil)
+		commandCenter.changePlaybackPositionCommand.removeTarget(nil)
+		commandCenter.changePlaybackRateCommand.removeTarget(nil)
 	}
 
 	private func updateRemoteCommandAvailability() {

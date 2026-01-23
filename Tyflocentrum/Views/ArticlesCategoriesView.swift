@@ -23,6 +23,10 @@ struct ArticlesCategoriesView: View {
 				}
 			}
 			.accessibilityIdentifier("articleCategories.list")
+			.refreshable {
+				categories.removeAll(keepingCapacity: true)
+				categories = await api.getArticleCategories()
+			}
 			.task {
 				categories = await api.getArticleCategories()
 			}.navigationTitle("Artykuły")

@@ -22,6 +22,10 @@ struct DetailedCategoryView: View {
 			}
 		}
 		.accessibilityIdentifier("categoryPodcasts.list")
+		.refreshable {
+			podcasts.removeAll(keepingCapacity: true)
+			podcasts = await api.getPodcast(for: category)
+		}
 		.task {
 			podcasts = await api.getPodcast(for: category)
 		}.navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
