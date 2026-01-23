@@ -42,6 +42,10 @@
 		BEEA97C028E9D4BB0073E5AB /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BEEA97BF28E9D4BB0073E5AB /* Preview Assets.xcassets */; };
 		BEEC27DB292E775700F0D869 /* ContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEC27DA292E775700F0D869 /* ContactView.swift */; };
 		BEF5F7EE292E8BE20065E572 /* ContactResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEF5F7ED292E8BE20065E572 /* ContactResponse.swift */; };
+		13B97F309E41DA3DB11FF9FB /* TyfloAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AEB5EB9C8F4260E80FB3CA /* TyfloAPITests.swift */; };
+		AF48539E186525A12C570E9F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 068F24BC7FC4CF7845F775E1 /* XCTest.framework */; };
+		D2E8B0B4EB840818A771E17E /* PodcastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF1F44F4E7077BA610B02CD /* PodcastTests.swift */; };
+		DE7687F4C5C79FE4AF14CE2C /* StubURLProtocol.swift in Sources */ = {isa = PBXBuildFile; fileRef = 244C7295B6BC7A57B4A7C542 /* StubURLProtocol.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -56,6 +60,16 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXContainerItemProxy section */
+		17B9D567E03102422890CC59 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = BEEA97AD28E9D4BA0073E5AB /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = BEEA97B428E9D4BA0073E5AB /* Tyflocentrum */;
+			remoteInfo = Tyflocentrum;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		BC1D24D02C256E5D00FB25D3 /* readme.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = readme.md; sourceTree = "<group>"; };
@@ -87,6 +101,9 @@
 		BED1708A29200E8700F4508B /* HTMLTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLTextView.swift; sourceTree = "<group>"; };
 		BED6A4842926E14300BA378B /* AudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayer.swift; sourceTree = "<group>"; };
 		BEDE145D292CE26E00C25C27 /* Comment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Comment.swift; sourceTree = "<group>"; };
+		068F24BC7FC4CF7845F775E1 /* XCTest.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = XCTest.framework; path = System/Library/Frameworks/XCTest.framework; sourceTree = SDKROOT; };
+		244C7295B6BC7A57B4A7C542 /* StubURLProtocol.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubURLProtocol.swift; sourceTree = "<group>"; };
+		51AEB5EB9C8F4260E80FB3CA /* TyfloAPITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPITests.swift; sourceTree = "<group>"; };
 		BEEA97B528E9D4BB0073E5AB /* Tyflocentrum.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Tyflocentrum.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumApp.swift; sourceTree = "<group>"; };
 		BEEA97BA28E9D4BB0073E5AB /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -95,7 +112,17 @@
 		BEEA97C628E9D6880073E5AB /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		BEEC27DA292E775700F0D869 /* ContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactView.swift; sourceTree = "<group>"; };
 		BEF5F7ED292E8BE20065E572 /* ContactResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactResponse.swift; sourceTree = "<group>"; };
+		ECF1F44F4E7077BA610B02CD /* PodcastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastTests.swift; sourceTree = "<group>"; };
+		E9036442801375F374C2F6B9 /* TyflocentrumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
+
+/* Begin PBXTargetDependency section */
+		62689E4B906B34FDC50BE4FF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = BEEA97B428E9D4BA0073E5AB /* Tyflocentrum */;
+			targetProxy = 17B9D567E03102422890CC59 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		BEEA97B228E9D4BA0073E5AB /* Frameworks */ = {
@@ -110,12 +137,21 @@
 				);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		415F625361BAC9AED141B5EB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AF48539E186525A12C570E9F /* XCTest.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		BE64D6C02925A1F9001F9A45 /* Frameworks */ = {
 			isa = PBXGroup;
 				children = (
+					068F24BC7FC4CF7845F775E1 /* XCTest.framework */,
 					BE64D6D22925A327001F9A45 /* Accelerate.framework */,
 					BE64D6CE2925A2C7001F9A45 /* AVFoundation.framework */,
 					BE64D6CA2925A296001F9A45 /* SystemConfiguration.framework */,
@@ -123,6 +159,16 @@
 					BE64D6C12925A1F9001F9A45 /* AudioToolbox.framework */,
 				);
 			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		332BAE81609B20E1E52D9A53 /* TyflocentrumTests */ = {
+			isa = PBXGroup;
+			children = (
+				244C7295B6BC7A57B4A7C542 /* StubURLProtocol.swift */,
+				ECF1F44F4E7077BA610B02CD /* PodcastTests.swift */,
+				51AEB5EB9C8F4260E80FB3CA /* TyfloAPITests.swift */,
+			);
+			path = TyflocentrumTests;
 			sourceTree = "<group>";
 		};
 		BEA9ECD129203FD700718254 /* Views */ = {
@@ -165,6 +211,7 @@
 			children = (
 				BE9381D028EAED6400ABB964 /* Tyflocentrum.xcdatamodeld */,
 				BEEA97B728E9D4BB0073E5AB /* Tyflocentrum */,
+				332BAE81609B20E1E52D9A53 /* TyflocentrumTests */,
 				BEEA97B628E9D4BB0073E5AB /* Products */,
 				BE64D6C02925A1F9001F9A45 /* Frameworks */,
 			);
@@ -174,6 +221,7 @@
 			isa = PBXGroup;
 			children = (
 				BEEA97B528E9D4BB0073E5AB /* Tyflocentrum.app */,
+				E9036442801375F374C2F6B9 /* TyflocentrumTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -225,6 +273,24 @@
 			productReference = BEEA97B528E9D4BB0073E5AB /* Tyflocentrum.app */;
 			productType = "com.apple.product-type.application";
 		};
+		B30AAF4E9741E7309DAF2E19 /* TyflocentrumTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8877A2FA7EC882075D580507 /* Build configuration list for PBXNativeTarget "TyflocentrumTests" */;
+			buildPhases = (
+				8ECB299EE7AD56B928399C9E /* Sources */,
+				415F625361BAC9AED141B5EB /* Frameworks */,
+				82432C513658FF3B200C4362 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				62689E4B906B34FDC50BE4FF /* PBXTargetDependency */,
+			);
+			name = TyflocentrumTests;
+			productName = TyflocentrumTests;
+			productReference = E9036442801375F374C2F6B9 /* TyflocentrumTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -236,6 +302,10 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					BEEA97B428E9D4BA0073E5AB = {
+						CreatedOnToolsVersion = 14.1;
+						LastSwiftMigration = 1410;
+					};
+					B30AAF4E9741E7309DAF2E19 = {
 						CreatedOnToolsVersion = 14.1;
 						LastSwiftMigration = 1410;
 					};
@@ -256,6 +326,7 @@
 			projectRoot = "";
 			targets = (
 				BEEA97B428E9D4BA0073E5AB /* Tyflocentrum */,
+				B30AAF4E9741E7309DAF2E19 /* TyflocentrumTests */,
 			);
 		};
 /* End PBXProject section */
@@ -269,6 +340,13 @@
 				BEEA97BD28E9D4BB0073E5AB /* Assets.xcassets in Resources */,
 				BC1D24D12C256E5D00FB25D3 /* readme.md in Resources */,
 				BE2ACFFC292B67C1001914EB /* Changelog.rtf in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		82432C513658FF3B200C4362 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -305,6 +383,16 @@
 				BEEA97B928E9D4BB0073E5AB /* TyflocentrumApp.swift in Sources */,
 				BED1708B29200E8700F4508B /* HTMLTextView.swift in Sources */,
 				BE77EE8A29000AE0002087ED /* PodcastCategoriesView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8ECB299EE7AD56B928399C9E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DE7687F4C5C79FE4AF14CE2C /* StubURLProtocol.swift in Sources */,
+				D2E8B0B4EB840818A771E17E /* PodcastTests.swift in Sources */,
+				13B97F309E41DA3DB11FF9FB /* TyfloAPITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -502,6 +590,46 @@
 			};
 			name = Release;
 		};
+		C51DC1E3F83D1ECBE2B11415 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.nunosoft.TyflocentrumTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tyflocentrum.app/Tyflocentrum";
+			};
+			name = Debug;
+		};
+		F67C6F16B1073CF88EB83F04 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CLANG_ENABLE_MODULES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.nunosoft.TyflocentrumTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_VERSION = 5.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tyflocentrum.app/Tyflocentrum";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -519,6 +647,15 @@
 			buildConfigurations = (
 				BEEA97C428E9D4BB0073E5AB /* Debug */,
 				BEEA97C528E9D4BB0073E5AB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		8877A2FA7EC882075D580507 /* Build configuration list for PBXNativeTarget "TyflocentrumTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				C51DC1E3F83D1ECBE2B11415 /* Debug */,
+				F67C6F16B1073CF88EB83F04 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

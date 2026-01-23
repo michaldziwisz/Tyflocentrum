@@ -28,6 +28,16 @@
       selectedLauncherIdentifier="Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnvironment="YES">
       <Testables>
+         <TestableReference
+            skipped="NO">
+            <BuildableReference
+               BuildableIdentifier="primary"
+               BlueprintIdentifier="B30AAF4E9741E7309DAF2E19"
+               BuildableName="TyflocentrumTests.xctest"
+               BlueprintName="TyflocentrumTests"
+               ReferencedContainer="container:Tyflocentrum.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
       </Testables>
    </TestAction>
    <LaunchAction
@@ -76,4 +86,3 @@
       revealArchiveInOrganizer="YES">
    </ArchiveAction>
 </Scheme>
-

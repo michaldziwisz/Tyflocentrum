@@ -14,7 +14,7 @@ jobs:
       - name: Xcode version
         run: xcodebuild -version
 
-      - name: Build (Simulator)
+      - name: Test (Simulator)
         run: |
           xcodebuild \
             -project Tyflocentrum.xcodeproj \
@@ -22,7 +22,7 @@ jobs:
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'platform=iOS Simulator,name=iPhone 15' \
-            build
+            test
 
       - name: Archive (no codesign)
         run: |
@@ -48,4 +48,3 @@ jobs:
         with:
           name: Tyflocentrum-unsigned-ipa
           path: Tyflocentrum-unsigned.ipa
-

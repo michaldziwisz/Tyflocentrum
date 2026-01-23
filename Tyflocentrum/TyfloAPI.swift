@@ -13,7 +13,7 @@ final class TyfloAPI: ObservableObject {
 	private let tyfloWorldBaseURL = URL(string: "https://tyfloswiat.pl/wp-json")!
 	private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
 	static let shared = TyfloAPI()
-	private init(session: URLSession = .shared) {
+	init(session: URLSession = .shared) {
 		self.session = session
 	}
 
