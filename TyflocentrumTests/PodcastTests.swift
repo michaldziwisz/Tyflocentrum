@@ -432,3 +432,70 @@ private final class FakeChangePlaybackRateRemoteCommand: ChangePlaybackRateRemot
 		handler?(rate) ?? false
 	}
 }
+
+@MainActor
+final class AsyncListViewModelTests: XCTestCase {
+	func testLoadIfNeededFetchesOnce() async {
+		let viewModel = AsyncListViewModel<Int>()
+		var fetchCount = 0
+
+		let fetch: () async -> [Int] = {
+			fetchCount += 1
+			return [fetchCount]
+		}
+
+		await viewModel.loadIfNeeded(fetch)
+		await viewModel.loadIfNeeded(fetch)
+
+		XCTAssertEqual(fetchCount, 1)
+		XCTAssertEqual(viewModel.items, [1])
+		XCTAssertTrue(viewModel.hasLoaded)
+		XCTAssertFalse(viewModel.isLoading)
+	}
+
+	func testRefreshFetchesAgain() async {
+		let viewModel = AsyncListViewModel<Int>()
+		var fetchCount = 0
+
+		let fetch: () async -> [Int] = {
+			fetchCount += 1
+			return [fetchCount]
+		}
+
+		await viewModel.loadIfNeeded(fetch)
+		await viewModel.refresh(fetch)
+
+		XCTAssertEqual(fetchCount, 2)
+		XCTAssertEqual(viewModel.items, [2])
+		XCTAssertTrue(viewModel.hasLoaded)
+		XCTAssertFalse(viewModel.isLoading)
+	}
+
+	func testLoadSkipsWhenAlreadyLoading() async {
+		let viewModel = AsyncListViewModel<Int>()
+		var fetchCount = 0
+		var releaseFetch: CheckedContinuation<Void, Never>?
+
+		let fetch: () async -> [Int] = {
+			fetchCount += 1
+			await withCheckedContinuation { continuation in
+				releaseFetch = continuation
+			}
+			return [fetchCount]
+		}
+
+		let firstLoad = Task { await viewModel.load(fetch) }
+		while releaseFetch == nil {
+			await Task.yield()
+		}
+
+		await viewModel.load(fetch)
+		releaseFetch?.resume()
+		await firstLoad.value
+
+		XCTAssertEqual(fetchCount, 1)
+		XCTAssertEqual(viewModel.items, [1])
+		XCTAssertTrue(viewModel.hasLoaded)
+		XCTAssertFalse(viewModel.isLoading)
+	}
+}
