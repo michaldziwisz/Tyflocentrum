@@ -79,6 +79,10 @@ private final class UITestURLProtocol: URLProtocol {
 			}
 		}
 
+		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
+			return #"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+		}
+
 		return Data("[]".utf8)
 	}
 }
