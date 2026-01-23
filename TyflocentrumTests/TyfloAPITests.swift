@@ -62,7 +62,7 @@ final class TyfloAPITests: XCTestCase {
 			let items = components.queryItems ?? []
 			XCTAssertEqual(items.first(where: { $0.name == "ac" })?.value, "add")
 
-			let body = try XCTUnwrap(request.httpBody)
+			let body = try requestBodyData(from: request)
 			let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
 			XCTAssertEqual(json["author"] as? String, "Jan")
 			XCTAssertEqual(json["comment"] as? String, "Test")
@@ -79,6 +79,35 @@ final class TyfloAPITests: XCTestCase {
 		XCTAssertNil(error)
 
 		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	private func requestBodyData(from request: URLRequest) throws -> Data {
+		if let body = request.httpBody {
+			return body
+		}
+
+		guard let stream = request.httpBodyStream else {
+			throw URLError(.badURL)
+		}
+
+		stream.open()
+		defer { stream.close() }
+
+		var data = Data()
+		var buffer = [UInt8](repeating: 0, count: 1024)
+
+		while true {
+			let count = stream.read(&buffer, maxLength: buffer.count)
+			if count > 0 {
+				data.append(buffer, count: count)
+			} else if count == 0 {
+				break
+			} else {
+				throw stream.streamError ?? URLError(.cannotDecodeContentData)
+			}
+		}
+
+		return data
 	}
 
 	private func makeSession() -> URLSession {
@@ -99,4 +128,3 @@ final class TyfloAPITests: XCTestCase {
 		)
 	}
 }
-
