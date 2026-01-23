@@ -49,7 +49,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
 		XCTAssertTrue(content.waitForExistence(timeout: 5))
 
-		let listenButton = app.buttons["Słuchaj"]
+		let listenButton = app.descendants(matching: .any).matching(identifier: "podcastDetail.listen").firstMatch
 		XCTAssertTrue(listenButton.waitForExistence(timeout: 5))
 		listenButton.tap()
 

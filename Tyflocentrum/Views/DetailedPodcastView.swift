@@ -65,6 +65,7 @@ struct DetailedPodcastView: View {
 				Text("Słuchaj")
 			}
 			.accessibilityLabel("Słuchaj audycji")
+			.accessibilityIdentifier("podcastDetail.listen")
 		}
 	}
 }
