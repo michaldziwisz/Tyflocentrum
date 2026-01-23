@@ -38,3 +38,20 @@ final class DataControllerTests: XCTestCase {
 		XCTAssertEqual(controller.container.persistentStoreDescriptions.first?.type, NSInMemoryStoreType)
 	}
 }
+
+final class PlaybackRatePolicyTests: XCTestCase {
+	func testNextPlaybackRateCyclesForward() {
+		XCTAssertEqual(PlaybackRatePolicy.next(after: 1.0), 1.25)
+		XCTAssertEqual(PlaybackRatePolicy.next(after: 1.25), 1.5)
+		XCTAssertEqual(PlaybackRatePolicy.next(after: 1.5), 1.75)
+		XCTAssertEqual(PlaybackRatePolicy.next(after: 1.75), 2.0)
+	}
+
+	func testNextPlaybackRateWrapsToBeginning() {
+		XCTAssertEqual(PlaybackRatePolicy.next(after: 2.0), 1.0)
+	}
+
+	func testNextPlaybackRateTreatsUnknownAsFirst() {
+		XCTAssertEqual(PlaybackRatePolicy.next(after: 1.33), 1.25)
+	}
+}

@@ -9,6 +9,17 @@ import AVFoundation
 import Foundation
 import MediaPlayer
 
+enum PlaybackRatePolicy {
+	static let supportedRates: [Float] = [1.0, 1.25, 1.5, 1.75, 2.0]
+
+	static func next(after rate: Float) -> Float {
+		guard !supportedRates.isEmpty else { return rate }
+		let currentIndex = supportedRates.firstIndex(of: rate) ?? 0
+		let nextIndex = supportedRates.index(after: currentIndex)
+		return nextIndex < supportedRates.endIndex ? supportedRates[nextIndex] : supportedRates[0]
+	}
+}
+
 @MainActor
 final class AudioPlayer: ObservableObject {
 	@Published private(set) var isPlaying = false
@@ -153,10 +164,7 @@ final class AudioPlayer: ObservableObject {
 
 	func cyclePlaybackRate() {
 		guard !isLiveStream else { return }
-		let supported: [Float] = [1.0, 1.25, 1.5, 1.75, 2.0]
-		let currentIndex = supported.firstIndex(of: playbackRate) ?? 0
-		let nextIndex = supported.index(after: currentIndex)
-		setPlaybackRate(nextIndex < supported.endIndex ? supported[nextIndex] : supported[0])
+		setPlaybackRate(PlaybackRatePolicy.next(after: playbackRate))
 	}
 
 	func setPlaybackRate(_ rate: Float) {
