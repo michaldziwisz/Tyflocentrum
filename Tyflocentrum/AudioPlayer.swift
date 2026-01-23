@@ -325,7 +325,7 @@ final class AudioPlayer: ObservableObject {
 		updateRemoteCommandAvailability()
 	}
 
-	private func tearDownRemoteCommands() {
+	nonisolated private func tearDownRemoteCommands() {
 		let commandCenter = MPRemoteCommandCenter.shared()
 		commandCenter.playCommand.removeTarget(nil)
 		commandCenter.pauseCommand.removeTarget(nil)
