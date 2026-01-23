@@ -33,7 +33,10 @@ struct ShortPodcastView: View {
 				.font(.caption)
 				.foregroundColor(.secondary)
 		}
-		.accessibilityElement(children: .combine)
+		.accessibilityElement(children: .ignore)
+		.accessibilityLabel(podcast.title.plainText)
+		.accessibilityValue(podcast.formattedDate)
+		.accessibilityHint(showsListenAction ? "Dwukrotnie stuknij, aby otworzyć szczegóły. Dostępna jest też akcja Słuchaj." : "Dwukrotnie stuknij, aby otworzyć szczegóły.")
 		.accessibilityIdentifier("podcast.row.\(podcast.id)")
 
 		Group {

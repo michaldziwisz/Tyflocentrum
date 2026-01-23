@@ -54,6 +54,7 @@ struct DetailedPodcastView: View {
 				item: podcast.guid.plainText,
 				message: Text("Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum")
 			)
+			.accessibilityHint("Otwiera systemowe udostępnianie linku do audycji.")
 			NavigationLink {
 				MediaPlayerView(
 					podcast: api.getListenableURL(for: podcast),
@@ -65,6 +66,7 @@ struct DetailedPodcastView: View {
 				Text("Słuchaj")
 			}
 			.accessibilityLabel("Słuchaj audycji")
+			.accessibilityHint("Otwiera odtwarzacz audycji.")
 			.accessibilityIdentifier("podcastDetail.listen")
 		}
 	}

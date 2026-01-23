@@ -19,6 +19,10 @@ struct SearchView: View {
 		Task {
 			podcasts = await api.getPodcasts(for: trimmed)
 			performedSearch = true
+			UIAccessibility.post(
+				notification: .announcement,
+				argument: podcasts.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(podcasts.count) wyników."
+			)
 		}
 	}
 	var body: some View {
@@ -27,6 +31,7 @@ struct SearchView: View {
 				Section {
 					TextField("Podaj frazę do wyszukania", text: $searchText)
 						.accessibilityIdentifier("search.field")
+						.accessibilityHint("Wpisz tekst, a następnie użyj przycisku Szukaj.")
 						.submitLabel(.search)
 						.onSubmit {
 							performSearch()
@@ -36,6 +41,7 @@ struct SearchView: View {
 						performSearch()
 					}
 					.accessibilityIdentifier("search.button")
+					.accessibilityHint("Wyszukuje audycje po podanej frazie.")
 					.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 				}
 

@@ -21,6 +21,7 @@ struct ShortCategoryView: View {
 		.accessibilityElement(children: .ignore)
 		.accessibilityLabel(category.name)
 		.accessibilityValue("\(category.count) pozycji")
+		.accessibilityHint("Dwukrotnie stuknij, aby otworzyć kategorię.")
 		.accessibilityIdentifier("category.row.\(category.id)")
 	}
 }

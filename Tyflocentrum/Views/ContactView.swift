@@ -25,15 +25,19 @@ struct ContactView: View {
 		return true
 	}
 	var body: some View {
+		let canSend = !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+			&& !message.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 		NavigationView {
 			Form {
 				Section {
 					TextField("Imię", text: $name)
 						.textContentType(.name)
 						.accessibilityIdentifier("contact.name")
+						.accessibilityHint("Wpisz imię, które będzie widoczne przy wiadomości.")
 					TextEditor(text: $message)
 						.accessibilityLabel("Wiadomość")
 						.accessibilityIdentifier("contact.message")
+						.accessibilityHint("Wpisz treść wiadomości do redakcji.")
 				}
 				Section {
 					Button("Wyślij") {
@@ -47,12 +51,13 @@ struct ContactView: View {
 						}
 					}
 					.accessibilityIdentifier("contact.send")
+					.accessibilityHint(canSend ? "Wysyła wiadomość." : "Uzupełnij imię i wiadomość, aby wysłać.")
 					.alert("Błąd", isPresented: $shouldShowError) {
 						Button("OK") {}
 					} message: {
 						Text(errorMessage)
 					}
-				}.disabled(name.isEmpty || message.isEmpty)
+				}.disabled(!canSend)
 			}.toolbar {
 				Button("Anuluj") {
 					dismiss()

@@ -55,74 +55,79 @@ struct MediaPlayerView: View {
 		let isLiveStream = canBeLive
 		let isPlayingCurrentItem = audioPlayer.isPlaying && audioPlayer.currentURL == podcast
 		let displayedTime = isScrubbing ? scrubPosition : audioPlayer.elapsedTime
-		VStack(spacing: 24) {
-			VStack(spacing: 6) {
-				Text(title)
-					.font(.headline)
-					.multilineTextAlignment(.center)
-					.accessibilityAddTraits(.isHeader)
-
-				if let subtitle, !subtitle.isEmpty {
-					Text(subtitle)
-						.font(.subheadline)
-						.foregroundColor(.secondary)
+			VStack(spacing: 24) {
+				VStack(spacing: 6) {
+					Text(title)
+						.font(.headline)
 						.multilineTextAlignment(.center)
-				}
-			}
 
-			HStack(alignment: .center, spacing: 24) {
-				if !isLiveStream {
+					if let subtitle, !subtitle.isEmpty {
+						Text(subtitle)
+							.font(.subheadline)
+							.foregroundColor(.secondary)
+							.multilineTextAlignment(.center)
+					}
+				}
+				.accessibilityElement(children: .combine)
+				.accessibilityAddTraits(.isHeader)
+
+				HStack(alignment: .center, spacing: 24) {
+					if !isLiveStream {
+						Button {
+							audioPlayer.skipBackward(seconds: 30)
+						} label: {
+							Image(systemName: "gobackward.30")
+								.font(.title2)
+								.imageScale(.large)
+						}
+						.accessibilityLabel("Cofnij 30 sekund")
+						.accessibilityHint("Dwukrotnie stuknij, aby cofnąć o 30 sekund.")
+						.accessibilityIdentifier("player.skipBackward30")
+					}
+
 					Button {
-						audioPlayer.skipBackward(seconds: 30)
+						togglePlayback()
 					} label: {
-						Image(systemName: "gobackward.30")
-							.font(.title2)
+						Image(systemName: isPlayingCurrentItem ? "pause.circle.fill" : "play.circle.fill")
+							.font(.largeTitle)
 							.imageScale(.large)
 					}
-					.accessibilityLabel("Cofnij 30 sekund")
-					.accessibilityIdentifier("player.skipBackward30")
-				}
+					.accessibilityLabel(isPlayingCurrentItem ? "Pauza" : "Odtwarzaj")
+					.accessibilityValue(isPlayingCurrentItem ? "Odtwarzanie trwa" : "Odtwarzanie wstrzymane")
+					.accessibilityHint(isPlayingCurrentItem ? "Dwukrotnie stuknij, aby wstrzymać odtwarzanie." : "Dwukrotnie stuknij, aby rozpocząć odtwarzanie.")
+					.accessibilityIdentifier("player.playPause")
 
-				Button {
-					togglePlayback()
-				} label: {
-					Image(systemName: isPlayingCurrentItem ? "pause.circle.fill" : "play.circle.fill")
-						.font(.largeTitle)
-						.imageScale(.large)
-				}
-				.accessibilityLabel(isPlayingCurrentItem ? "Pauza" : "Odtwarzaj")
-				.accessibilityValue(isPlayingCurrentItem ? "Odtwarzanie trwa" : "Odtwarzanie wstrzymane")
-				.accessibilityIdentifier("player.playPause")
-
-				if !isLiveStream {
-					Button {
-						audioPlayer.skipForward(seconds: 30)
+					if !isLiveStream {
+						Button {
+							audioPlayer.skipForward(seconds: 30)
 					} label: {
 						Image(systemName: "goforward.30")
 							.font(.title2)
-							.imageScale(.large)
-					}
-					.accessibilityLabel("Przewiń do przodu 30 sekund")
-					.accessibilityIdentifier("player.skipForward30")
-				}
-			}
-
-			if !isLiveStream {
-				VStack(spacing: 12) {
-					if let duration = audioPlayer.duration, duration.isFinite, duration > 0 {
-						HStack {
-							Text(formatTime(displayedTime))
-								.monospacedDigit()
-								.foregroundColor(.secondary)
-							Spacer()
-							Text(formatTime(duration))
-								.monospacedDigit()
-								.foregroundColor(.secondary)
+								.imageScale(.large)
 						}
+						.accessibilityLabel("Przewiń do przodu 30 sekund")
+						.accessibilityHint("Dwukrotnie stuknij, aby przewinąć do przodu o 30 sekund.")
+						.accessibilityIdentifier("player.skipForward30")
+					}
+				}
 
-						Slider(
-							value: Binding(
-								get: {
+				if !isLiveStream {
+					VStack(spacing: 12) {
+						if let duration = audioPlayer.duration, duration.isFinite, duration > 0 {
+							HStack {
+								Text(formatTime(displayedTime))
+									.monospacedDigit()
+									.foregroundColor(.secondary)
+								Spacer()
+								Text(formatTime(duration))
+									.monospacedDigit()
+									.foregroundColor(.secondary)
+							}
+							.accessibilityHidden(true)
+
+							Slider(
+								value: Binding(
+									get: {
 									displayedTime
 								},
 								set: { newValue in
@@ -138,40 +143,43 @@ struct MediaPlayerView: View {
 									audioPlayer.seek(to: scrubPosition)
 								}
 							}
-						)
-						.accessibilityLabel("Pozycja odtwarzania")
-						.accessibilityValue("\(formatTime(displayedTime)) z \(formatTime(duration))")
-						.accessibilityHint("Przesuń w lewo lub w prawo, aby przewinąć.")
-						.accessibilityIdentifier("player.position")
-					}
-					else {
-						ProgressView()
+							)
+							.accessibilityLabel("Pozycja odtwarzania")
+							.accessibilityValue("\(formatTime(displayedTime)) z \(formatTime(duration))")
+							.accessibilityHint("Przesuń w górę lub w dół jednym palcem, aby przewinąć.")
+							.accessibilityIdentifier("player.position")
+						}
+						else {
+							ProgressView()
 							.accessibilityLabel("Ładowanie czasu trwania")
 					}
 				}
 			}
 
-			if !isLiveStream {
-				Button {
-					audioPlayer.cyclePlaybackRate()
-				} label: {
-					Text("Prędkość: \(audioPlayer.playbackRate, specifier: "%.2gx")")
-				}
-				.accessibilityLabel("Zmień prędkość odtwarzania")
-				.accessibilityValue("\(audioPlayer.playbackRate, specifier: "%.2g") razy")
-				.accessibilityIdentifier("player.speed")
-			}
-
-			if canBeLive {
-				Button("Skontaktuj się z radiem") {
-					Task {
-						await performLiveCheck()
+				if !isLiveStream {
+					Button {
+						audioPlayer.cyclePlaybackRate()
+						UIAccessibility.post(notification: .announcement, argument: "Prędkość \(audioPlayer.playbackRate, specifier: "%.2g")x")
+					} label: {
+						Text("Prędkość: \(audioPlayer.playbackRate, specifier: "%.2gx")")
 					}
+					.accessibilityLabel("Zmień prędkość odtwarzania")
+					.accessibilityValue("\(audioPlayer.playbackRate, specifier: "%.2g")x")
+					.accessibilityHint("Dwukrotnie stuknij, aby przełączyć prędkość.")
+					.accessibilityIdentifier("player.speed")
 				}
-				.accessibilityIdentifier("player.contactRadio")
-				.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
-					Button("OK"){}
-				} message: {
+
+				if canBeLive {
+					Button("Skontaktuj się z radiem") {
+						Task {
+							await performLiveCheck()
+						}
+					}
+					.accessibilityHint("Sprawdza, czy trwa audycja interaktywna i otwiera formularz kontaktu.")
+					.accessibilityIdentifier("player.contactRadio")
+					.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
+						Button("OK"){}
+					} message: {
 					Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
 				}.sheet(isPresented: $shouldShowContactForm) {
 					ContactView()
