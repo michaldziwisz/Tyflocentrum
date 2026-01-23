@@ -1,3 +1,4 @@
+import CoreGraphics
 import XCTest
 
 final class TyflocentrumSmokeTests: XCTestCase {
@@ -12,9 +13,15 @@ final class TyflocentrumSmokeTests: XCTestCase {
 	}
 
 	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement) {
-		list.swipeDown()
+		func dragDown() {
+			let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+			let finish = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+			start.press(forDuration: 0.05, thenDragTo: finish)
+		}
+
+		dragDown()
 		if !element.waitForExistence(timeout: 2) {
-			list.swipeDown()
+			dragDown()
 		}
 		XCTAssertTrue(element.waitForExistence(timeout: 5))
 	}
