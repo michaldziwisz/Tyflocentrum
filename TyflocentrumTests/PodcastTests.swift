@@ -1,4 +1,5 @@
 import CoreData
+import MediaPlayer
 import XCTest
 
 @testable import Tyflocentrum
@@ -174,5 +175,99 @@ final class SeekPolicyTests: XCTestCase {
 	func testTargetTimeReturnsNilForNonFinite() {
 		XCTAssertNil(SeekPolicy.targetTime(elapsed: .nan, delta: 1))
 		XCTAssertNil(SeekPolicy.targetTime(elapsed: 1, delta: .nan))
+	}
+}
+
+@MainActor
+final class MediaPlayerIntegrationTests: XCTestCase {
+	override func tearDown() {
+		let nowPlaying = MPNowPlayingInfoCenter.default()
+		nowPlaying.nowPlayingInfo = nil
+		nowPlaying.playbackState = .stopped
+		super.tearDown()
+	}
+
+	func testRemoteSkipCommandsPrefer30Seconds() {
+		var audioPlayer: AudioPlayer? = AudioPlayer()
+		defer {
+			audioPlayer?.stop()
+			audioPlayer = nil
+		}
+
+		let commandCenter = MPRemoteCommandCenter.shared()
+		XCTAssertEqual(commandCenter.skipForwardCommand.preferredIntervals, [30])
+		XCTAssertEqual(commandCenter.skipBackwardCommand.preferredIntervals, [30])
+	}
+
+	func testRemoteCommandAvailabilityFollowsPlaybackStateAndLiveFlag() throws {
+		let commandCenter = MPRemoteCommandCenter.shared()
+
+		var audioPlayer: AudioPlayer? = AudioPlayer()
+		defer {
+			audioPlayer?.stop()
+			audioPlayer = nil
+		}
+
+		audioPlayer?.stop()
+
+		XCTAssertFalse(commandCenter.playCommand.isEnabled)
+		XCTAssertFalse(commandCenter.pauseCommand.isEnabled)
+		XCTAssertFalse(commandCenter.skipForwardCommand.isEnabled)
+		XCTAssertFalse(commandCenter.skipBackwardCommand.isEnabled)
+		XCTAssertFalse(commandCenter.changePlaybackPositionCommand.isEnabled)
+		XCTAssertFalse(commandCenter.changePlaybackRateCommand.isEnabled)
+
+		let nonLiveURL = try makeTempAudioURL()
+		audioPlayer?.play(url: nonLiveURL, title: "Title", subtitle: "Subtitle", isLiveStream: false)
+
+		XCTAssertTrue(commandCenter.playCommand.isEnabled)
+		XCTAssertTrue(commandCenter.pauseCommand.isEnabled)
+		XCTAssertTrue(commandCenter.skipForwardCommand.isEnabled)
+		XCTAssertTrue(commandCenter.skipBackwardCommand.isEnabled)
+		XCTAssertTrue(commandCenter.changePlaybackPositionCommand.isEnabled)
+		XCTAssertTrue(commandCenter.changePlaybackRateCommand.isEnabled)
+
+		let liveURL = try makeTempAudioURL(fileExtension: "m3u8")
+		audioPlayer?.play(url: liveURL, title: "Live", subtitle: nil, isLiveStream: true)
+
+		XCTAssertTrue(commandCenter.playCommand.isEnabled)
+		XCTAssertTrue(commandCenter.pauseCommand.isEnabled)
+		XCTAssertFalse(commandCenter.skipForwardCommand.isEnabled)
+		XCTAssertFalse(commandCenter.skipBackwardCommand.isEnabled)
+		XCTAssertFalse(commandCenter.changePlaybackPositionCommand.isEnabled)
+		XCTAssertFalse(commandCenter.changePlaybackRateCommand.isEnabled)
+	}
+
+	func testNowPlayingMetadataIsUpdatedAndClearedOnStop() throws {
+		let nowPlaying = MPNowPlayingInfoCenter.default()
+		nowPlaying.nowPlayingInfo = nil
+		nowPlaying.playbackState = .stopped
+
+		var audioPlayer: AudioPlayer? = AudioPlayer()
+		defer {
+			audioPlayer?.stop()
+			audioPlayer = nil
+		}
+
+		let url = try makeTempAudioURL()
+		audioPlayer?.play(url: url, title: "Test title", subtitle: "Test subtitle", isLiveStream: false)
+
+		let info = try XCTUnwrap(nowPlaying.nowPlayingInfo)
+		XCTAssertEqual(info[MPMediaItemPropertyTitle] as? String, "Test title")
+		XCTAssertEqual(info[MPMediaItemPropertyArtist] as? String, "Test subtitle")
+		XCTAssertEqual(info[MPNowPlayingInfoPropertyIsLiveStream] as? Bool, false)
+
+		audioPlayer?.stop()
+
+		XCTAssertNil(nowPlaying.nowPlayingInfo)
+		XCTAssertEqual(nowPlaying.playbackState, .stopped)
+	}
+
+	private func makeTempAudioURL(fileExtension: String = "mp3") throws -> URL {
+		let url = FileManager.default.temporaryDirectory
+			.appendingPathComponent(UUID().uuidString)
+			.appendingPathExtension(fileExtension)
+		try Data().write(to: url)
+		return url
 	}
 }
