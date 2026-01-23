@@ -271,3 +271,141 @@ final class MediaPlayerIntegrationTests: XCTestCase {
 		return url
 	}
 }
+
+final class RemoteCommandWiringTests: XCTestCase {
+	func testRemoteCommandWiringInvokesExpectedHandlers() {
+		let center = FakeRemoteCommandCenter()
+
+		var playCount = 0
+		var pauseCount = 0
+		var skipForwardIntervals: [Double] = []
+		var skipBackwardIntervals: [Double] = []
+		var positions: [TimeInterval] = []
+		var rates: [Float] = []
+
+		RemoteCommandWiring.install(
+			center: center,
+			play: {
+				playCount += 1
+				return true
+			},
+			pause: {
+				pauseCount += 1
+				return true
+			},
+			skipForward: { interval in
+				skipForwardIntervals.append(interval)
+				return true
+			},
+			skipBackward: { interval in
+				skipBackwardIntervals.append(interval)
+				return true
+			},
+			changePlaybackPosition: { position in
+				positions.append(position)
+				return true
+			},
+			changePlaybackRate: { rate in
+				rates.append(rate)
+				return true
+			}
+		)
+
+		XCTAssertTrue(center.play.isEnabled)
+		XCTAssertTrue(center.pause.isEnabled)
+		XCTAssertEqual(center.skipForward.preferredIntervals, [30])
+		XCTAssertEqual(center.skipBackward.preferredIntervals, [30])
+
+		XCTAssertTrue(center.play.invoke())
+		XCTAssertTrue(center.pause.invoke())
+		XCTAssertTrue(center.skipForward.invoke(interval: 15))
+		XCTAssertTrue(center.skipBackward.invoke(interval: 30))
+		XCTAssertTrue(center.changePlaybackPosition.invoke(position: 12.5))
+		XCTAssertTrue(center.changePlaybackRate.invoke(rate: 1.5))
+
+		XCTAssertEqual(playCount, 1)
+		XCTAssertEqual(pauseCount, 1)
+		XCTAssertEqual(skipForwardIntervals, [15])
+		XCTAssertEqual(skipBackwardIntervals, [30])
+		XCTAssertEqual(positions, [12.5])
+		XCTAssertEqual(rates, [1.5])
+	}
+}
+
+private final class FakeRemoteCommandCenter: RemoteCommandCenterProtocol {
+	let play = FakeRemoteCommand()
+	let pause = FakeRemoteCommand()
+	let skipForward = FakeSkipIntervalRemoteCommand()
+	let skipBackward = FakeSkipIntervalRemoteCommand()
+	let changePlaybackPosition = FakeChangePlaybackPositionRemoteCommand()
+	let changePlaybackRate = FakeChangePlaybackRateRemoteCommand()
+}
+
+private final class FakeRemoteCommand: RemoteCommandProtocol {
+	var isEnabled = false
+	private var handler: (() -> Bool)?
+
+	func addHandler(_ handler: @escaping () -> Bool) {
+		self.handler = handler
+	}
+
+	func removeAllHandlers() {
+		handler = nil
+	}
+
+	func invoke() -> Bool {
+		handler?() ?? false
+	}
+}
+
+private final class FakeSkipIntervalRemoteCommand: SkipIntervalRemoteCommandProtocol {
+	var isEnabled = false
+	var preferredIntervals: [NSNumber] = []
+	private var handler: ((Double) -> Bool)?
+
+	func addHandler(_ handler: @escaping (Double) -> Bool) {
+		self.handler = handler
+	}
+
+	func removeAllHandlers() {
+		handler = nil
+	}
+
+	func invoke(interval: Double) -> Bool {
+		handler?(interval) ?? false
+	}
+}
+
+private final class FakeChangePlaybackPositionRemoteCommand: ChangePlaybackPositionRemoteCommandProtocol {
+	var isEnabled = false
+	private var handler: ((TimeInterval) -> Bool)?
+
+	func addHandler(_ handler: @escaping (TimeInterval) -> Bool) {
+		self.handler = handler
+	}
+
+	func removeAllHandlers() {
+		handler = nil
+	}
+
+	func invoke(position: TimeInterval) -> Bool {
+		handler?(position) ?? false
+	}
+}
+
+private final class FakeChangePlaybackRateRemoteCommand: ChangePlaybackRateRemoteCommandProtocol {
+	var isEnabled = false
+	private var handler: ((Float) -> Bool)?
+
+	func addHandler(_ handler: @escaping (Float) -> Bool) {
+		self.handler = handler
+	}
+
+	func removeAllHandlers() {
+		handler = nil
+	}
+
+	func invoke(rate: Float) -> Bool {
+		handler?(rate) ?? false
+	}
+}

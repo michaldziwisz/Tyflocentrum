@@ -9,6 +9,184 @@ import AVFoundation
 import Foundation
 import MediaPlayer
 
+protocol RemoteCommandCenterProtocol {
+	var play: RemoteCommandProtocol { get }
+	var pause: RemoteCommandProtocol { get }
+	var skipForward: SkipIntervalRemoteCommandProtocol { get }
+	var skipBackward: SkipIntervalRemoteCommandProtocol { get }
+	var changePlaybackPosition: ChangePlaybackPositionRemoteCommandProtocol { get }
+	var changePlaybackRate: ChangePlaybackRateRemoteCommandProtocol { get }
+}
+
+protocol RemoteCommandProtocol: AnyObject {
+	var isEnabled: Bool { get set }
+	func addHandler(_ handler: @escaping () -> Bool)
+	func removeAllHandlers()
+}
+
+protocol SkipIntervalRemoteCommandProtocol: AnyObject {
+	var isEnabled: Bool { get set }
+	var preferredIntervals: [NSNumber] { get set }
+	func addHandler(_ handler: @escaping (Double) -> Bool)
+	func removeAllHandlers()
+}
+
+protocol ChangePlaybackPositionRemoteCommandProtocol: AnyObject {
+	var isEnabled: Bool { get set }
+	func addHandler(_ handler: @escaping (TimeInterval) -> Bool)
+	func removeAllHandlers()
+}
+
+protocol ChangePlaybackRateRemoteCommandProtocol: AnyObject {
+	var isEnabled: Bool { get set }
+	func addHandler(_ handler: @escaping (Float) -> Bool)
+	func removeAllHandlers()
+}
+
+struct RemoteCommandWiring {
+	static let defaultSkipInterval: Double = 30
+
+	static func install(
+		center: RemoteCommandCenterProtocol,
+		play: @escaping () -> Bool,
+		pause: @escaping () -> Bool,
+		skipForward: @escaping (Double) -> Bool,
+		skipBackward: @escaping (Double) -> Bool,
+		changePlaybackPosition: @escaping (TimeInterval) -> Bool,
+		changePlaybackRate: @escaping (Float) -> Bool
+	) {
+		center.play.addHandler(play)
+		center.pause.addHandler(pause)
+
+		center.skipForward.preferredIntervals = [NSNumber(value: defaultSkipInterval)]
+		center.skipForward.addHandler(skipForward)
+
+		center.skipBackward.preferredIntervals = [NSNumber(value: defaultSkipInterval)]
+		center.skipBackward.addHandler(skipBackward)
+
+		center.changePlaybackPosition.addHandler(changePlaybackPosition)
+		center.changePlaybackRate.addHandler(changePlaybackRate)
+
+		center.play.isEnabled = true
+		center.pause.isEnabled = true
+	}
+}
+
+final class SystemRemoteCommandCenter: RemoteCommandCenterProtocol {
+	private let commandCenter: MPRemoteCommandCenter
+
+	init(commandCenter: MPRemoteCommandCenter = .shared()) {
+		self.commandCenter = commandCenter
+	}
+
+	var play: RemoteCommandProtocol { SystemRemoteCommand(command: commandCenter.playCommand) }
+	var pause: RemoteCommandProtocol { SystemRemoteCommand(command: commandCenter.pauseCommand) }
+	var skipForward: SkipIntervalRemoteCommandProtocol { SystemSkipIntervalRemoteCommand(command: commandCenter.skipForwardCommand) }
+	var skipBackward: SkipIntervalRemoteCommandProtocol { SystemSkipIntervalRemoteCommand(command: commandCenter.skipBackwardCommand) }
+	var changePlaybackPosition: ChangePlaybackPositionRemoteCommandProtocol { SystemChangePlaybackPositionRemoteCommand(command: commandCenter.changePlaybackPositionCommand) }
+	var changePlaybackRate: ChangePlaybackRateRemoteCommandProtocol { SystemChangePlaybackRateRemoteCommand(command: commandCenter.changePlaybackRateCommand) }
+}
+
+private final class SystemRemoteCommand: RemoteCommandProtocol {
+	private let command: MPRemoteCommand
+
+	init(command: MPRemoteCommand) {
+		self.command = command
+	}
+
+	var isEnabled: Bool {
+		get { command.isEnabled }
+		set { command.isEnabled = newValue }
+	}
+
+	func addHandler(_ handler: @escaping () -> Bool) {
+		command.addTarget { _ in
+			handler() ? .success : .commandFailed
+		}
+	}
+
+	func removeAllHandlers() {
+		command.removeTarget(nil)
+	}
+}
+
+private final class SystemSkipIntervalRemoteCommand: SkipIntervalRemoteCommandProtocol {
+	private let command: MPSkipIntervalCommand
+
+	init(command: MPSkipIntervalCommand) {
+		self.command = command
+	}
+
+	var isEnabled: Bool {
+		get { command.isEnabled }
+		set { command.isEnabled = newValue }
+	}
+
+	var preferredIntervals: [NSNumber] {
+		get { command.preferredIntervals }
+		set { command.preferredIntervals = newValue }
+	}
+
+	func addHandler(_ handler: @escaping (Double) -> Bool) {
+		command.addTarget { event in
+			guard let event = event as? MPSkipIntervalCommandEvent else { return .commandFailed }
+			return handler(event.interval) ? .success : .commandFailed
+		}
+	}
+
+	func removeAllHandlers() {
+		command.removeTarget(nil)
+	}
+}
+
+private final class SystemChangePlaybackPositionRemoteCommand: ChangePlaybackPositionRemoteCommandProtocol {
+	private let command: MPChangePlaybackPositionCommand
+
+	init(command: MPChangePlaybackPositionCommand) {
+		self.command = command
+	}
+
+	var isEnabled: Bool {
+		get { command.isEnabled }
+		set { command.isEnabled = newValue }
+	}
+
+	func addHandler(_ handler: @escaping (TimeInterval) -> Bool) {
+		command.addTarget { event in
+			guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
+			return handler(event.positionTime) ? .success : .commandFailed
+		}
+	}
+
+	func removeAllHandlers() {
+		command.removeTarget(nil)
+	}
+}
+
+private final class SystemChangePlaybackRateRemoteCommand: ChangePlaybackRateRemoteCommandProtocol {
+	private let command: MPChangePlaybackRateCommand
+
+	init(command: MPChangePlaybackRateCommand) {
+		self.command = command
+	}
+
+	var isEnabled: Bool {
+		get { command.isEnabled }
+		set { command.isEnabled = newValue }
+	}
+
+	func addHandler(_ handler: @escaping (Float) -> Bool) {
+		command.addTarget { event in
+			guard let event = event as? MPChangePlaybackRateCommandEvent else { return .commandFailed }
+			return handler(event.playbackRate) ? .success : .commandFailed
+		}
+	}
+
+	func removeAllHandlers() {
+		command.removeTarget(nil)
+	}
+}
+
 enum PlaybackRatePolicy {
 	static let supportedRates: [Float] = [1.0, 1.25, 1.5, 1.75, 2.0]
 
@@ -328,69 +506,61 @@ final class AudioPlayer: ObservableObject {
 	}
 
 	private func setupRemoteCommands() {
-		let commandCenter = MPRemoteCommandCenter.shared()
+		let center = SystemRemoteCommandCenter()
 
-		commandCenter.playCommand.addTarget { [weak self] _ in
-			guard let self else { return .commandFailed }
-			Task { @MainActor in
-				guard self.currentURL != nil else { return }
-				self.configureAudioSessionForPlayback()
-				if self.isLiveStream {
-					self.player.play()
-				} else {
-					self.player.playImmediately(atRate: self.playbackRate)
+		RemoteCommandWiring.install(
+			center: center,
+			play: { [weak self] in
+				guard let self else { return false }
+				Task { @MainActor in
+					guard self.currentURL != nil else { return }
+					self.configureAudioSessionForPlayback()
+					if self.isLiveStream {
+						self.player.play()
+					} else {
+						self.player.playImmediately(atRate: self.playbackRate)
+					}
+					self.updateNowPlayingPlaybackInfo()
 				}
-				self.updateNowPlayingPlaybackInfo()
+				return true
+			},
+			pause: { [weak self] in
+				guard let self else { return false }
+				Task { @MainActor in
+					self.pause()
+				}
+				return true
+			},
+			skipForward: { [weak self] interval in
+				guard let self else { return false }
+				Task { @MainActor in
+					self.skipForward(seconds: interval)
+				}
+				return true
+			},
+			skipBackward: { [weak self] interval in
+				guard let self else { return false }
+				Task { @MainActor in
+					self.skipBackward(seconds: interval)
+				}
+				return true
+			},
+			changePlaybackPosition: { [weak self] position in
+				guard let self else { return false }
+				Task { @MainActor in
+					self.seek(to: position)
+				}
+				return true
+			},
+			changePlaybackRate: { [weak self] rate in
+				guard let self else { return false }
+				Task { @MainActor in
+					self.setPlaybackRate(rate)
+				}
+				return true
 			}
-			return .success
-		}
+		)
 
-		commandCenter.pauseCommand.addTarget { [weak self] _ in
-			guard let self else { return .commandFailed }
-			Task { @MainActor in
-				self.pause()
-			}
-			return .success
-		}
-
-		commandCenter.skipForwardCommand.preferredIntervals = [30]
-		commandCenter.skipForwardCommand.addTarget { [weak self] _ in
-			guard let self else { return .commandFailed }
-			Task { @MainActor in
-				self.skipForward(seconds: 30)
-			}
-			return .success
-		}
-
-		commandCenter.skipBackwardCommand.preferredIntervals = [30]
-		commandCenter.skipBackwardCommand.addTarget { [weak self] _ in
-			guard let self else { return .commandFailed }
-			Task { @MainActor in
-				self.skipBackward(seconds: 30)
-			}
-			return .success
-		}
-
-		commandCenter.changePlaybackPositionCommand.addTarget { [weak self] event in
-			guard let self else { return .commandFailed }
-			guard let event = event as? MPChangePlaybackPositionCommandEvent else { return .commandFailed }
-			Task { @MainActor in
-				self.seek(to: event.positionTime)
-			}
-			return .success
-		}
-
-		commandCenter.changePlaybackRateCommand.addTarget { [weak self] event in
-			guard let self else { return .commandFailed }
-			guard let event = event as? MPChangePlaybackRateCommandEvent else { return .commandFailed }
-			Task { @MainActor in
-				self.setPlaybackRate(event.playbackRate)
-			}
-			return .success
-		}
-
-		commandCenter.playCommand.isEnabled = true
-		commandCenter.pauseCommand.isEnabled = true
 		updateRemoteCommandAvailability()
 	}
 
