@@ -55,7 +55,8 @@ struct MediaPlayerView: View {
 		let isLiveStream = canBeLive
 		let isPlayingCurrentItem = audioPlayer.isPlaying && audioPlayer.currentURL == podcast
 		let displayedTime = isScrubbing ? scrubPosition : audioPlayer.elapsedTime
-			VStack(spacing: 24) {
+		let playbackRateText = String(format: "%.2g", audioPlayer.playbackRate)
+		VStack(spacing: 24) {
 				VStack(spacing: 6) {
 					Text(title)
 						.font(.headline)
@@ -159,12 +160,13 @@ struct MediaPlayerView: View {
 				if !isLiveStream {
 					Button {
 						audioPlayer.cyclePlaybackRate()
-						UIAccessibility.post(notification: .announcement, argument: "Prędkość \(audioPlayer.playbackRate, specifier: "%.2g")x")
+						let newPlaybackRateText = String(format: "%.2g", audioPlayer.playbackRate)
+						UIAccessibility.post(notification: .announcement, argument: "Prędkość \(newPlaybackRateText)x")
 					} label: {
 						Text("Prędkość: \(audioPlayer.playbackRate, specifier: "%.2gx")")
 					}
 					.accessibilityLabel("Zmień prędkość odtwarzania")
-					.accessibilityValue("\(audioPlayer.playbackRate, specifier: "%.2g")x")
+					.accessibilityValue("\(playbackRateText)x")
 					.accessibilityHint("Dwukrotnie stuknij, aby przełączyć prędkość.")
 					.accessibilityIdentifier("player.speed")
 				}
