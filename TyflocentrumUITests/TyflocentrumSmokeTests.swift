@@ -26,6 +26,12 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(element.waitForExistence(timeout: 5))
 	}
 
+	private func tapBackButton(in app: XCUIApplication) {
+		let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
+		XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+		backButton.tap()
+	}
+
 	func testAppLaunchesAndShowsTabs() {
 		let app = makeApp()
 		app.launch()
@@ -225,5 +231,65 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
 		XCTAssertTrue(content.waitForExistence(timeout: 5))
+	}
+
+	func testCanNavigateBackFromPodcastDetail() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Podcasty"].tap()
+
+		let categoriesList = app.descendants(matching: .any).matching(identifier: "podcastCategories.list").firstMatch
+		XCTAssertTrue(categoriesList.waitForExistence(timeout: 5))
+
+		let categoryRow = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+		XCTAssertTrue(categoryRow.waitForExistence(timeout: 5))
+		categoryRow.tap()
+
+		let categoryPodcastsList = app.descendants(matching: .any).matching(identifier: "categoryPodcasts.list").firstMatch
+		XCTAssertTrue(categoryPodcastsList.waitForExistence(timeout: 5))
+
+		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+		podcastRow.tap()
+
+		let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+
+		tapBackButton(in: app)
+		XCTAssertTrue(categoryPodcastsList.waitForExistence(timeout: 5))
+
+		tapBackButton(in: app)
+		XCTAssertTrue(categoriesList.waitForExistence(timeout: 5))
+	}
+
+	func testCanNavigateBackFromArticleDetail() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Artykuły"].tap()
+
+		let categoriesList = app.descendants(matching: .any).matching(identifier: "articleCategories.list").firstMatch
+		XCTAssertTrue(categoriesList.waitForExistence(timeout: 5))
+
+		let categoryRow = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+		XCTAssertTrue(categoryRow.waitForExistence(timeout: 5))
+		categoryRow.tap()
+
+		let categoryArticlesList = app.descendants(matching: .any).matching(identifier: "categoryArticles.list").firstMatch
+		XCTAssertTrue(categoryArticlesList.waitForExistence(timeout: 5))
+
+		let articleRow = app.descendants(matching: .any).matching(identifier: "podcast.row.2").firstMatch
+		XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
+		articleRow.tap()
+
+		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+
+		tapBackButton(in: app)
+		XCTAssertTrue(categoryArticlesList.waitForExistence(timeout: 5))
+
+		tapBackButton(in: app)
+		XCTAssertTrue(categoriesList.waitForExistence(timeout: 5))
 	}
 }
