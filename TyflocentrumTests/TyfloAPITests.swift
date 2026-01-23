@@ -259,6 +259,271 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
+	func testGetLatestPodcastsReturnsEmptyOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getLatestPodcasts()
+		XCTAssertTrue(podcasts.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetCategoriesReturnsEmptyOnServerError() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let categories = await api.getCategories()
+		XCTAssertTrue(categories.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetCategoriesReturnsEmptyOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let categories = await api.getCategories()
+		XCTAssertTrue(categories.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetPodcastForCategoryReturnsEmptyOnServerError() async {
+		let requestMade = expectation(description: "request made")
+		let category = Category(name: "Test", id: 7, count: 0)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getPodcast(for: category)
+		XCTAssertTrue(podcasts.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetPodcastForCategoryReturnsEmptyOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+		let category = Category(name: "Test", id: 7, count: 0)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getPodcast(for: category)
+		XCTAssertTrue(podcasts.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetArticleCategoriesReturnsEmptyOnServerError() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let categories = await api.getArticleCategories()
+		XCTAssertTrue(categories.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetArticleCategoriesReturnsEmptyOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let categories = await api.getArticleCategories()
+		XCTAssertTrue(categories.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetArticlesForCategoryReturnsEmptyOnServerError() async {
+		let requestMade = expectation(description: "request made")
+		let category = Category(name: "Test", id: 9, count: 0)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let articles = await api.getArticles(for: category)
+		XCTAssertTrue(articles.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetArticlesForCategoryReturnsEmptyOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+		let category = Category(name: "Test", id: 9, count: 0)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let articles = await api.getArticles(for: category)
+		XCTAssertTrue(articles.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetCommentsReturnsEmptyOnServerError() async {
+		let requestMade = expectation(description: "request made")
+		let podcast = makePodcast(id: 123)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let comments = await api.getComments(for: podcast)
+		XCTAssertTrue(comments.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetCommentsReturnsEmptyOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+		let podcast = makePodcast(id: 123)
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let comments = await api.getComments(for: podcast)
+		XCTAssertTrue(comments.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testSearchReturnsEmptyOnServerError() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getPodcasts(for: "test")
+		XCTAssertTrue(podcasts.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testSearchReturnsEmptyOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let podcasts = await api.getPodcasts(for: "test")
+		XCTAssertTrue(podcasts.isEmpty)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testIsTPAvailableReturnsFalseOnServerError() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let (available, info) = await api.isTPAvailable()
+		XCTAssertFalse(available)
+		XCTAssertFalse(info.available)
+		XCTAssertNil(info.title)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testIsTPAvailableReturnsFalseOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let (available, info) = await api.isTPAvailable()
+		XCTAssertFalse(available)
+		XCTAssertFalse(info.available)
+		XCTAssertNil(info.title)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
 	func testContactRadioPostsJSON() async {
 		let requestMade = expectation(description: "request made")
 
@@ -288,6 +553,67 @@ final class TyfloAPITests: XCTestCase {
 		let (success, error) = await api.contactRadio(as: "Jan", with: "Test")
 
 		XCTAssertTrue(success)
+		XCTAssertNil(error)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testContactRadioReturnsFalseWithErrorMessageWhenAPIReportsError() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			let responseBody = #"{"author":"Jan","comment":"Test","error":"Nope"}"#.data(using: .utf8)!
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, responseBody)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let (success, error) = await api.contactRadio(as: "Jan", with: "Test")
+
+		XCTAssertFalse(success)
+		XCTAssertEqual(error, "Nope")
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testContactRadioReturnsFalseOnServerError() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let (success, error) = await api.contactRadio(as: "Jan", with: "Test")
+
+		XCTAssertFalse(success)
+		XCTAssertNil(error)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testContactRadioReturnsFalseOnInvalidJSON() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("not-json".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let (success, error) = await api.contactRadio(as: "Jan", with: "Test")
+
+		XCTAssertFalse(success)
 		XCTAssertNil(error)
 
 		await fulfillment(of: [requestMade], timeout: 1)
