@@ -20,6 +20,58 @@ enum PlaybackRatePolicy {
 	}
 }
 
+struct ResumePositionStore {
+	private let userDefaults: UserDefaults
+	private let now: () -> Date
+	private let throttleInterval: TimeInterval
+	private var lastSave: Date
+
+	init(
+		userDefaults: UserDefaults,
+		now: @escaping () -> Date = { Date() },
+		throttleInterval: TimeInterval = 5,
+		lastSave: Date = .distantPast
+	) {
+		self.userDefaults = userDefaults
+		self.now = now
+		self.throttleInterval = throttleInterval
+		self.lastSave = lastSave
+	}
+
+	static func makeKey(for url: URL) -> String {
+		"resume.\(url.absoluteString)"
+	}
+
+	func load(forKey key: String?) -> Double? {
+		guard let key else { return nil }
+		guard let saved = userDefaults.object(forKey: key) as? Double else { return nil }
+		guard saved > 1 else { return nil }
+		return saved
+	}
+
+	mutating func maybeSave(_ seconds: Double, forKey key: String?) {
+		guard let key else { return }
+		guard seconds.isFinite else { return }
+
+		let currentTime = now()
+		guard currentTime.timeIntervalSince(lastSave) >= throttleInterval else { return }
+		lastSave = currentTime
+
+		userDefaults.set(seconds, forKey: key)
+	}
+
+	func save(_ seconds: Double, forKey key: String?) {
+		guard let key else { return }
+		guard seconds.isFinite else { return }
+		userDefaults.set(seconds, forKey: key)
+	}
+
+	func clear(forKey key: String?) {
+		guard let key else { return }
+		userDefaults.removeObject(forKey: key)
+	}
+}
+
 @MainActor
 final class AudioPlayer: ObservableObject {
 	@Published private(set) var isPlaying = false
@@ -32,7 +84,7 @@ final class AudioPlayer: ObservableObject {
 	@Published private(set) var duration: TimeInterval?
 
 	private let player: AVPlayer
-	private let userDefaults: UserDefaults
+	private var resumeStore: ResumePositionStore
 	private var timeControlStatusObserver: NSKeyValueObservation?
 	private var periodicTimeObserver: Any?
 	private var endObserver: NSObjectProtocol?
@@ -40,11 +92,10 @@ final class AudioPlayer: ObservableObject {
 	private var currentItemStatusObserver: NSKeyValueObservation?
 
 	private var resumeKey: String?
-	private var lastResumeSave = Date.distantPast
 
 	init(player: AVPlayer = AVPlayer(), userDefaults: UserDefaults = .standard) {
 		self.player = player
-		self.userDefaults = userDefaults
+		self.resumeStore = ResumePositionStore(userDefaults: userDefaults)
 		player.automaticallyWaitsToMinimizeStalling = true
 
 		timeControlStatusObserver = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
@@ -88,7 +139,7 @@ final class AudioPlayer: ObservableObject {
 			currentTitle = title
 			currentSubtitle = subtitle
 			self.isLiveStream = isLiveStream
-			resumeKey = isLiveStream ? nil : makeResumeKey(for: url)
+			resumeKey = isLiveStream ? nil : ResumePositionStore.makeKey(for: url)
 
 			player.replaceCurrentItem(with: AVPlayerItem(url: url))
 			restoreResumePositionIfNeeded()
@@ -260,7 +311,7 @@ final class AudioPlayer: ObservableObject {
 
 			self.isPlaying = false
 			if let resumeKey = self.resumeKey {
-				self.userDefaults.removeObject(forKey: resumeKey)
+				self.resumeStore.clear(forKey: resumeKey)
 			}
 			self.updateNowPlayingPlaybackInfo()
 		}
@@ -394,9 +445,7 @@ final class AudioPlayer: ObservableObject {
 	}
 
 	private func restoreResumePositionIfNeeded() {
-		guard let resumeKey else { return }
-		guard let saved = userDefaults.object(forKey: resumeKey) as? Double else { return }
-		guard saved > 1 else { return }
+		guard let saved = resumeStore.load(forKey: resumeKey) else { return }
 
 		currentItemStatusObserver = player.currentItem?.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
 			guard let self else { return }
@@ -411,25 +460,11 @@ final class AudioPlayer: ObservableObject {
 
 	private func maybePersistResumeTime(_ seconds: Double) {
 		guard !isLiveStream else { return }
-		guard let resumeKey else { return }
-		guard seconds.isFinite else { return }
-
-		let now = Date()
-		guard now.timeIntervalSince(lastResumeSave) >= 5 else { return }
-		lastResumeSave = now
-
-		userDefaults.set(seconds, forKey: resumeKey)
+		resumeStore.maybeSave(seconds, forKey: resumeKey)
 	}
 
 	private func persistCurrentPositionIfNeeded() {
 		guard !isLiveStream else { return }
-		guard let resumeKey else { return }
-		let seconds = elapsedTime
-		guard seconds.isFinite else { return }
-		userDefaults.set(seconds, forKey: resumeKey)
-	}
-
-	private func makeResumeKey(for url: URL) -> String {
-		"resume.\(url.absoluteString)"
+		resumeStore.save(elapsedTime, forKey: resumeKey)
 	}
 }

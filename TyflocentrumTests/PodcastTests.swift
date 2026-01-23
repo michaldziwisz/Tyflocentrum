@@ -55,3 +55,101 @@ final class PlaybackRatePolicyTests: XCTestCase {
 		XCTAssertEqual(PlaybackRatePolicy.next(after: 1.33), 1.25)
 	}
 }
+
+final class ResumePositionStoreTests: XCTestCase {
+	func testMakeKeyUsesAbsoluteString() {
+		let url = URL(string: "https://example.com/audio.mp3?x=1")!
+		XCTAssertEqual(ResumePositionStore.makeKey(for: url), "resume.\(url.absoluteString)")
+	}
+
+	func testLoadReturnsNilWhenMissing() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let store = ResumePositionStore(userDefaults: defaults)
+		XCTAssertNil(store.load(forKey: "missing"))
+	}
+
+	func testLoadReturnsNilWhenValueIsTooSmall() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let key = "resume.test"
+		var store = ResumePositionStore(userDefaults: defaults)
+		store.save(1, forKey: key)
+
+		XCTAssertNil(store.load(forKey: key))
+	}
+
+	func testLoadReturnsValueWhenGreaterThanOne() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let key = "resume.test"
+		var store = ResumePositionStore(userDefaults: defaults)
+		store.save(12.5, forKey: key)
+
+		XCTAssertEqual(store.load(forKey: key), 12.5)
+	}
+
+	func testClearRemovesValue() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let key = "resume.test"
+		var store = ResumePositionStore(userDefaults: defaults)
+		store.save(12.5, forKey: key)
+		store.clear(forKey: key)
+
+		XCTAssertNil(store.load(forKey: key))
+	}
+
+	func testMaybeSaveThrottlesWrites() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let key = "resume.test"
+		var now = Date(timeIntervalSince1970: 0)
+		var store = ResumePositionStore(userDefaults: defaults, now: { now }, throttleInterval: 5)
+
+		store.maybeSave(10, forKey: key)
+		XCTAssertEqual(store.load(forKey: key), 10)
+
+		now = now.addingTimeInterval(4)
+		store.maybeSave(11, forKey: key)
+		XCTAssertEqual(store.load(forKey: key), 10)
+
+		now = now.addingTimeInterval(1)
+		store.maybeSave(11, forKey: key)
+		XCTAssertEqual(store.load(forKey: key), 11)
+	}
+
+	func testSaveIgnoresNonFinite() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let key = "resume.test"
+		var store = ResumePositionStore(userDefaults: defaults)
+		store.save(.nan, forKey: key)
+		XCTAssertNil(store.load(forKey: key))
+	}
+
+	func testMaybeSaveIgnoresNonFinite() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let key = "resume.test"
+		var store = ResumePositionStore(userDefaults: defaults)
+		store.save(10, forKey: key)
+		store.maybeSave(.nan, forKey: key)
+
+		XCTAssertEqual(store.load(forKey: key), 10)
+	}
+}
