@@ -10,29 +10,36 @@ import SwiftUI
 struct ContactView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@Environment(\.dismiss) var dismiss
-@AppStorage("name") private var name = ""
+	@AppStorage("name") private var name = ""
 	@AppStorage("CurrentMSG") private var message = "\nWysłane przy pomocy aplikacji Tyflocentrum"
 	@State private var shouldShowError = false
 	@State private var errorMessage = ""
-	func performSend() async -> Void {
+	@MainActor
+	func performSend() async -> Bool {
 		let (success, error) = await api.contactRadio(as: name, with: message)
-		if !success {
+		guard success else {
+			errorMessage = error ?? "Nieznany błąd"
 			shouldShowError = true
-			message = "\(error ?? "Nieznany błąd")"
+			return false
 		}
-		message = "\nWysłane przy pomocy aplikacji TyfloCentrum"
+		return true
 	}
 	var body: some View {
 		NavigationView {
 			Form {
 				Section {
 					TextField("Imię", text: $name)
+						.textContentType(.name)
 					TextEditor(text: $message)
+						.accessibilityLabel("Wiadomość")
 				}
 				Section {
 					Button("Wyślij") {
 						Task {
-							await performSend()
+							let didSend = await performSend()
+							guard didSend else { return }
+
+							message = "\nWysłane przy pomocy aplikacji Tyflocentrum"
 							UIAccessibility.post(notification: .announcement, argument: "Wiadomość wysłana pomyślnie")
 							dismiss()
 						}
