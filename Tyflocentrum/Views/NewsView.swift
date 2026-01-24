@@ -5,8 +5,8 @@
 //  Created by Arkadiusz Świętnicki on 17/10/2022.
 //
 
-import Foundation
 import SwiftUI
+import UIKit
 
 enum NewsItemKind: String {
 	case podcast
@@ -56,6 +56,77 @@ struct NewsItem: Identifiable {
 			return lhs.kind.sortOrder < rhs.kind.sortOrder
 		}
 		return lhs.post.id > rhs.post.id
+	}
+}
+
+private struct ScrollIndicatorsFlasher: UIViewRepresentable {
+	let shouldFlash: Bool
+
+	func makeCoordinator() -> Coordinator {
+		Coordinator()
+	}
+
+	func makeUIView(context: Context) -> UIView {
+		UIView(frame: .zero)
+	}
+
+	func updateUIView(_ uiView: UIView, context: Context) {
+		if shouldFlash {
+			context.coordinator.scheduleFlash(from: uiView)
+		} else {
+			context.coordinator.reset()
+		}
+	}
+
+	final class Coordinator {
+		private var didFlash = false
+
+		func reset() {
+			didFlash = false
+		}
+
+		func scheduleFlash(from view: UIView) {
+			guard !didFlash else { return }
+			didFlash = true
+
+			flashIndicators(from: view, attemptsRemaining: 6)
+		}
+
+		private func flashIndicators(from view: UIView, attemptsRemaining: Int) {
+			guard attemptsRemaining > 0 else { return }
+
+			DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+				if let scrollView = self.locateScrollView(from: view) {
+					scrollView.flashScrollIndicators()
+				} else {
+					self.flashIndicators(from: view, attemptsRemaining: attemptsRemaining - 1)
+				}
+			}
+		}
+
+		private func locateScrollView(from view: UIView) -> UIScrollView? {
+			var current: UIView? = view
+			while let currentView = current {
+				if let found = findFirstScrollView(in: currentView) {
+					return found
+				}
+				current = currentView.superview
+			}
+			return nil
+		}
+
+		private func findFirstScrollView(in view: UIView) -> UIScrollView? {
+			if let scrollView = view as? UIScrollView {
+				return scrollView
+			}
+
+			for subview in view.subviews {
+				if let found = findFirstScrollView(in: subview) {
+					return found
+				}
+			}
+			return nil
+		}
 	}
 }
 
@@ -473,6 +544,10 @@ struct NewsView: View {
 				}
 			}
 			.accessibilityIdentifier("news.list")
+			.background(
+				ScrollIndicatorsFlasher(shouldFlash: viewModel.hasLoaded && !viewModel.items.isEmpty)
+					.frame(width: 0, height: 0)
+			)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
