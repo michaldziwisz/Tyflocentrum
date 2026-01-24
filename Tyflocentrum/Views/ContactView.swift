@@ -13,6 +13,7 @@ final class ContactViewModel: ObservableObject {
 	private static let defaultMessage = "\nWysłane przy pomocy aplikacji Tyflocentrum"
 	private static let nameKey = "name"
 	private static let messageKey = "CurrentMSG"
+	private static let fallbackErrorMessage = "Nie udało się wysłać wiadomości. Spróbuj ponownie."
 
 	@Published var name: String {
 		didSet { userDefaults.set(name, forKey: Self.nameKey) }
@@ -51,7 +52,7 @@ final class ContactViewModel: ObservableObject {
 
 		let (success, error) = await api.contactRadio(as: name, with: message)
 		guard success else {
-			errorMessage = error ?? "Nieznany błąd"
+			errorMessage = error ?? Self.fallbackErrorMessage
 			shouldShowError = true
 			return false
 		}
@@ -65,6 +66,13 @@ struct ContactView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@Environment(\.dismiss) var dismiss
 	@StateObject private var viewModel = ContactViewModel()
+	@AccessibilityFocusState private var focusedField: Field?
+
+	private enum Field: Hashable {
+		case name
+		case message
+	}
+
 	var body: some View {
 		let canSend = viewModel.canSend
 		NavigationView {
@@ -74,10 +82,12 @@ struct ContactView: View {
 						.textContentType(.name)
 						.accessibilityIdentifier("contact.name")
 						.accessibilityHint("Wpisz imię, które będzie widoczne przy wiadomości.")
+						.accessibilityFocused($focusedField, equals: .name)
 					TextEditor(text: $viewModel.message)
 						.accessibilityLabel("Wiadomość")
 						.accessibilityIdentifier("contact.message")
 						.accessibilityHint("Wpisz treść wiadomości do redakcji.")
+						.accessibilityFocused($focusedField, equals: .message)
 				}
 				Section {
 					Button {
@@ -94,6 +104,7 @@ struct ContactView: View {
 								ProgressView()
 								Text("Wysyłanie…")
 							}
+							.accessibilityElement(children: .combine)
 						}
 						else {
 							Text("Wyślij")
@@ -108,12 +119,22 @@ struct ContactView: View {
 					}
 				}
 				.disabled(!canSend || viewModel.isSending)
-				}.toolbar {
-					Button("Anuluj") {
-						dismiss()
-					}
-				.accessibilityIdentifier("contact.cancel")
 			}
+			.navigationTitle("Kontakt")
+			.toolbar {
+				Button("Anuluj") {
+					dismiss()
+				}
+				.accessibilityIdentifier("contact.cancel")
+				.accessibilityHint("Zamyka formularz bez wysyłania.")
+			}
+		}
+		.task {
+			focusedField = .name
+		}
+		.onChange(of: viewModel.shouldShowError) { shouldShowError in
+			guard !shouldShowError else { return }
+			focusedField = .message
 		}
 	}
 }

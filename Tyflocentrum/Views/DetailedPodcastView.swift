@@ -18,12 +18,14 @@ struct DetailedPodcastView: View {
 				VStack(alignment: .leading, spacing: 6) {
 					Text(podcast.title.plainText)
 						.font(.title3.weight(.semibold))
-						.accessibilityAddTraits(.isHeader)
 
 					Text(podcast.formattedDate)
 						.font(.subheadline)
 						.foregroundColor(.secondary)
 				}
+				.accessibilityElement(children: .combine)
+				.accessibilityAddTraits(.isHeader)
+				.accessibilityIdentifier("podcastDetail.header")
 
 				Text(podcast.content.plainText)
 					.font(.body)
@@ -35,10 +37,12 @@ struct DetailedPodcastView: View {
 				if comments.isEmpty {
 					Text("Brak komentarzy")
 						.foregroundColor(.secondary)
+						.accessibilityIdentifier("podcastDetail.commentsSummary")
 				}
 				else {
 					Text("\(comments.count) komentarzy")
 						.foregroundColor(.secondary)
+						.accessibilityIdentifier("podcastDetail.commentsSummary")
 				}
 			}
 			.padding()
@@ -54,7 +58,9 @@ struct DetailedPodcastView: View {
 				item: podcast.guid.plainText,
 				message: Text("Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum")
 			)
+			.accessibilityLabel("Udostępnij audycję")
 			.accessibilityHint("Otwiera systemowe udostępnianie linku do audycji.")
+			.accessibilityIdentifier("podcastDetail.share")
 			NavigationLink {
 				MediaPlayerView(
 					podcast: api.getListenableURL(for: podcast),

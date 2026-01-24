@@ -15,12 +15,14 @@ struct DetailedArticleView: View {
 				VStack(alignment: .leading, spacing: 6) {
 					Text(article.title.plainText)
 						.font(.title3.weight(.semibold))
-						.accessibilityAddTraits(.isHeader)
 
 					Text(article.formattedDate)
 						.font(.subheadline)
 						.foregroundColor(.secondary)
 				}
+				.accessibilityElement(children: .combine)
+				.accessibilityAddTraits(.isHeader)
+				.accessibilityIdentifier("articleDetail.header")
 
 				Text(article.content.plainText)
 					.font(.body)
