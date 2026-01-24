@@ -28,6 +28,7 @@
 		BEBAB45F292931BB009967A0 /* MediaPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEBAB45E292931BB009967A0 /* MediaPlayerView.swift */; };
 		BEC9AB97292E56FF009907EB /* Schedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC9AB96292E56FF009907EB /* Schedule.swift */; };
 		BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */; };
+		74D0E52F50594708AD4B1AEA /* PodcastPlayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */; };
 		BED1708B29200E8700F4508B /* HTMLTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED1708A29200E8700F4508B /* HTMLTextView.swift */; };
 		BED6A4772926DDFE00BA378B /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6C12925A1F9001F9A45 /* AudioToolbox.framework */; };
 		BED6A4782926DE2C00BA378B /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6CA2925A296001F9A45 /* SystemConfiguration.framework */; };
@@ -109,6 +110,7 @@
 		BEBAB45E292931BB009967A0 /* MediaPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPlayerView.swift; sourceTree = "<group>"; };
 		BEC9AB96292E56FF009907EB /* Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schedule.swift; sourceTree = "<group>"; };
 		BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortPodcastView.swift; sourceTree = "<group>"; };
+		A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastPlayerSheet.swift; sourceTree = "<group>"; };
 		BED1708A29200E8700F4508B /* HTMLTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLTextView.swift; sourceTree = "<group>"; };
 		BED6A4842926E14300BA378B /* AudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayer.swift; sourceTree = "<group>"; };
 		BEDE145D292CE26E00C25C27 /* Comment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Comment.swift; sourceTree = "<group>"; };
@@ -215,6 +217,7 @@
 				BE77EE8F29000B39002087ED /* MoreView.swift */,
 				BED1708A29200E8700F4508B /* HTMLTextView.swift */,
 				BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */,
+				A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */,
 				BE890DFD29087659005D8DC7 /* ShortCategoryView.swift */,
 				BE56ED2E290B3BE9006ADF67 /* DetailedPodcastView.swift */,
 				BEB8A67A291CE49C00A2836F /* DetailedCategoryView.swift */,
@@ -427,6 +430,7 @@
 					BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
 					BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */,
 					BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,
+					74D0E52F50594708AD4B1AEA /* PodcastPlayerSheet.swift in Sources */,
 					BED6A4852926E14300BA378B /* AudioPlayer.swift in Sources */,
 					BE77EE8C29000B06002087ED /* ArticlesCategoriesView.swift in Sources */,
 					BEEA97BB28E9D4BB0073E5AB /* ContentView.swift in Sources */,

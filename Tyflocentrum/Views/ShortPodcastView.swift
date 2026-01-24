@@ -12,8 +12,7 @@ import UIKit
 struct ShortPodcastView: View {
 	let podcast: Podcast
 	var showsListenAction = true
-	@EnvironmentObject var api: TyfloAPI
-	@State private var isShowingPlayer = false
+	var onListen: (() -> Void)? = nil
 
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
@@ -60,27 +59,10 @@ struct ShortPodcastView: View {
 			if showsListenAction {
 				row
 					.accessibilityAction(named: "Słuchaj") {
-						isShowingPlayer = true
+						onListen?()
 					}
 					.accessibilityAction(named: "Skopiuj link") {
 						copyPodcastLink()
-					}
-					.sheet(isPresented: $isShowingPlayer) {
-						NavigationStack {
-							MediaPlayerView(
-								podcast: api.getListenableURL(for: podcast),
-								title: podcast.title.plainText,
-								subtitle: podcast.formattedDate,
-								canBeLive: false
-							)
-							.toolbar {
-								ToolbarItem(placement: .cancellationAction) {
-									Button("Zamknij") {
-										isShowingPlayer = false
-									}
-								}
-							}
-						}
 					}
 			}
 			else {

@@ -11,6 +11,7 @@ struct DetailedCategoryView: View {
 	let category: Category
 	@EnvironmentObject var api: TyfloAPI
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
+	@State private var playerPodcast: Podcast?
 	var body: some View {
 		List {
 			AsyncListStatusSection(
@@ -28,7 +29,12 @@ struct DetailedCategoryView: View {
 				NavigationLink {
 					DetailedPodcastView(podcast: item)
 				} label: {
-					ShortPodcastView(podcast: item)
+					ShortPodcastView(
+						podcast: item,
+						onListen: {
+							playerPodcast = item
+						}
+					)
 				}
 			}
 		}
@@ -41,5 +47,8 @@ struct DetailedCategoryView: View {
 		}
 		.navigationTitle(category.name)
 		.navigationBarTitleDisplayMode(.inline)
+		.sheet(item: $playerPodcast) { podcast in
+			PodcastPlayerSheet(podcast: podcast)
+		}
 	}
 }

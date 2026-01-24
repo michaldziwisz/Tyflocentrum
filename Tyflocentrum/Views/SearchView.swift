@@ -13,6 +13,7 @@ struct SearchView: View {
 	@State private var searchText = ""
 	@State private var lastSearchQuery = ""
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
+	@State private var playerPodcast: Podcast?
 
 	@MainActor
 	private func search(query: String) async {
@@ -75,7 +76,12 @@ struct SearchView: View {
 							NavigationLink {
 								DetailedPodcastView(podcast: item)
 							} label: {
-								ShortPodcastView(podcast: item)
+								ShortPodcastView(
+									podcast: item,
+									onListen: {
+										playerPodcast = item
+									}
+								)
 							}
 						}
 					}
@@ -88,6 +94,9 @@ struct SearchView: View {
 				await search(query: query)
 			}
 			.navigationTitle("Szukaj")
+		}
+		.sheet(item: $playerPodcast) { podcast in
+			PodcastPlayerSheet(podcast: podcast)
 		}
 	}
 }

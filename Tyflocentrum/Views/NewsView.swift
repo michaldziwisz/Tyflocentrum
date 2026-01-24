@@ -126,6 +126,7 @@ struct AsyncListStatusSection: View {
 struct NewsView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
+	@State private var playerPodcast: Podcast?
 	var body: some View {
 		NavigationView {
 			List {
@@ -144,7 +145,12 @@ struct NewsView: View {
 					NavigationLink {
 						DetailedPodcastView(podcast: item)
 					} label: {
-						ShortPodcastView(podcast: item)
+						ShortPodcastView(
+							podcast: item,
+							onListen: {
+								playerPodcast = item
+							}
+						)
 					}
 				}
 			}
@@ -156,6 +162,9 @@ struct NewsView: View {
 				await viewModel.loadIfNeeded(api.fetchLatestPodcasts)
 			}
 			.navigationTitle("Nowości")
+		}
+		.sheet(item: $playerPodcast) { podcast in
+			PodcastPlayerSheet(podcast: podcast)
 		}
 	}
 }
