@@ -8,6 +8,57 @@
 import Foundation
 import SwiftUI
 
+enum NewsItemKind: String {
+	case podcast
+	case article
+
+	var label: String {
+		switch self {
+		case .podcast:
+			return "Podcast"
+		case .article:
+			return "Artykuł"
+		}
+	}
+
+	var systemImageName: String {
+		switch self {
+		case .podcast:
+			return "mic.fill"
+		case .article:
+			return "doc.text.fill"
+		}
+	}
+
+	var sortOrder: Int {
+		switch self {
+		case .podcast:
+			return 0
+		case .article:
+			return 1
+		}
+	}
+}
+
+struct NewsItem: Identifiable {
+	let kind: NewsItemKind
+	let post: Podcast
+
+	var id: String {
+		"\(kind.rawValue).\(post.id)"
+	}
+
+	static func isSortedBefore(_ lhs: NewsItem, _ rhs: NewsItem) -> Bool {
+		if lhs.post.date != rhs.post.date {
+			return lhs.post.date > rhs.post.date
+		}
+		if lhs.kind.sortOrder != rhs.kind.sortOrder {
+			return lhs.kind.sortOrder < rhs.kind.sortOrder
+		}
+		return lhs.post.id > rhs.post.id
+	}
+}
+
 @MainActor
 final class AsyncListViewModel<Item>: ObservableObject {
 	@Published private(set) var items: [Item] = []
@@ -125,8 +176,37 @@ struct AsyncListStatusSection: View {
 
 struct NewsView: View {
 	@EnvironmentObject var api: TyfloAPI
-	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
+	@StateObject private var viewModel = AsyncListViewModel<NewsItem>()
 	@State private var playerPodcast: Podcast?
+
+	private func fetchLatestItems() async throws -> [NewsItem] {
+		async let podcastPosts: [Podcast] = api.fetchLatestPodcasts()
+		async let articlePosts: [Podcast] = api.fetchLatestArticles()
+
+		var combined: [NewsItem] = []
+		var lastError: Error?
+
+		do {
+			let podcasts = try await podcastPosts
+			combined.append(contentsOf: podcasts.map { NewsItem(kind: .podcast, post: $0) })
+		} catch {
+			lastError = error
+		}
+
+		do {
+			let articles = try await articlePosts
+			combined.append(contentsOf: articles.map { NewsItem(kind: .article, post: $0) })
+		} catch {
+			lastError = error
+		}
+
+		guard !combined.isEmpty else {
+			throw lastError ?? URLError(.badServerResponse)
+		}
+
+		return combined.sorted(by: NewsItem.isSortedBefore)
+	}
+
 	var body: some View {
 		NavigationView {
 			List {
@@ -135,21 +215,32 @@ struct NewsView: View {
 					isLoading: viewModel.isLoading,
 					hasLoaded: viewModel.hasLoaded,
 					isEmpty: viewModel.items.isEmpty,
-					emptyMessage: "Brak nowych audycji.",
-					retryAction: { await viewModel.refresh(api.fetchLatestPodcasts) },
+					emptyMessage: "Brak nowych treści.",
+					retryAction: { await viewModel.refresh(fetchLatestItems) },
 					retryIdentifier: "news.retry",
 					isRetryDisabled: viewModel.isLoading
 				)
 
 				ForEach(viewModel.items) { item in
 					NavigationLink {
-						DetailedPodcastView(podcast: item)
+						switch item.kind {
+						case .podcast:
+							DetailedPodcastView(podcast: item.post)
+						case .article:
+							DetailedArticleView(article: item.post)
+						}
 					} label: {
 						ShortPodcastView(
-							podcast: item,
-							onListen: {
-								playerPodcast = item
-							}
+							podcast: item.post,
+							showsListenAction: item.kind == .podcast,
+							onListen: item.kind == .podcast
+								? { playerPodcast = item.post }
+								: nil,
+							leadingSystemImageName: item.kind.systemImageName,
+							accessibilityKindLabel: item.kind.label,
+							accessibilityIdentifierOverride: item.kind == .podcast
+								? nil
+								: "article.row.\(item.post.id)"
 						)
 					}
 					.accessibilityRemoveTraits(.isButton)
@@ -157,10 +248,10 @@ struct NewsView: View {
 			}
 			.accessibilityIdentifier("news.list")
 			.refreshable {
-				await viewModel.refresh(api.fetchLatestPodcasts)
+				await viewModel.refresh(fetchLatestItems)
 			}
 			.task {
-				await viewModel.loadIfNeeded(api.fetchLatestPodcasts)
+				await viewModel.loadIfNeeded(fetchLatestItems)
 			}
 			.navigationTitle("Nowości")
 		}

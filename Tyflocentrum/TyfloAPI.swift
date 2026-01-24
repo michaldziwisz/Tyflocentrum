@@ -41,6 +41,17 @@ import Foundation
 			}
 			return try await fetch(url)
 		}
+
+		func fetchLatestArticles() async throws -> [Podcast] {
+			guard let url = makeWPURL(
+				baseURL: tyfloWorldBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [URLQueryItem(name: "per_page", value: "100")]
+			) else {
+				throw URLError(.badURL)
+			}
+			return try await fetch(url)
+		}
 		
 		func getLatestPodcasts() async -> [Podcast] {
 			do {

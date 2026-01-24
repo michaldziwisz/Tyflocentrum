@@ -52,6 +52,7 @@ private final class UITestURLProtocol: URLProtocol {
 	private static var didFailTyflopodcastSearchPosts = false
 	private static var didFailTyfloswiatCategories = false
 	private static var didFailTyfloswiatCategoryPosts = false
+	private static var didFailTyfloswiatLatestPosts = false
 
 	override class func canInit(with request: URLRequest) -> Bool {
 		true
@@ -183,6 +184,10 @@ private final class UITestURLProtocol: URLProtocol {
 					200,
 					#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"}},{"id":5,"date":"2026-01-21T00:59:40","title":{"rendered":"Test artykuł 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=5"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
 				)
+			}
+
+			if shouldFailOnce(&didFailTyfloswiatLatestPosts) {
+				return (500, Data("[]".utf8))
 			}
 
 			return (

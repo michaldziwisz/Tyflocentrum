@@ -13,6 +13,9 @@ struct ShortPodcastView: View {
 	let podcast: Podcast
 	var showsListenAction = true
 	var onListen: (() -> Void)? = nil
+	var leadingSystemImageName: String? = nil
+	var accessibilityKindLabel: String? = nil
+	var accessibilityIdentifierOverride: String? = nil
 
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
@@ -28,11 +31,17 @@ struct ShortPodcastView: View {
 
 	var body: some View {
 		let excerpt = podcast.excerpt.plainText
+		let title = podcast.title.plainText
+		let accessibilityTitle = {
+			let prefix = accessibilityKindLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+			guard !prefix.isEmpty else { return title }
+			return "\(prefix). \(title)"
+		}()
 		let hint = showsListenAction
 			? "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcje: Słuchaj, Skopiuj link."
 			: "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcja: Skopiuj link."
-		let row = VStack(alignment: .leading, spacing: 6) {
-			Text(podcast.title.plainText)
+		let rowContent = VStack(alignment: .leading, spacing: 6) {
+			Text(title)
 				.font(.headline)
 				.foregroundColor(.primary)
 				.multilineTextAlignment(.leading)
@@ -49,11 +58,21 @@ struct ShortPodcastView: View {
 				.font(.caption)
 				.foregroundColor(.secondary)
 		}
+		let row = HStack(alignment: .top, spacing: 12) {
+			if let leadingSystemImageName {
+				Image(systemName: leadingSystemImageName)
+					.font(.title3)
+					.foregroundColor(.secondary)
+					.accessibilityHidden(true)
+			}
+
+			rowContent
+		}
 		.accessibilityElement(children: .ignore)
-		.accessibilityLabel(podcast.title.plainText)
+		.accessibilityLabel(accessibilityTitle)
 		.accessibilityValue(podcast.formattedDate)
 		.accessibilityHint(hint)
-		.accessibilityIdentifier("podcast.row.\(podcast.id)")
+		.accessibilityIdentifier(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)")
 
 		Group {
 			if showsListenAction {
