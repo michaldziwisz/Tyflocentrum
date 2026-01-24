@@ -52,6 +52,42 @@ import Foundation
 			}
 			return try await fetch(url)
 		}
+
+		func fetchPodcastsPage(page: Int, perPage: Int) async throws -> [Podcast] {
+			guard page > 0 else { return [] }
+			guard perPage > 0 else { return [] }
+
+			guard let url = makeWPURL(
+				baseURL: tyfloPodcastBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [
+					URLQueryItem(name: "per_page", value: "\(perPage)"),
+					URLQueryItem(name: "page", value: "\(page)"),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
+
+			return try await fetch(url)
+		}
+
+		func fetchArticlesPage(page: Int, perPage: Int) async throws -> [Podcast] {
+			guard page > 0 else { return [] }
+			guard perPage > 0 else { return [] }
+
+			guard let url = makeWPURL(
+				baseURL: tyfloWorldBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [
+					URLQueryItem(name: "per_page", value: "\(perPage)"),
+					URLQueryItem(name: "page", value: "\(page)"),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
+
+			return try await fetch(url)
+		}
 		
 		func getLatestPodcasts() async -> [Podcast] {
 			do {

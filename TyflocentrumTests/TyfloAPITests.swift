@@ -74,6 +74,36 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
+	func testFetchPodcastsPageUsesPerPageAndPageParameters() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyflopodcast.net")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "20")
+			XCTAssertEqual(items.first(where: { $0.name == "page" })?.value, "2")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("[]".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			let podcasts = try await api.fetchPodcastsPage(page: 2, perPage: 20)
+			XCTAssertTrue(podcasts.isEmpty)
+		} catch {
+			XCTFail("Expected success but got error: \(error)")
+		}
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
 	func testGetCategoriesUsesPerPage100() async {
 		let requestMade = expectation(description: "request made")
 
@@ -126,6 +156,36 @@ final class TyfloAPITests: XCTestCase {
 
 		XCTAssertEqual(podcasts.count, 1)
 		XCTAssertEqual(podcasts.first?.id, 42)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testFetchArticlesPageUsesPerPageAndPageParameters() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyfloswiat.pl")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "10")
+			XCTAssertEqual(items.first(where: { $0.name == "page" })?.value, "3")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("[]".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			let articles = try await api.fetchArticlesPage(page: 3, perPage: 10)
+			XCTAssertTrue(articles.isEmpty)
+		} catch {
+			XCTFail("Expected success but got error: \(error)")
+		}
 
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
