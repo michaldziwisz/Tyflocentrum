@@ -14,18 +14,16 @@ struct ArticlesCategoriesView: View {
 	var body: some View {
 		NavigationView {
 			List {
-				if let errorMessage = viewModel.errorMessage {
-					Section {
-						Text(errorMessage)
-							.foregroundColor(.secondary)
-
-						Button("Spróbuj ponownie") {
-							Task {
-								await viewModel.refresh(api.fetchArticleCategories)
-							}
-						}
-					}
-				}
+				AsyncListStatusSection(
+					errorMessage: viewModel.errorMessage,
+					isLoading: viewModel.isLoading,
+					hasLoaded: viewModel.hasLoaded,
+					isEmpty: viewModel.items.isEmpty,
+					emptyMessage: "Brak kategorii artykułów.",
+					retryAction: { await viewModel.refresh(api.fetchArticleCategories) },
+					retryIdentifier: "articleCategories.retry",
+					isRetryDisabled: viewModel.isLoading
+				)
 
 				ForEach(viewModel.items) { item in
 					NavigationLink {

@@ -33,10 +33,6 @@ struct SearchView: View {
 		Task { await search(query: searchText) }
 	}
 
-	private func retryLastSearch() {
-		Task { await search(query: lastSearchQuery) }
-	}
-
 	var body: some View {
 		NavigationView {
 			List {
@@ -53,27 +49,28 @@ struct SearchView: View {
 						performSearch()
 					}
 					.accessibilityIdentifier("search.button")
-					.accessibilityHint("Wyszukuje audycje po podanej frazie.")
-					.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+						.accessibilityHint("Wyszukuje audycje po podanej frazie.")
+						.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
 				}
 
-				Section {
-					if let errorMessage = viewModel.errorMessage {
-						Text(errorMessage)
-							.foregroundColor(.secondary)
+				AsyncListStatusSection(
+					errorMessage: viewModel.errorMessage,
+					isLoading: viewModel.isLoading,
+					hasLoaded: viewModel.hasLoaded,
+					isEmpty: viewModel.items.isEmpty,
+					emptyMessage: "Brak wyników wyszukiwania dla podanej frazy. Spróbuj użyć innych słów kluczowych.",
+					loadingMessage: "Wyszukiwanie…",
+					retryAction: {
+						guard !lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+						await search(query: lastSearchQuery)
+					},
+					retryIdentifier: "search.retry",
+					isRetryDisabled: viewModel.isLoading || lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+					retryHint: "Ponawia ostatnie wyszukiwanie."
+				)
 
-						Button("Spróbuj ponownie") {
-							retryLastSearch()
-						}
-						.accessibilityIdentifier("search.retry")
-						.accessibilityHint("Ponawia ostatnie wyszukiwanie.")
-						.disabled(lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
-					}
-					else if viewModel.hasLoaded && viewModel.items.isEmpty {
-						Text("Brak wyników wyszukiwania dla podanej frazy. Spróbuj użyć innych słów kluczowych.")
-							.foregroundColor(.secondary)
-					}
-					else {
+				if viewModel.errorMessage == nil && !viewModel.items.isEmpty {
+					Section {
 						ForEach(viewModel.items) { item in
 							NavigationLink {
 								DetailedPodcastView(podcast: item)

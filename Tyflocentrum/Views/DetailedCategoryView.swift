@@ -13,18 +13,16 @@ struct DetailedCategoryView: View {
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
 	var body: some View {
 		List {
-			if let errorMessage = viewModel.errorMessage {
-				Section {
-					Text(errorMessage)
-						.foregroundColor(.secondary)
-
-					Button("Spróbuj ponownie") {
-						Task {
-							await viewModel.refresh { try await api.fetchPodcasts(for: category) }
-						}
-					}
-				}
-			}
+			AsyncListStatusSection(
+				errorMessage: viewModel.errorMessage,
+				isLoading: viewModel.isLoading,
+				hasLoaded: viewModel.hasLoaded,
+				isEmpty: viewModel.items.isEmpty,
+				emptyMessage: "Brak audycji w tej kategorii.",
+				retryAction: { await viewModel.refresh { try await api.fetchPodcasts(for: category) } },
+				retryIdentifier: "categoryPodcasts.retry",
+				isRetryDisabled: viewModel.isLoading
+			)
 
 			ForEach(viewModel.items) { item in
 				NavigationLink {

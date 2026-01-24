@@ -14,18 +14,16 @@ struct PodcastCategoriesView: View {
 	var body: some View {
 		NavigationView {
 			List {
-				if let errorMessage = viewModel.errorMessage {
-					Section {
-						Text(errorMessage)
-							.foregroundColor(.secondary)
-
-						Button("Spróbuj ponownie") {
-							Task {
-								await viewModel.refresh(api.fetchCategories)
-							}
-						}
-					}
-				}
+				AsyncListStatusSection(
+					errorMessage: viewModel.errorMessage,
+					isLoading: viewModel.isLoading,
+					hasLoaded: viewModel.hasLoaded,
+					isEmpty: viewModel.items.isEmpty,
+					emptyMessage: "Brak kategorii podcastów.",
+					retryAction: { await viewModel.refresh(api.fetchCategories) },
+					retryIdentifier: "podcastCategories.retry",
+					isRetryDisabled: viewModel.isLoading
+				)
 
 				ForEach(viewModel.items) { item in
 					NavigationLink {
