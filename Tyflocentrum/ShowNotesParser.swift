@@ -81,11 +81,8 @@ enum ShowNotesParser {
 
 	private static func normalizedLines(fromHTML html: String) -> [String] {
 		let plainText = htmlToPlainText(html)
-			.replacingOccurrences(of: "\r\n", with: "\n")
-			.replacingOccurrences(of: "\r", with: "\n")
-
 		return plainText
-			.split(separator: "\n", omittingEmptySubsequences: false)
+			.split(whereSeparator: { $0.isNewline })
 			.map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
 			.filter { !$0.isEmpty }
 	}
@@ -289,4 +286,3 @@ enum ShowNotesParser {
 		return "\(baseTitle) (\(host))"
 	}
 }
-
