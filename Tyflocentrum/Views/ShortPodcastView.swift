@@ -7,14 +7,31 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 struct ShortPodcastView: View {
 	let podcast: Podcast
 	var showsListenAction = true
 	@EnvironmentObject var api: TyfloAPI
 	@State private var isShowingPlayer = false
+
+	private func announceIfVoiceOver(_ message: String) {
+		guard UIAccessibility.isVoiceOverRunning else { return }
+		UIAccessibility.post(notification: .announcement, argument: message)
+	}
+
+	private func copyPodcastLink() {
+		let urlString = podcast.guid.plainText.trimmingCharacters(in: .whitespacesAndNewlines)
+		guard !urlString.isEmpty else { return }
+		UIPasteboard.general.string = urlString
+		announceIfVoiceOver("Skopiowano link.")
+	}
+
 	var body: some View {
 		let excerpt = podcast.excerpt.plainText
+		let hint = showsListenAction
+			? "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcje: Słuchaj, Skopiuj link."
+			: "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcja: Skopiuj link."
 		let row = VStack(alignment: .leading, spacing: 6) {
 			Text(podcast.title.plainText)
 				.font(.headline)
@@ -36,7 +53,7 @@ struct ShortPodcastView: View {
 		.accessibilityElement(children: .ignore)
 		.accessibilityLabel(podcast.title.plainText)
 		.accessibilityValue(podcast.formattedDate)
-		.accessibilityHint(showsListenAction ? "Dwukrotnie stuknij, aby otworzyć szczegóły. Dostępna jest też akcja Słuchaj." : "Dwukrotnie stuknij, aby otworzyć szczegóły.")
+		.accessibilityHint(hint)
 		.accessibilityIdentifier("podcast.row.\(podcast.id)")
 
 		Group {
@@ -44,6 +61,9 @@ struct ShortPodcastView: View {
 				row
 					.accessibilityAction(named: "Słuchaj") {
 						isShowingPlayer = true
+					}
+					.accessibilityAction(named: "Skopiuj link") {
+						copyPodcastLink()
 					}
 					.sheet(isPresented: $isShowingPlayer) {
 						NavigationStack {
@@ -65,6 +85,9 @@ struct ShortPodcastView: View {
 			}
 			else {
 				row
+					.accessibilityAction(named: "Skopiuj link") {
+						copyPodcastLink()
+					}
 			}
 		}
 	}
