@@ -233,6 +233,20 @@ final class NewsFeedViewModel: ObservableObject {
 		}
 	}
 
+	private func fetchNextPodcastPage(api: TyfloAPI) async -> Bool {
+		var source = podcasts
+		let result = await fetchNextPage(api: api, source: &source)
+		podcasts = source
+		return result
+	}
+
+	private func fetchNextArticlePage(api: TyfloAPI) async -> Bool {
+		var source = articles
+		let result = await fetchNextPage(api: api, source: &source)
+		articles = source
+		return result
+	}
+
 	private func appendNextBatch(api: TyfloAPI, batchSize: Int) async {
 		podcasts.didFailLastFetch = false
 		articles.didFailLastFetch = false
@@ -245,10 +259,10 @@ final class NewsFeedViewModel: ObservableObject {
 			let articleNext = articles.nextItem
 
 			if podcastNext == nil && podcasts.hasMore {
-				_ = await fetchNextPage(api: api, source: &podcasts)
+				_ = await fetchNextPodcastPage(api: api)
 			}
 			if articleNext == nil && articles.hasMore {
-				_ = await fetchNextPage(api: api, source: &articles)
+				_ = await fetchNextArticlePage(api: api)
 			}
 
 			guard let selected = selectNextItem() else { break }
