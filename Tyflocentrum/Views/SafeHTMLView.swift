@@ -19,7 +19,7 @@ struct SafeHTMLView: UIViewRepresentable {
 	}
 
 	func makeCoordinator() -> Coordinator {
-		Coordinator()
+		Coordinator(allowedHost: baseURL?.host)
 	}
 
 	func makeUIView(context: Context) -> WKWebView {
@@ -46,6 +46,7 @@ struct SafeHTMLView: UIViewRepresentable {
 
 	func updateUIView(_ uiView: WKWebView, context: Context) {
 		uiView.accessibilityIdentifier = accessibilityIdentifier
+		context.coordinator.allowedHost = baseURL?.host
 
 		let document = Self.makeDocument(body: htmlBody, fontSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
 		guard context.coordinator.lastLoadedHTML != document else { return }
@@ -107,8 +108,25 @@ struct SafeHTMLView: UIViewRepresentable {
 		}
 	}
 
+	static func isAllowedMainFrameURL(_ url: URL, allowedHost: String?) -> Bool {
+		switch url.scheme?.lowercased() {
+		case "about":
+			true
+		case "http", "https":
+			guard let allowedHost else { return false }
+			return url.host == allowedHost
+		default:
+			false
+		}
+	}
+
 	final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
 		var lastLoadedHTML: String?
+		var allowedHost: String?
+
+		init(allowedHost: String? = nil) {
+			self.allowedHost = allowedHost
+		}
 
 		func webView(
 			_ webView: WKWebView,
@@ -123,6 +141,12 @@ struct SafeHTMLView: UIViewRepresentable {
 			if navigationAction.navigationType == .linkActivated {
 				openExternally(url)
 				decisionHandler(.cancel)
+				return
+			}
+
+			let isMainFrame = navigationAction.targetFrame?.isMainFrame ?? true
+			if isMainFrame {
+				decisionHandler(SafeHTMLView.isAllowedMainFrameURL(url, allowedHost: allowedHost) ? .allow : .cancel)
 				return
 			}
 

@@ -29,6 +29,7 @@ struct DetailedArticleView: View {
 				baseURL: URL(string: "https://tyfloswiat.pl"),
 				accessibilityIdentifier: "articleDetail.content"
 			)
+			.frame(maxWidth: .infinity, maxHeight: .infinity)
 		}
 		.navigationTitle(article.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)

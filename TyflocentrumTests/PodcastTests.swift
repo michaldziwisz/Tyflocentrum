@@ -220,6 +220,14 @@ final class SafeHTMLViewTests: XCTestCase {
 		XCTAssertFalse(SafeHTMLView.isAllowedExternalScheme("file"))
 		XCTAssertFalse(SafeHTMLView.isAllowedExternalScheme("data"))
 	}
+
+	func testAllowedMainFrameURLRestrictsNavigationToAllowedHost() {
+		let host = "tyfloswiat.pl"
+		XCTAssertTrue(SafeHTMLView.isAllowedMainFrameURL(URL(string: "about:blank")!, allowedHost: host))
+		XCTAssertTrue(SafeHTMLView.isAllowedMainFrameURL(URL(string: "https://\(host)/")!, allowedHost: host))
+		XCTAssertFalse(SafeHTMLView.isAllowedMainFrameURL(URL(string: "https://example.com/")!, allowedHost: host))
+		XCTAssertFalse(SafeHTMLView.isAllowedMainFrameURL(URL(string: "https://\(host)/")!, allowedHost: nil))
+	}
 }
 
 @MainActor
