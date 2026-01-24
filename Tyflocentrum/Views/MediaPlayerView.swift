@@ -382,7 +382,7 @@ private struct RelatedLinksSheet: View {
 
 	private func copyableString(for url: URL) -> String {
 		if url.scheme?.lowercased() == "mailto" {
-			return url.resourceSpecifier
+			return url.absoluteString.replacingOccurrences(of: "mailto:", with: "")
 		}
 		return url.absoluteString
 	}
