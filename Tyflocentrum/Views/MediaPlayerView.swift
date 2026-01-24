@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 struct MediaPlayerView: View {
 	private static let timeFormatterHMS: DateComponentsFormatter = {
 		let formatter = DateComponentsFormatter()
@@ -362,7 +363,7 @@ private struct RelatedLinksSheet: View {
 	let title: String
 	let links: [RelatedLink]
 
-	@Environment(\.openURL) private var openURL
+	@State private var sharePayload: SharePayload?
 
 	private func hostLabel(for url: URL) -> String? {
 		if let host = url.host, !host.isEmpty {
@@ -374,12 +375,34 @@ private struct RelatedLinksSheet: View {
 		return nil
 	}
 
+	private func announceIfVoiceOver(_ message: String) {
+		guard UIAccessibility.isVoiceOverRunning else { return }
+		UIAccessibility.post(notification: .announcement, argument: message)
+	}
+
+	private func copyableString(for url: URL) -> String {
+		if url.scheme?.lowercased() == "mailto" {
+			return url.resourceSpecifier
+		}
+		return url.absoluteString
+	}
+
+	private func copyLink(_ link: RelatedLink) {
+		UIPasteboard.general.string = copyableString(for: link.url)
+		announceIfVoiceOver("Skopiowano link.")
+	}
+
+	private func activityItem(for url: URL) -> Any {
+		if url.scheme?.lowercased() == "mailto" {
+			return copyableString(for: url)
+		}
+		return url
+	}
+
 	var body: some View {
 		NavigationStack {
 			List(links) { link in
-				Button {
-					openURL(link.url)
-				} label: {
+				Link(destination: link.url) {
 					VStack(alignment: .leading, spacing: 4) {
 						Text(link.title)
 							.foregroundColor(.primary)
@@ -391,10 +414,43 @@ private struct RelatedLinksSheet: View {
 						}
 					}
 				}
+				.tint(.primary)
+				.contextMenu {
+					Button("Skopiuj link") {
+						copyLink(link)
+					}
+					Button("Udostępnij link") {
+						sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
+					}
+				}
 				.accessibilityHint("Otwiera odnośnik.")
+				.accessibilityAction(named: "Skopiuj link") {
+					copyLink(link)
+				}
+				.accessibilityAction(named: "Udostępnij link") {
+					sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
+				}
 			}
 			.navigationTitle("Odnośniki")
 			.navigationBarTitleDisplayMode(.inline)
 		}
+		.sheet(item: $sharePayload) { payload in
+			ActivityView(activityItems: payload.activityItems)
+		}
 	}
+}
+
+private struct SharePayload: Identifiable {
+	let id = UUID()
+	let activityItems: [Any]
+}
+
+private struct ActivityView: UIViewControllerRepresentable {
+	let activityItems: [Any]
+
+	func makeUIViewController(context: Context) -> UIActivityViewController {
+		UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+	}
+
+	func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }

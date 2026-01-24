@@ -281,8 +281,6 @@ enum ShowNotesParser {
 	}
 
 	private static func makeLinkTitle(baseTitle: String, url: URL, isDisambiguationNeeded: Bool) -> String {
-		guard isDisambiguationNeeded else { return baseTitle }
-		guard let host = url.host, !host.isEmpty else { return baseTitle }
-		return "\(baseTitle) (\(host))"
+		baseTitle
 	}
 }
