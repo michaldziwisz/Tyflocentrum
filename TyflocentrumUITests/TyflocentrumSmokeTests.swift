@@ -121,6 +121,20 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(content.waitForExistence(timeout: 5))
 	}
 
+	func testCanOpenArticleFromNewsAndSeeReadableContent() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
+		XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
+		articleRow.tap()
+
+		let content = app.textViews.matching(identifier: "articleDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+	}
+
 	func testRadioContactShowsNoLiveAlert() {
 		let app = makeApp()
 		app.launch()
