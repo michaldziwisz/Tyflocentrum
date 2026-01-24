@@ -30,7 +30,7 @@ struct MediaPlayerView: View {
 	let title: String
 	let subtitle: String?
 	let canBeLive: Bool
-	let podcastPostID: Int? = nil
+	let podcastPostID: Int?
 	@State private var shouldShowContactForm = false
 	@State private var shouldShowNoLiveAlert = false
 	@State private var isScrubbing = false
@@ -41,6 +41,14 @@ struct MediaPlayerView: View {
 	@State private var relatedLinks: [RelatedLink] = []
 	@State private var shouldShowChapterMarkers = false
 	@State private var shouldShowRelatedLinks = false
+
+	init(podcast: URL, title: String, subtitle: String?, canBeLive: Bool, podcastPostID: Int? = nil) {
+		self.podcast = podcast
+		self.title = title
+		self.subtitle = subtitle
+		self.canBeLive = canBeLive
+		self.podcastPostID = podcastPostID
+	}
 
 	private func loadShowNotes() async {
 		guard let podcastPostID else { return }
