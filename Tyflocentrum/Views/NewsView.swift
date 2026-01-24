@@ -152,6 +152,7 @@ struct NewsView: View {
 							}
 						)
 					}
+					.accessibilityRemoveTraits(.isButton)
 				}
 			}
 			.accessibilityIdentifier("news.list")

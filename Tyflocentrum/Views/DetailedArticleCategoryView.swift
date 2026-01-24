@@ -30,6 +30,7 @@ struct DetailedArticleCategoryView: View {
 				} label: {
 					ShortPodcastView(podcast: item, showsListenAction: false)
 				}
+				.accessibilityRemoveTraits(.isButton)
 			}
 		}
 		.accessibilityIdentifier("categoryArticles.list")

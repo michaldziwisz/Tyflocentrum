@@ -31,6 +31,7 @@ struct ArticlesCategoriesView: View {
 					} label: {
 						ShortCategoryView(category: item)
 					}
+					.accessibilityRemoveTraits(.isButton)
 				}
 			}
 			.accessibilityIdentifier("articleCategories.list")

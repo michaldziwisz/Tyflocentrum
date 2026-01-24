@@ -36,6 +36,7 @@ struct DetailedCategoryView: View {
 						}
 					)
 				}
+				.accessibilityRemoveTraits(.isButton)
 			}
 		}
 		.accessibilityIdentifier("categoryPodcasts.list")
