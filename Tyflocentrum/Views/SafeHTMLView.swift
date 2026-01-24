@@ -93,30 +93,30 @@ struct SafeHTMLView: UIViewRepresentable {
 	static func isAllowedWebViewScheme(_ scheme: String?) -> Bool {
 		switch scheme?.lowercased() {
 		case "http", "https", "about":
-			true
+			return true
 		default:
-			false
+			return false
 		}
 	}
 
 	static func isAllowedExternalScheme(_ scheme: String?) -> Bool {
 		switch scheme?.lowercased() {
 		case "http", "https", "mailto", "tel":
-			true
+			return true
 		default:
-			false
+			return false
 		}
 	}
 
 	static func isAllowedMainFrameURL(_ url: URL, allowedHost: String?) -> Bool {
 		switch url.scheme?.lowercased() {
 		case "about":
-			true
+			return true
 		case "http", "https":
 			guard let allowedHost else { return false }
 			return url.host == allowedHost
 		default:
-			false
+			return false
 		}
 	}
 
