@@ -53,28 +53,33 @@ struct DetailedPodcastView: View {
 			comments = await api.getComments(for: podcast)
 		}
 		.toolbar {
-			ShareLink(
-				"Udostępnij",
-				item: podcast.guid.plainText,
-				message: Text("Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum")
-			)
-			.accessibilityLabel("Udostępnij audycję")
-			.accessibilityHint("Otwiera systemowe udostępnianie linku do audycji.")
-			.accessibilityIdentifier("podcastDetail.share")
-			NavigationLink {
-				MediaPlayerView(
-					podcast: api.getListenableURL(for: podcast),
-					title: podcast.title.plainText,
-					subtitle: podcast.formattedDate,
-					canBeLive: false,
-					podcastPostID: podcast.id
+			ToolbarItem(placement: .primaryAction) {
+				ShareLink(
+					"Udostępnij",
+					item: podcast.guid.plainText,
+					message: Text("Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum")
 				)
-			} label: {
-				Text("Słuchaj")
+				.accessibilityLabel("Udostępnij audycję")
+				.accessibilityHint("Otwiera systemowe udostępnianie linku do audycji.")
+				.accessibilityIdentifier("podcastDetail.share")
 			}
-			.accessibilityLabel("Słuchaj audycji")
-			.accessibilityHint("Otwiera odtwarzacz audycji.")
-			.accessibilityIdentifier("podcastDetail.listen")
+
+			ToolbarItem(placement: .primaryAction) {
+				NavigationLink {
+					MediaPlayerView(
+						podcast: api.getListenableURL(for: podcast),
+						title: podcast.title.plainText,
+						subtitle: podcast.formattedDate,
+						canBeLive: false,
+						podcastPostID: podcast.id
+					)
+				} label: {
+					Text("Słuchaj")
+				}
+				.accessibilityLabel("Słuchaj audycji")
+				.accessibilityHint("Otwiera odtwarzacz audycji.")
+				.accessibilityIdentifier("podcastDetail.listen")
+			}
 		}
 	}
 }
