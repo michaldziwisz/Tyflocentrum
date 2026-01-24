@@ -11,10 +11,12 @@ import SwiftUI
 struct SearchView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@State private var searchText = ""
+	@State private var lastSearchQuery = ""
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
 	private func performSearch() {
 		let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard !trimmed.isEmpty else { return }
+		lastSearchQuery = trimmed
 		Task {
 			await viewModel.refresh { try await api.fetchPodcasts(matching: trimmed) }
 			let announcement = viewModel.errorMessage
@@ -66,6 +68,11 @@ struct SearchView: View {
 				}
 			}
 			.accessibilityIdentifier("search.list")
+			.refreshable {
+				let query = lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+				guard !query.isEmpty else { return }
+				await viewModel.refresh { try await api.fetchPodcasts(matching: query) }
+			}
 			.navigationTitle("Szukaj")
 		}
 	}

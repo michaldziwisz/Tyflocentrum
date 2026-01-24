@@ -512,3 +512,82 @@ final class AsyncListViewModelTests: XCTestCase {
 		XCTAssertEqual(viewModel.errorMessage, "Nie udało się pobrać danych. Spróbuj ponownie.")
 	}
 }
+
+@MainActor
+final class ContactViewModelTests: XCTestCase {
+	override func tearDown() {
+		StubURLProtocol.requestHandler = nil
+		super.tearDown()
+	}
+
+	func testCanSendRequiresNameAndMessage() {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		let viewModel = ContactViewModel(userDefaults: defaults)
+		viewModel.name = " "
+		viewModel.message = " "
+		XCTAssertFalse(viewModel.canSend)
+
+		viewModel.name = "Ala"
+		viewModel.message = "Test"
+		XCTAssertTrue(viewModel.canSend)
+	}
+
+	func testSendShowsErrorWhenAPIReportsFailure() async {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		StubURLProtocol.requestHandler = { request in
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			let data = #"{"author":"UI","comment":"Test","error":"Błąd wysyłki"}"#.data(using: .utf8) ?? Data()
+			return (response, data)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let viewModel = ContactViewModel(userDefaults: defaults)
+		viewModel.name = "UI"
+		viewModel.message = "Wiadomość"
+
+		let didSend = await viewModel.send(using: api)
+
+		XCTAssertFalse(didSend)
+		XCTAssertTrue(viewModel.shouldShowError)
+		XCTAssertEqual(viewModel.errorMessage, "Błąd wysyłki")
+		XCTAssertFalse(viewModel.isSending)
+	}
+
+	func testSendResetsMessageOnSuccess() async {
+		let suiteName = "TyflocentrumTests.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defer { defaults.removePersistentDomain(forName: suiteName) }
+
+		StubURLProtocol.requestHandler = { request in
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			let data = #"{"author":"UI","comment":"Test","error":null}"#.data(using: .utf8) ?? Data()
+			return (response, data)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let viewModel = ContactViewModel(userDefaults: defaults)
+		viewModel.name = "UI"
+		viewModel.message = "Wiadomość"
+
+		let didSend = await viewModel.send(using: api)
+
+		XCTAssertTrue(didSend)
+		XCTAssertFalse(viewModel.shouldShowError)
+		XCTAssertEqual(viewModel.message, "\nWysłane przy pomocy aplikacji Tyflocentrum")
+		XCTAssertFalse(viewModel.isSending)
+	}
+
+	private func makeSession() -> URLSession {
+		let config = URLSessionConfiguration.ephemeral
+		config.protocolClasses = [StubURLProtocol.self]
+		return URLSession(configuration: config)
+	}
+}
