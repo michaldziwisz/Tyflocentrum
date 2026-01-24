@@ -95,8 +95,8 @@ final class TyfloAPITests: XCTestCase {
 
 		let api = TyfloAPI(session: makeSession())
 		do {
-			let podcasts = try await api.fetchPodcastsPage(page: 2, perPage: 20)
-			XCTAssertTrue(podcasts.isEmpty)
+			let page = try await api.fetchPodcastsPage(page: 2, perPage: 20)
+			XCTAssertTrue(page.items.isEmpty)
 		} catch {
 			XCTFail("Expected success but got error: \(error)")
 		}
@@ -181,8 +181,8 @@ final class TyfloAPITests: XCTestCase {
 
 		let api = TyfloAPI(session: makeSession())
 		do {
-			let articles = try await api.fetchArticlesPage(page: 3, perPage: 10)
-			XCTAssertTrue(articles.isEmpty)
+			let page = try await api.fetchArticlesPage(page: 3, perPage: 10)
+			XCTAssertTrue(page.items.isEmpty)
 		} catch {
 			XCTFail("Expected success but got error: \(error)")
 		}

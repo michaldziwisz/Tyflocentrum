@@ -103,6 +103,7 @@ final class NewsFeedViewModel: ObservableObject {
 	private struct SourceState {
 		var kind: NewsItemKind
 		var nextPage: Int = 1
+		var totalPages: Int?
 		var nextIndex: Int = 0
 		var hasMore: Bool = true
 		var didFailLastFetch: Bool = false
@@ -119,6 +120,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 		mutating func reset() {
 			nextPage = 1
+			totalPages = nil
 			nextIndex = 0
 			hasMore = true
 			didFailLastFetch = false
@@ -206,24 +208,32 @@ final class NewsFeedViewModel: ObservableObject {
 		guard !source.didFailLastFetch else { return false }
 
 		do {
-			let pageItems: [Podcast]
+			let page: TyfloAPI.WPPostsPage
 			switch source.kind {
 			case .podcast:
-				pageItems = try await api.fetchPodcastsPage(page: source.nextPage, perPage: sourcePerPage)
+				page = try await api.fetchPodcastsPage(page: source.nextPage, perPage: sourcePerPage)
 			case .article:
-				pageItems = try await api.fetchArticlesPage(page: source.nextPage, perPage: sourcePerPage)
+				page = try await api.fetchArticlesPage(page: source.nextPage, perPage: sourcePerPage)
+			}
+
+			if let totalPages = page.totalPages {
+				source.totalPages = totalPages
 			}
 
 			source.didFailLastFetch = false
 			source.nextPage += 1
 
+			let pageItems = page.items
 			if pageItems.isEmpty {
 				source.hasMore = false
 				return true
 			}
 
 			source.buffer.append(contentsOf: pageItems)
-			if pageItems.count < sourcePerPage {
+
+			if let totalPages = source.totalPages {
+				source.hasMore = source.nextPage <= totalPages
+			} else if pageItems.count < sourcePerPage {
 				source.hasMore = false
 			}
 			return true
@@ -424,9 +434,15 @@ struct NewsView: View {
 							accessibilityIdentifierOverride: item.kind == .podcast
 								? nil
 								: "article.row.\(item.post.id)"
-						)
+							)
 					}
 					.accessibilityRemoveTraits(.isButton)
+					.onAppear {
+						guard viewModel.errorMessage == nil else { return }
+						guard viewModel.hasLoaded else { return }
+						guard viewModel.items.last?.id == item.id else { return }
+						Task { await viewModel.loadMore(api: api) }
+					}
 				}
 
 				if viewModel.errorMessage == nil, viewModel.hasLoaded {
@@ -440,12 +456,16 @@ struct NewsView: View {
 							.disabled(viewModel.isLoadingMore)
 						}
 					}
-					else if viewModel.canLoadMore {
+					else if viewModel.isLoadingMore {
 						Section {
 							ProgressView("Ładowanie starszych treści…")
-								.onAppear {
-									Task { await viewModel.loadMore(api: api) }
-								}
+						}
+					}
+					else if viewModel.canLoadMore {
+						Section {
+							Button("Załaduj starsze treści") {
+								Task { await viewModel.loadMore(api: api) }
+							}
 						}
 					}
 				}
