@@ -42,7 +42,7 @@ enum NewsItemKind: String {
 
 struct NewsItem: Identifiable {
 	let kind: NewsItemKind
-	let post: Podcast
+	let post: WPPostSummary
 
 	var id: String {
 		"\(kind.rawValue).\(post.id)"
@@ -107,9 +107,9 @@ final class NewsFeedViewModel: ObservableObject {
 		var nextIndex: Int = 0
 		var hasMore: Bool = true
 		var didFailLastFetch: Bool = false
-		var buffer: [Podcast] = []
+		var buffer: [WPPostSummary] = []
 
-		var nextItem: Podcast? {
+		var nextItem: WPPostSummary? {
 			guard nextIndex < buffer.count else { return nil }
 			return buffer[nextIndex]
 		}
@@ -208,12 +208,12 @@ final class NewsFeedViewModel: ObservableObject {
 		guard !source.didFailLastFetch else { return false }
 
 		do {
-			let page: TyfloAPI.WPPostsPage
+			let page: TyfloAPI.WPPage<WPPostSummary>
 			switch source.kind {
 			case .podcast:
-				page = try await api.fetchPodcastsPage(page: source.nextPage, perPage: sourcePerPage)
+				page = try await api.fetchPodcastSummariesPage(page: source.nextPage, perPage: sourcePerPage)
 			case .article:
-				page = try await api.fetchArticlesPage(page: source.nextPage, perPage: sourcePerPage)
+				page = try await api.fetchArticleSummariesPage(page: source.nextPage, perPage: sourcePerPage)
 			}
 
 			if let totalPages = page.totalPages {
@@ -268,11 +268,18 @@ final class NewsFeedViewModel: ObservableObject {
 			let podcastNext = podcasts.nextItem
 			let articleNext = articles.nextItem
 
-			if podcastNext == nil && podcasts.hasMore {
-				_ = await fetchNextPodcastPage(api: api)
+			if podcastNext == nil, podcasts.hasMore, articleNext == nil, articles.hasMore {
+				async let podcastsFetched = fetchNextPodcastPage(api: api)
+				async let articlesFetched = fetchNextArticlePage(api: api)
+				_ = await (podcastsFetched, articlesFetched)
 			}
-			if articleNext == nil && articles.hasMore {
-				_ = await fetchNextArticlePage(api: api)
+			else {
+				if podcastNext == nil && podcasts.hasMore {
+					_ = await fetchNextPodcastPage(api: api)
+				}
+				if articleNext == nil && articles.hasMore {
+					_ = await fetchNextArticlePage(api: api)
+				}
 			}
 
 			guard let selected = selectNextItem() else { break }
@@ -290,7 +297,7 @@ final class NewsFeedViewModel: ObservableObject {
 		canLoadMore = podcasts.nextItem != nil || articles.nextItem != nil || podcasts.hasMore || articles.hasMore
 	}
 
-	private func selectNextItem() -> (kind: NewsItemKind, post: Podcast)? {
+	private func selectNextItem() -> (kind: NewsItemKind, post: WPPostSummary)? {
 		let p = podcasts.nextItem
 		let a = articles.nextItem
 
@@ -415,34 +422,29 @@ struct NewsView: View {
 				)
 
 				ForEach(viewModel.items) { item in
+					let stubPodcast = item.post.asPodcastStub()
 					NavigationLink {
 						switch item.kind {
 						case .podcast:
-							DetailedPodcastView(podcast: item.post)
+							LazyDetailedPodcastView(summary: item.post)
 						case .article:
-							DetailedArticleView(article: item.post)
+							LazyDetailedArticleView(summary: item.post)
 						}
 					} label: {
 						ShortPodcastView(
-							podcast: item.post,
+							podcast: stubPodcast,
 							showsListenAction: item.kind == .podcast,
 							onListen: item.kind == .podcast
-								? { playerPodcast = item.post }
+								? { playerPodcast = stubPodcast }
 								: nil,
 							leadingSystemImageName: item.kind.systemImageName,
 							accessibilityKindLabel: item.kind.label,
 							accessibilityIdentifierOverride: item.kind == .podcast
 								? nil
 								: "article.row.\(item.post.id)"
-							)
+						)
 					}
 					.accessibilityRemoveTraits(.isButton)
-					.onAppear {
-						guard viewModel.errorMessage == nil else { return }
-						guard viewModel.hasLoaded else { return }
-						guard viewModel.items.last?.id == item.id else { return }
-						Task { await viewModel.loadMore(api: api) }
-					}
 				}
 
 				if viewModel.errorMessage == nil, viewModel.hasLoaded {

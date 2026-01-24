@@ -109,6 +109,15 @@ private final class UITestURLProtocol: URLProtocol {
 		}
 
 		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
+			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+				return (
+					200,
+					#"""
+					{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=\#(postID)"},"link":"https://tyflopodcast.net/?p=\#(postID)"}
+					"""#.data(using: .utf8) ?? Data()
+				)
+			}
+
 			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
 			let queryItems = components?.queryItems ?? []
 
@@ -120,12 +129,12 @@ private final class UITestURLProtocol: URLProtocol {
 				if requestIndex <= 1 {
 					return (
 						200,
-						#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+						#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"},"link":"https://tyflopodcast.net/?p=1"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 					)
 				}
 				return (
 					200,
-					#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"}},{"id":6,"date":"2026-01-21T00:59:40","title":{"rendered":"Test podcast wynik 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=6"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+					#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"},"link":"https://tyflopodcast.net/?p=1"},{"id":6,"date":"2026-01-21T00:59:40","title":{"rendered":"Test podcast wynik 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=6"},"link":"https://tyflopodcast.net/?p=6"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 				)
 			}
 
@@ -137,13 +146,13 @@ private final class UITestURLProtocol: URLProtocol {
 				if requestIndex <= 1 {
 					return (
 						200,
-						#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+						#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"},"link":"https://tyflopodcast.net/?p=1"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 					)
 				}
 
 				return (
 					200,
-					#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"}},{"id":4,"date":"2026-01-21T00:59:40","title":{"rendered":"Test podcast w kategorii 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=4"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+					#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"},"link":"https://tyflopodcast.net/?p=1"},{"id":4,"date":"2026-01-21T00:59:40","title":{"rendered":"Test podcast w kategorii 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=4"},"link":"https://tyflopodcast.net/?p=4"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 				)
 			}
 
@@ -154,11 +163,20 @@ private final class UITestURLProtocol: URLProtocol {
 
 			return (
 				200,
-				#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"}},{"id":3,"date":"2026-01-21T00:59:40","title":{"rendered":"Test podcast 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=3"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+				#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"},"link":"https://tyflopodcast.net/?p=1"},{"id":3,"date":"2026-01-21T00:59:40","title":{"rendered":"Test podcast 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=3"},"link":"https://tyflopodcast.net/?p=3"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 			)
 		}
 
 		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
+			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+				return (
+					200,
+					#"""
+					{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=\#(postID)"},"link":"https://tyfloswiat.pl/?p=\#(postID)"}
+					"""#.data(using: .utf8) ?? Data()
+				)
+			}
+
 			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
 			let queryItems = components?.queryItems ?? []
 
@@ -170,13 +188,13 @@ private final class UITestURLProtocol: URLProtocol {
 				if requestIndex <= 1 {
 					return (
 						200,
-						#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+						#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"},"link":"https://tyfloswiat.pl/?p=2"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 					)
 				}
 
 				return (
 					200,
-					#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"}},{"id":5,"date":"2026-01-21T00:59:40","title":{"rendered":"Test artykuł 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=5"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+					#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"},"link":"https://tyfloswiat.pl/?p=2"},{"id":5,"date":"2026-01-21T00:59:40","title":{"rendered":"Test artykuł 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=5"},"link":"https://tyfloswiat.pl/?p=5"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 				)
 			}
 
@@ -186,7 +204,7 @@ private final class UITestURLProtocol: URLProtocol {
 
 			return (
 				200,
-				#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
+				#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"},"link":"https://tyfloswiat.pl/?p=2"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 			)
 		}
 

@@ -74,7 +74,7 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
-	func testFetchPodcastsPageUsesPerPageAndPageParameters() async {
+	func testFetchPodcastSummariesPageUsesPerPageAndPageParameters() async {
 		let requestMade = expectation(description: "request made")
 
 		StubURLProtocol.requestHandler = { request in
@@ -86,6 +86,7 @@ final class TyfloAPITests: XCTestCase {
 
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
 			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "20")
 			XCTAssertEqual(items.first(where: { $0.name == "page" })?.value, "2")
 
@@ -95,7 +96,7 @@ final class TyfloAPITests: XCTestCase {
 
 		let api = TyfloAPI(session: makeSession())
 		do {
-			let page = try await api.fetchPodcastsPage(page: 2, perPage: 20)
+			let page = try await api.fetchPodcastSummariesPage(page: 2, perPage: 20)
 			XCTAssertTrue(page.items.isEmpty)
 		} catch {
 			XCTFail("Expected success but got error: \(error)")
@@ -160,7 +161,7 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
-	func testFetchArticlesPageUsesPerPageAndPageParameters() async {
+	func testFetchArticleSummariesPageUsesPerPageAndPageParameters() async {
 		let requestMade = expectation(description: "request made")
 
 		StubURLProtocol.requestHandler = { request in
@@ -172,6 +173,7 @@ final class TyfloAPITests: XCTestCase {
 
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
 			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "10")
 			XCTAssertEqual(items.first(where: { $0.name == "page" })?.value, "3")
 
@@ -181,7 +183,7 @@ final class TyfloAPITests: XCTestCase {
 
 		let api = TyfloAPI(session: makeSession())
 		do {
-			let page = try await api.fetchArticlesPage(page: 3, perPage: 10)
+			let page = try await api.fetchArticleSummariesPage(page: 3, perPage: 10)
 			XCTAssertTrue(page.items.isEmpty)
 		} catch {
 			XCTFail("Expected success but got error: \(error)")
