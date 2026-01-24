@@ -131,7 +131,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
 		articleRow.tap()
 
-		let content = app.textViews.matching(identifier: "articleDetail.content").firstMatch
+		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
 		XCTAssertTrue(content.waitForExistence(timeout: 5))
 	}
 

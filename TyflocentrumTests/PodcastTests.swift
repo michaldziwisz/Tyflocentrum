@@ -193,6 +193,35 @@ final class SeekPolicyTests: XCTestCase {
 	}
 }
 
+final class SafeHTMLViewTests: XCTestCase {
+	func testMakeDocumentWrapsBodyAndAddsCSP() {
+		let body = "<h1>Test</h1><p>Ala ma kota</p>"
+		let document = SafeHTMLView.makeDocument(body: body, fontSize: 17, languageCode: "pl")
+
+		XCTAssertTrue(document.contains("<!doctype html>"))
+		XCTAssertTrue(document.contains("<html lang=\"pl\">"))
+		XCTAssertTrue(document.contains(body))
+		XCTAssertTrue(document.contains("Content-Security-Policy"))
+		XCTAssertTrue(document.contains("default-src 'none'"))
+		XCTAssertTrue(document.contains("frame-src 'none'"))
+		XCTAssertTrue(document.contains("form-action 'none'"))
+	}
+
+	func testAllowedSchemesPreventUnsafeNavigation() {
+		XCTAssertTrue(SafeHTMLView.isAllowedWebViewScheme("https"))
+		XCTAssertTrue(SafeHTMLView.isAllowedWebViewScheme("http"))
+		XCTAssertTrue(SafeHTMLView.isAllowedWebViewScheme("about"))
+		XCTAssertFalse(SafeHTMLView.isAllowedWebViewScheme("file"))
+		XCTAssertFalse(SafeHTMLView.isAllowedWebViewScheme("javascript"))
+
+		XCTAssertTrue(SafeHTMLView.isAllowedExternalScheme("https"))
+		XCTAssertTrue(SafeHTMLView.isAllowedExternalScheme("mailto"))
+		XCTAssertTrue(SafeHTMLView.isAllowedExternalScheme("tel"))
+		XCTAssertFalse(SafeHTMLView.isAllowedExternalScheme("file"))
+		XCTAssertFalse(SafeHTMLView.isAllowedExternalScheme("data"))
+	}
+}
+
 @MainActor
 final class MediaPlayerIntegrationTests: XCTestCase {
 	override func tearDown() {

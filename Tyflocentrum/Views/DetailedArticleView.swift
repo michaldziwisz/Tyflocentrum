@@ -10,27 +10,25 @@ import SwiftUI
 struct DetailedArticleView: View {
 	let article: Podcast
 	var body: some View {
-		ScrollView {
-			VStack(alignment: .leading, spacing: 16) {
-				VStack(alignment: .leading, spacing: 6) {
-					Text(article.title.plainText)
-						.font(.title3.weight(.semibold))
+		VStack(alignment: .leading, spacing: 16) {
+			VStack(alignment: .leading, spacing: 6) {
+				Text(article.title.plainText)
+					.font(.title3.weight(.semibold))
 
-					Text(article.formattedDate)
-						.font(.subheadline)
-						.foregroundColor(.secondary)
-				}
-				.accessibilityElement(children: .combine)
-				.accessibilityAddTraits(.isHeader)
-				.accessibilityIdentifier("articleDetail.header")
-
-				AccessibleTextView(
-					text: article.content.plainText,
-					textStyle: .body,
-					accessibilityIdentifier: "articleDetail.content"
-				)
+				Text(article.formattedDate)
+					.font(.subheadline)
+					.foregroundColor(.secondary)
 			}
-			.padding()
+			.accessibilityElement(children: .combine)
+			.accessibilityAddTraits(.isHeader)
+			.accessibilityIdentifier("articleDetail.header")
+			.padding([.horizontal, .top])
+
+			SafeHTMLView(
+				htmlBody: article.content.rendered,
+				baseURL: URL(string: "https://tyfloswiat.pl"),
+				accessibilityIdentifier: "articleDetail.content"
+			)
 		}
 		.navigationTitle(article.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
