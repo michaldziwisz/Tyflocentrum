@@ -24,10 +24,11 @@ struct DetailedArticleView: View {
 				.accessibilityAddTraits(.isHeader)
 				.accessibilityIdentifier("articleDetail.header")
 
-				Text(article.content.plainText)
-					.font(.body)
-					.textSelection(.enabled)
-					.accessibilityIdentifier("articleDetail.content")
+				AccessibleTextView(
+					text: article.content.plainText,
+					textStyle: .body,
+					accessibilityIdentifier: "articleDetail.content"
+				)
 			}
 			.padding()
 		}
