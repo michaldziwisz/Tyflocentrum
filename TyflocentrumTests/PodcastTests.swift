@@ -55,6 +55,21 @@ final class PlaybackRatePolicyTests: XCTestCase {
 	func testNextPlaybackRateTreatsUnknownAsFirst() {
 		XCTAssertEqual(PlaybackRatePolicy.next(after: 1.33), 1.25)
 	}
+
+	func testPreviousPlaybackRateCyclesBackward() {
+		XCTAssertEqual(PlaybackRatePolicy.previous(before: 2.0), 1.75)
+		XCTAssertEqual(PlaybackRatePolicy.previous(before: 1.75), 1.5)
+		XCTAssertEqual(PlaybackRatePolicy.previous(before: 1.5), 1.25)
+		XCTAssertEqual(PlaybackRatePolicy.previous(before: 1.25), 1.0)
+	}
+
+	func testPreviousPlaybackRateWrapsToEnd() {
+		XCTAssertEqual(PlaybackRatePolicy.previous(before: 1.0), 2.0)
+	}
+
+	func testPreviousPlaybackRateTreatsUnknownAsLast() {
+		XCTAssertEqual(PlaybackRatePolicy.previous(before: 1.33), 2.0)
+	}
 }
 
 final class ResumePositionStoreTests: XCTestCase {

@@ -196,6 +196,16 @@ enum PlaybackRatePolicy {
 		let nextIndex = supportedRates.index(after: currentIndex)
 		return nextIndex < supportedRates.endIndex ? supportedRates[nextIndex] : supportedRates[0]
 	}
+
+	static func previous(before rate: Float) -> Float {
+		guard !supportedRates.isEmpty else { return rate }
+		let currentIndex = supportedRates.firstIndex(of: rate) ?? 0
+		let previousIndex = currentIndex - 1
+		guard previousIndex >= supportedRates.startIndex else {
+			return supportedRates[supportedRates.index(before: supportedRates.endIndex)]
+		}
+		return supportedRates[previousIndex]
+	}
 }
 
 struct ResumePositionStore {
