@@ -13,20 +13,30 @@ struct SearchView: View {
 	@State private var searchText = ""
 	@State private var lastSearchQuery = ""
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
-	private func performSearch() {
-		let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+
+	@MainActor
+	private func search(query: String) async {
+		let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard !trimmed.isEmpty else { return }
 		lastSearchQuery = trimmed
-		Task {
-			await viewModel.refresh { try await api.fetchPodcasts(matching: trimmed) }
-			let announcement = viewModel.errorMessage
-				?? (viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników.")
-			UIAccessibility.post(
-				notification: .announcement,
-				argument: announcement
-			)
-		}
+
+		await viewModel.refresh { try await api.fetchPodcasts(matching: trimmed) }
+		let announcement = viewModel.errorMessage
+			?? (viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników.")
+		UIAccessibility.post(
+			notification: .announcement,
+			argument: announcement
+		)
 	}
+
+	private func performSearch() {
+		Task { await search(query: searchText) }
+	}
+
+	private func retryLastSearch() {
+		Task { await search(query: lastSearchQuery) }
+	}
+
 	var body: some View {
 		NavigationView {
 			List {
@@ -51,6 +61,13 @@ struct SearchView: View {
 					if let errorMessage = viewModel.errorMessage {
 						Text(errorMessage)
 							.foregroundColor(.secondary)
+
+						Button("Spróbuj ponownie") {
+							retryLastSearch()
+						}
+						.accessibilityIdentifier("search.retry")
+						.accessibilityHint("Ponawia ostatnie wyszukiwanie.")
+						.disabled(lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
 					}
 					else if viewModel.hasLoaded && viewModel.items.isEmpty {
 						Text("Brak wyników wyszukiwania dla podanej frazy. Spróbuj użyć innych słów kluczowych.")
@@ -71,7 +88,7 @@ struct SearchView: View {
 			.refreshable {
 				let query = lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
 				guard !query.isEmpty else { return }
-				await viewModel.refresh { try await api.fetchPodcasts(matching: query) }
+				await search(query: query)
 			}
 			.navigationTitle("Szukaj")
 		}

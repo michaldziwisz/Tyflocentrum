@@ -324,7 +324,9 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 		XCTAssertTrue(searchList.staticTexts[errorMessage].waitForExistence(timeout: 5))
 
-		searchButton.tap()
+		let retryButton = app.descendants(matching: .any).matching(identifier: "search.retry").firstMatch
+		XCTAssertTrue(retryButton.waitForExistence(timeout: 5))
+		retryButton.tap()
 		let firstResult = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
 		XCTAssertTrue(firstResult.waitForExistence(timeout: 5))
 
