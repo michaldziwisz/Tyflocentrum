@@ -179,7 +179,7 @@ import Foundation
 			return try await fetch(url)
 		}
 
-		func getPodcasts(for searchString: String) async -> [Podcast] {
+	func getPodcasts(for searchString: String) async -> [Podcast] {
 			do {
 				return try await fetchPodcasts(matching: searchString)
 			}
@@ -189,12 +189,13 @@ import Foundation
 			}
 			
 		}
-	func getComments(for podcast: Podcast) async -> [Comment] {
+
+	func getComments(forPostID postID: Int) async -> [Comment] {
 		guard let url = makeWPURL(
 			baseURL: tyfloPodcastBaseURL,
 			path: "wp/v2/comments",
 			queryItems: [
-				URLQueryItem(name: "post", value: "\(podcast.id)"),
+				URLQueryItem(name: "post", value: "\(postID)"),
 				URLQueryItem(name: "per_page", value: "100"),
 			]
 		) else {
@@ -207,9 +208,13 @@ import Foundation
 			return try await fetch(url, decoder: decoder)
 		}
 		catch {
-			print("Failed to fetch comments for post \(podcast.id).\n\(error.localizedDescription)\n\(url.absoluteString)")
+			print("Failed to fetch comments for post \(postID).\n\(error.localizedDescription)\n\(url.absoluteString)")
 			return [Comment]()
 		}
+	}
+
+	func getComments(for podcast: Podcast) async -> [Comment] {
+		await getComments(forPostID: podcast.id)
 	}
 	func isTPAvailable() async -> (Bool, Availability) {
 		guard var components = URLComponents(url: tyfloPodcastAPIURL, resolvingAgainstBaseURL: false) else {

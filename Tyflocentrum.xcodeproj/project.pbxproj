@@ -17,6 +17,7 @@
 		BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */; };
 		E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED2F0E60BF0E4CD1B0748873 /* AccessibleTextView.swift */; };
 		C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */; };
+		D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */; };
 		BE77EE8A29000AE0002087ED /* PodcastCategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE77EE8929000AE0002087ED /* PodcastCategoriesView.swift */; };
 		BE77EE8C29000B06002087ED /* ArticlesCategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE77EE8B29000B06002087ED /* ArticlesCategoriesView.swift */; };
 		BE77EE8E29000B2C002087ED /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE77EE8D29000B2C002087ED /* SearchView.swift */; };
@@ -88,6 +89,7 @@
 		A1B2C3D4E5F60718293A4B5E /* TyflocentrumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumSmokeTests.swift; sourceTree = "<group>"; };
 		BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
+		8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowNotesParser.swift; sourceTree = "<group>"; };
 		BE1FDCD328F6DE7D00B9601B /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
 		BE2ACFFB292B67C1001914EB /* Changelog.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Changelog.rtf; sourceTree = "<group>"; };
 		BE55421B28FD548300CC0128 /* NewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsView.swift; sourceTree = "<group>"; };
@@ -274,6 +276,7 @@
 				children = (
 					BEEA97C628E9D6880073E5AB /* Info.plist */,
 					BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
+					8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */,
 					BEA9ECD129203FD700718254 /* Views */,
 					BEEA97BC28E9D4BB0073E5AB /* Assets.xcassets */,
 					BEEA97BE28E9D4BB0073E5AB /* Preview Content */,
@@ -435,6 +438,7 @@
 					BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
 					E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
 					C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */,
+					D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */,
 					BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
 					BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */,
 					BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,

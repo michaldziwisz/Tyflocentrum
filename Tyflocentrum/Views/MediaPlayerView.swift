@@ -30,10 +30,31 @@ struct MediaPlayerView: View {
 	let title: String
 	let subtitle: String?
 	let canBeLive: Bool
+	let podcastPostID: Int? = nil
 	@State private var shouldShowContactForm = false
 	@State private var shouldShowNoLiveAlert = false
 	@State private var isScrubbing = false
 	@State private var scrubPosition: Double = 0
+
+	@State private var isShowNotesLoading = false
+	@State private var chapterMarkers: [ChapterMarker] = []
+	@State private var relatedLinks: [RelatedLink] = []
+	@State private var shouldShowChapterMarkers = false
+	@State private var shouldShowRelatedLinks = false
+
+	private func loadShowNotes() async {
+		guard let podcastPostID else { return }
+		guard !isShowNotesLoading else { return }
+
+		isShowNotesLoading = true
+		defer { isShowNotesLoading = false }
+
+		let comments = await api.getComments(forPostID: podcastPostID)
+		let parsed = ShowNotesParser.parse(from: comments)
+		chapterMarkers = parsed.markers
+		relatedLinks = parsed.links
+	}
+
 	func performLiveCheck() async -> Void {
 		let (available, _) = await api.isTPAvailable()
 		if available {
@@ -208,6 +229,33 @@ struct MediaPlayerView: View {
 				}
 			}
 
+			if !isLiveStream {
+				if isShowNotesLoading && (chapterMarkers.isEmpty && relatedLinks.isEmpty) {
+					ProgressView("Ładowanie dodatków…")
+						.accessibilityIdentifier("player.showNotesLoading")
+				}
+				else if !chapterMarkers.isEmpty || !relatedLinks.isEmpty {
+					HStack(spacing: 12) {
+						if !chapterMarkers.isEmpty {
+							Button("Znaczniki czasu") {
+								shouldShowChapterMarkers = true
+							}
+							.accessibilityHint("Wyświetla listę znaczników czasu. Dwukrotnie stuknij, aby przejść do wybranego fragmentu.")
+							.accessibilityIdentifier("player.showChapterMarkers")
+						}
+
+						if !relatedLinks.isEmpty {
+							Button("Odnośniki") {
+								shouldShowRelatedLinks = true
+							}
+							.accessibilityHint("Wyświetla odnośniki uzupełniające audycję.")
+							.accessibilityIdentifier("player.showRelatedLinks")
+						}
+					}
+					.buttonStyle(.bordered)
+				}
+			}
+
 			if canBeLive {
 				Button("Skontaktuj się z radiem") {
 					Task {
@@ -234,8 +282,111 @@ struct MediaPlayerView: View {
 			guard !ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
 			audioPlayer.play(url: podcast, title: title, subtitle: subtitle, isLiveStream: canBeLive)
 		}
+		.task(id: podcastPostID) {
+			await loadShowNotes()
+		}
+		.sheet(isPresented: $shouldShowChapterMarkers) {
+			ChapterMarkersSheet(
+				title: title,
+				markers: chapterMarkers,
+				formatTime: formatTime
+			)
+		}
+		.sheet(isPresented: $shouldShowRelatedLinks) {
+			RelatedLinksSheet(
+				title: title,
+				links: relatedLinks
+			)
+		}
 		.accessibilityAction(.magicTap) {
 			togglePlayback()
+		}
+	}
+}
+
+private struct ChapterMarkersSheet: View {
+	let title: String
+	let markers: [ChapterMarker]
+	let formatTime: (TimeInterval) -> String
+
+	@EnvironmentObject private var audioPlayer: AudioPlayer
+	@Environment(\.dismiss) private var dismiss
+
+	private func announceIfVoiceOver(_ message: String) {
+		guard UIAccessibility.isVoiceOverRunning else { return }
+		UIAccessibility.post(notification: .announcement, argument: message)
+	}
+
+	var body: some View {
+		NavigationStack {
+			List(markers) { marker in
+				Button {
+					audioPlayer.seek(to: marker.seconds)
+					announceIfVoiceOver("Przejdź do \(marker.title), \(formatTime(marker.seconds)).")
+					dismiss()
+				} label: {
+					HStack(alignment: .firstTextBaseline) {
+						Text(marker.title)
+						Spacer()
+						Text(formatTime(marker.seconds))
+							.monospacedDigit()
+							.foregroundColor(.secondary)
+					}
+				}
+				.accessibilityLabel(marker.title)
+				.accessibilityValue(formatTime(marker.seconds))
+				.accessibilityHint("Dwukrotnie stuknij, aby przewinąć do tego momentu.")
+			}
+			.navigationTitle("Znaczniki czasu")
+			.navigationBarTitleDisplayMode(.inline)
+			.toolbar {
+				ToolbarItem(placement: .cancellationAction) {
+					Button("Zamknij") {
+						dismiss()
+					}
+				}
+			}
+		}
+	}
+}
+
+private struct RelatedLinksSheet: View {
+	let title: String
+	let links: [RelatedLink]
+
+	@Environment(\.openURL) private var openURL
+
+	private func hostLabel(for url: URL) -> String? {
+		if let host = url.host, !host.isEmpty {
+			return host
+		}
+		if url.scheme?.lowercased() == "mailto" {
+			return "e-mail"
+		}
+		return nil
+	}
+
+	var body: some View {
+		NavigationStack {
+			List(links) { link in
+				Button {
+					openURL(link.url)
+				} label: {
+					VStack(alignment: .leading, spacing: 4) {
+						Text(link.title)
+							.foregroundColor(.primary)
+
+						if let host = hostLabel(for: link.url) {
+							Text(host)
+								.font(.caption)
+								.foregroundColor(.secondary)
+						}
+					}
+				}
+				.accessibilityHint("Otwiera odnośnik.")
+			}
+			.navigationTitle("Odnośniki")
+			.navigationBarTitleDisplayMode(.inline)
 		}
 	}
 }

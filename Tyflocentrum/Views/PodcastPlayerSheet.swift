@@ -16,7 +16,8 @@ struct PodcastPlayerSheet: View {
 				podcast: api.getListenableURL(for: podcast),
 				title: podcast.title.plainText,
 				subtitle: podcast.formattedDate,
-				canBeLive: false
+				canBeLive: false,
+				podcastPostID: podcast.id
 			)
 			.toolbar {
 				ToolbarItem(placement: .cancellationAction) {
@@ -28,4 +29,3 @@ struct PodcastPlayerSheet: View {
 		}
 	}
 }
-

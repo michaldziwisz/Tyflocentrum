@@ -230,6 +230,43 @@ final class SafeHTMLViewTests: XCTestCase {
 	}
 }
 
+final class ShowNotesParserTests: XCTestCase {
+	func testParseExtractsMarkersAndLinksFromComments() {
+		let markersHTML = """
+		<p>Znaczniki czasu:<br />
+		Intro 00:00:00<br />
+		Co u nas 00:02:54</p>
+		"""
+
+		let linksHTML = """
+		<p>A oto odnośniki uzupełniające audycję:<br />
+		– Nowy numer Tyfloświata (1/2026) dostępny:<br />
+		https://tyfloswiat.pl/czasopismo/tyfloswiat-1-2026-70/<br />
+		– Grupa skupiająca testerów dostępnego telegrama na iOS:<br />
+		https://t.me/accessiblegram<br />
+		e-mail do autora: miet@violinist . pl</p>
+		"""
+
+		let comments = [
+			Comment(id: 1, post: 123, parent: 0, authorName: "TyfloPodcast", content: .init(rendered: markersHTML)),
+			Comment(id: 2, post: 123, parent: 0, authorName: "TyfloPodcast", content: .init(rendered: linksHTML)),
+		]
+
+		let parsed = ShowNotesParser.parse(from: comments)
+
+		XCTAssertEqual(parsed.markers.count, 2)
+		XCTAssertEqual(parsed.markers.first?.title, "Intro")
+		XCTAssertEqual(parsed.markers.first?.seconds, 0)
+		XCTAssertEqual(parsed.markers.last?.title, "Co u nas")
+		XCTAssertEqual(parsed.markers.last?.seconds, 174)
+
+		let urls = Set(parsed.links.map(\.url.absoluteString))
+		XCTAssertTrue(urls.contains("https://tyfloswiat.pl/czasopismo/tyfloswiat-1-2026-70/"))
+		XCTAssertTrue(urls.contains("https://t.me/accessiblegram"))
+		XCTAssertTrue(urls.contains("mailto:miet@violinist.pl"))
+	}
+}
+
 @MainActor
 final class MediaPlayerIntegrationTests: XCTestCase {
 	override func tearDown() {

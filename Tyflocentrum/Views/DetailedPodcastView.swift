@@ -66,7 +66,8 @@ struct DetailedPodcastView: View {
 					podcast: api.getListenableURL(for: podcast),
 					title: podcast.title.plainText,
 					subtitle: podcast.formattedDate,
-					canBeLive: false
+					canBeLive: false,
+					podcastPostID: podcast.id
 				)
 			} label: {
 				Text("Słuchaj")
