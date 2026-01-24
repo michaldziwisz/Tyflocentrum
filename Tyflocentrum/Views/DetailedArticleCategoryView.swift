@@ -13,6 +13,19 @@ struct DetailedArticleCategoryView: View {
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
 	var body: some View {
 		List {
+			if let errorMessage = viewModel.errorMessage {
+				Section {
+					Text(errorMessage)
+						.foregroundColor(.secondary)
+
+					Button("Spróbuj ponownie") {
+						Task {
+							await viewModel.refresh { try await api.fetchArticles(for: category) }
+						}
+					}
+				}
+			}
+
 			ForEach(viewModel.items) { item in
 				NavigationLink {
 					DetailedArticleView(article: item)
@@ -23,10 +36,10 @@ struct DetailedArticleCategoryView: View {
 		}
 		.accessibilityIdentifier("categoryArticles.list")
 		.refreshable {
-			await viewModel.refresh { await api.getArticles(for: category) }
+			await viewModel.refresh { try await api.fetchArticles(for: category) }
 		}
 		.task {
-			await viewModel.loadIfNeeded { await api.getArticles(for: category) }
+			await viewModel.loadIfNeeded { try await api.fetchArticles(for: category) }
 		}
 		.navigationTitle(category.name)
 		.navigationBarTitleDisplayMode(.inline)

@@ -498,4 +498,17 @@ final class AsyncListViewModelTests: XCTestCase {
 		XCTAssertTrue(viewModel.hasLoaded)
 		XCTAssertFalse(viewModel.isLoading)
 	}
+
+	func testLoadSetsErrorMessageOnFailure() async {
+		struct TestError: Error {}
+
+		let viewModel = AsyncListViewModel<Int>()
+		await viewModel.load {
+			throw TestError()
+		}
+
+		XCTAssertTrue(viewModel.hasLoaded)
+		XCTAssertTrue(viewModel.items.isEmpty)
+		XCTAssertEqual(viewModel.errorMessage, "Nie udało się pobrać danych. Spróbuj ponownie.")
+	}
 }

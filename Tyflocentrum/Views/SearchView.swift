@@ -15,11 +15,13 @@ struct SearchView: View {
 	private func performSearch() {
 		let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard !trimmed.isEmpty else { return }
-		Task { @MainActor in
-			await viewModel.refresh { await api.getPodcasts(for: trimmed) }
+		Task {
+			await viewModel.refresh { try await api.fetchPodcasts(matching: trimmed) }
+			let announcement = viewModel.errorMessage
+				?? (viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników.")
 			UIAccessibility.post(
 				notification: .announcement,
-				argument: viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników."
+				argument: announcement
 			)
 		}
 	}
@@ -40,20 +42,24 @@ struct SearchView: View {
 					}
 					.accessibilityIdentifier("search.button")
 					.accessibilityHint("Wyszukuje audycje po podanej frazie.")
-					.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+					.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
 				}
 
-					Section {
-						if viewModel.hasLoaded && viewModel.items.isEmpty {
-							Text("Brak wyników wyszukiwania dla podanej frazy. Spróbuj użyć innych słów kluczowych.")
-								.foregroundColor(.secondary)
-						}
-						else {
-							ForEach(viewModel.items) { item in
-								NavigationLink {
-									DetailedPodcastView(podcast: item)
-								} label: {
-									ShortPodcastView(podcast: item)
+				Section {
+					if let errorMessage = viewModel.errorMessage {
+						Text(errorMessage)
+							.foregroundColor(.secondary)
+					}
+					else if viewModel.hasLoaded && viewModel.items.isEmpty {
+						Text("Brak wyników wyszukiwania dla podanej frazy. Spróbuj użyć innych słów kluczowych.")
+							.foregroundColor(.secondary)
+					}
+					else {
+						ForEach(viewModel.items) { item in
+							NavigationLink {
+								DetailedPodcastView(podcast: item)
+							} label: {
+								ShortPodcastView(podcast: item)
 							}
 						}
 					}

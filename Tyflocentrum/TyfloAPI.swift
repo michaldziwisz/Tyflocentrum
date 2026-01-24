@@ -7,11 +7,11 @@
 
 import Foundation
 
-final class TyfloAPI: ObservableObject {
-	private let session: URLSession
-	private let tyfloPodcastBaseURL = URL(string: "https://tyflopodcast.net/wp-json")!
-	private let tyfloWorldBaseURL = URL(string: "https://tyfloswiat.pl/wp-json")!
-	private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
+	final class TyfloAPI: ObservableObject {
+		private let session: URLSession
+		private let tyfloPodcastBaseURL = URL(string: "https://tyflopodcast.net/wp-json")!
+		private let tyfloWorldBaseURL = URL(string: "https://tyfloswiat.pl/wp-json")!
+		private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
 	static let shared = TyfloAPI()
 	init(session: URLSession = .shared) {
 		self.session = session
@@ -28,101 +28,120 @@ final class TyfloAPI: ObservableObject {
 		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 			throw URLError(.badServerResponse)
 		}
-		return try decoder.decode(T.self, from: data)
-	}
+			return try decoder.decode(T.self, from: data)
+		}
 
-	func getLatestPodcasts() async -> [Podcast] {
-		guard let url = makeWPURL(
-			baseURL: tyfloPodcastBaseURL,
-			path: "wp/v2/posts",
-			queryItems: [URLQueryItem(name: "per_page", value: "100")]
-		) else {
-			print("Failed to create URL for latest podcasts")
-			return [Podcast]()
-		}
-		do {
+		func fetchLatestPodcasts() async throws -> [Podcast] {
+			guard let url = makeWPURL(
+				baseURL: tyfloPodcastBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [URLQueryItem(name: "per_page", value: "100")]
+			) else {
+				throw URLError(.badURL)
+			}
 			return try await fetch(url)
-		}
-		catch {
-			print("Failed to fetch latest podcasts.\n\(error.localizedDescription)\n\(url.absoluteString)")
-			return [Podcast]()
 		}
 		
-	}
-	func getCategories() async -> [Category] {
-		guard let url = makeWPURL(
-			baseURL: tyfloPodcastBaseURL,
-			path: "wp/v2/categories",
-			queryItems: [URLQueryItem(name: "per_page", value: "100")]
-		) else {
-			print("Failed to create URL for categories")
-			return [Category]()
+		func getLatestPodcasts() async -> [Podcast] {
+			do {
+				return try await fetchLatestPodcasts()
+			}
+			catch {
+				print("Failed to fetch latest podcasts.\n\(error.localizedDescription)")
+				return [Podcast]()
+			}
+			
 		}
-		do {
+
+		func fetchCategories() async throws -> [Category] {
+			guard let url = makeWPURL(
+				baseURL: tyfloPodcastBaseURL,
+				path: "wp/v2/categories",
+				queryItems: [URLQueryItem(name: "per_page", value: "100")]
+			) else {
+				throw URLError(.badURL)
+			}
 			return try await fetch(url)
 		}
-		catch {
-			print("Failed to fetch categories.\n\(error.localizedDescription)\n\(url.absoluteString)")
-			return [Category]()
+
+		func getCategories() async -> [Category] {
+			do {
+				return try await fetchCategories()
+			}
+			catch {
+				print("Failed to fetch categories.\n\(error.localizedDescription)")
+				return [Category]()
+			}
 		}
-	}
-	func getPodcast(for category: Category) async -> [Podcast] {
-		guard let url = makeWPURL(
-			baseURL: tyfloPodcastBaseURL,
-			path: "wp/v2/posts",
-			queryItems: [
-				URLQueryItem(name: "categories", value: "\(category.id)"),
-				URLQueryItem(name: "per_page", value: "100"),
-			]
-		) else {
-			print("Failed to create URL for podcasts in category \(category.id)")
-			return [Podcast]()
-		}
-		do {
+
+		func fetchPodcasts(for category: Category) async throws -> [Podcast] {
+			guard let url = makeWPURL(
+				baseURL: tyfloPodcastBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [
+					URLQueryItem(name: "categories", value: "\(category.id)"),
+					URLQueryItem(name: "per_page", value: "100"),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
 			return try await fetch(url)
 		}
-		catch {
-			print("Failed to fetch podcasts in category \(category.id).\n\(error.localizedDescription)\n\(url.absoluteString)")
-			return [Podcast]()
+
+		func getPodcast(for category: Category) async -> [Podcast] {
+			do {
+				return try await fetchPodcasts(for: category)
+			}
+			catch {
+				print("Failed to fetch podcasts in category \(category.id).\n\(error.localizedDescription)")
+				return [Podcast]()
+			}
 		}
-	}
-	func getArticleCategories() async -> [Category] {
-		guard let url = makeWPURL(
-			baseURL: tyfloWorldBaseURL,
-			path: "wp/v2/categories",
-			queryItems: [URLQueryItem(name: "per_page", value: "100")]
-		) else {
-			print("Failed to create URL for article categories")
-			return [Category]()
-		}
-		do {
+
+		func fetchArticleCategories() async throws -> [Category] {
+			guard let url = makeWPURL(
+				baseURL: tyfloWorldBaseURL,
+				path: "wp/v2/categories",
+				queryItems: [URLQueryItem(name: "per_page", value: "100")]
+			) else {
+				throw URLError(.badURL)
+			}
 			return try await fetch(url)
 		}
-		catch {
-			print("Failed to fetch article categories.\n\(error.localizedDescription)\n\(url.absoluteString)")
-			return [Category]()
+
+		func getArticleCategories() async -> [Category] {
+			do {
+				return try await fetchArticleCategories()
+			}
+			catch {
+				print("Failed to fetch article categories.\n\(error.localizedDescription)")
+				return [Category]()
+			}
 		}
-	}
-	func getArticles(for category: Category) async -> [Podcast] {
-		guard let url = makeWPURL(
-			baseURL: tyfloWorldBaseURL,
-			path: "wp/v2/posts",
-			queryItems: [
-				URLQueryItem(name: "categories", value: "\(category.id)"),
-				URLQueryItem(name: "per_page", value: "100"),
-			]
-		) else {
-			print("Failed to create URL for articles in category \(category.id)")
-			return [Podcast]()
-		}
-		do {
+
+		func fetchArticles(for category: Category) async throws -> [Podcast] {
+			guard let url = makeWPURL(
+				baseURL: tyfloWorldBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [
+					URLQueryItem(name: "categories", value: "\(category.id)"),
+					URLQueryItem(name: "per_page", value: "100"),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
 			return try await fetch(url)
 		}
-		catch {
-			print("Failed to fetch articles in category \(category.id).\n\(error.localizedDescription)\n\(url.absoluteString)")
-			return [Podcast]()
+
+		func getArticles(for category: Category) async -> [Podcast] {
+			do {
+				return try await fetchArticles(for: category)
+			}
+			catch {
+				print("Failed to fetch articles in category \(category.id).\n\(error.localizedDescription)")
+				return [Podcast]()
+			}
 		}
-	}
 	func getListenableURL(for podcast: Podcast) -> URL {
 		guard var components = URLComponents(string: "https://tyflopodcast.net/pobierz.php") else {
 			return URL(string: "https://tyflopodcast.net")!
@@ -131,30 +150,34 @@ final class TyfloAPI: ObservableObject {
 			URLQueryItem(name: "id", value: "\(podcast.id)"),
 			URLQueryItem(name: "plik", value: "0"),
 		]
-		return components.url ?? URL(string: "https://tyflopodcast.net")!
-	}
-	func getPodcasts(for searchString: String) async -> [Podcast] {
-		let trimmed = searchString.trimmingCharacters(in: .whitespacesAndNewlines)
-		guard let url = makeWPURL(
-			baseURL: tyfloPodcastBaseURL,
-			path: "wp/v2/posts",
-			queryItems: [
-				URLQueryItem(name: "per_page", value: "100"),
-				URLQueryItem(name: "search", value: trimmed.lowercased()),
-			]
-		) else {
-			print("Failed to create URL for search")
-			return [Podcast]()
+			return components.url ?? URL(string: "https://tyflopodcast.net")!
 		}
-		do {
+
+		func fetchPodcasts(matching searchString: String) async throws -> [Podcast] {
+			let trimmed = searchString.trimmingCharacters(in: .whitespacesAndNewlines)
+			guard let url = makeWPURL(
+				baseURL: tyfloPodcastBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [
+					URLQueryItem(name: "per_page", value: "100"),
+					URLQueryItem(name: "search", value: trimmed.lowercased()),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
 			return try await fetch(url)
 		}
-		catch {
-			print("Failed to search podcasts.\n\(error.localizedDescription)\n\(url.absoluteString)")
-			return [Podcast]()
+
+		func getPodcasts(for searchString: String) async -> [Podcast] {
+			do {
+				return try await fetchPodcasts(matching: searchString)
+			}
+			catch {
+				print("Failed to search podcasts.\n\(error.localizedDescription)")
+				return [Podcast]()
+			}
+			
 		}
-		
-	}
 	func getComments(for podcast: Podcast) async -> [Comment] {
 		guard let url = makeWPURL(
 			baseURL: tyfloPodcastBaseURL,

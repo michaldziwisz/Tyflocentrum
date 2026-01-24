@@ -14,6 +14,19 @@ struct ArticlesCategoriesView: View {
 	var body: some View {
 		NavigationView {
 			List {
+				if let errorMessage = viewModel.errorMessage {
+					Section {
+						Text(errorMessage)
+							.foregroundColor(.secondary)
+
+						Button("Spróbuj ponownie") {
+							Task {
+								await viewModel.refresh(api.fetchArticleCategories)
+							}
+						}
+					}
+				}
+
 				ForEach(viewModel.items) { item in
 					NavigationLink {
 						DetailedArticleCategoryView(category: item)
@@ -24,10 +37,10 @@ struct ArticlesCategoriesView: View {
 			}
 			.accessibilityIdentifier("articleCategories.list")
 			.refreshable {
-				await viewModel.refresh(api.getArticleCategories)
+				await viewModel.refresh(api.fetchArticleCategories)
 			}
 			.task {
-				await viewModel.loadIfNeeded(api.getArticleCategories)
+				await viewModel.loadIfNeeded(api.fetchArticleCategories)
 			}
 			.navigationTitle("Artykuły")
 		}
