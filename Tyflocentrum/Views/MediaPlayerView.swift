@@ -363,6 +363,7 @@ private struct RelatedLinksSheet: View {
 	let title: String
 	let links: [RelatedLink]
 
+	@Environment(\.openURL) private var openURL
 	@State private var sharePayload: SharePayload?
 
 	private func hostLabel(for url: URL) -> String? {
@@ -402,7 +403,9 @@ private struct RelatedLinksSheet: View {
 	var body: some View {
 		NavigationStack {
 			List(links) { link in
-				Link(destination: link.url) {
+				Button {
+					openURL(link.url)
+				} label: {
 					VStack(alignment: .leading, spacing: 4) {
 						Text(link.title)
 							.foregroundColor(.primary)
@@ -414,6 +417,7 @@ private struct RelatedLinksSheet: View {
 						}
 					}
 				}
+				.buttonStyle(.plain)
 				.tint(.primary)
 				.contextMenu {
 					Button("Skopiuj link") {
@@ -423,6 +427,11 @@ private struct RelatedLinksSheet: View {
 						sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
 					}
 				}
+				.accessibilityElement(children: .ignore)
+				.accessibilityLabel(link.title)
+				.accessibilityValue(hostLabel(for: link.url) ?? "")
+				.accessibilityAddTraits(.isLink)
+				.accessibilityRemoveTraits(.isButton)
 				.accessibilityHint("Otwiera odnośnik.")
 				.accessibilityAction(named: "Skopiuj link") {
 					copyLink(link)
