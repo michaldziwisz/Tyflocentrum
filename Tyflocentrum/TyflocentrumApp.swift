@@ -150,13 +150,7 @@ private final class UITestURLProtocol: URLProtocol {
 			if shouldFailOnce(&didFailTyflopodcastLatestPosts) {
 				return (500, Data("[]".utf8))
 			}
-			let requestIndex = nextRequestIndex(for: &tyflopodcastLatestPostsRequestCount)
-			if requestIndex <= 1 {
-				return (
-					200,
-					#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"}}]"#.data(using: .utf8) ?? Data("[]".utf8)
-				)
-			}
+			_ = nextRequestIndex(for: &tyflopodcastLatestPostsRequestCount)
 
 			return (
 				200,
