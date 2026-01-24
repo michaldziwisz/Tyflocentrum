@@ -12,6 +12,8 @@
 		BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
 		BE2ACFFC292B67C1001914EB /* Changelog.rtf in Resources */ = {isa = PBXBuildFile; fileRef = BE2ACFFB292B67C1001914EB /* Changelog.rtf */; };
 		BE55421C28FD548300CC0128 /* NewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE55421B28FD548300CC0128 /* NewsView.swift */; };
+		6E8B3030010D97CFDCD59665 /* LazyDetailedPodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9646723B6391FE47334552EF /* LazyDetailedPodcastView.swift */; };
+		DD8D357EC14072F7B8DCB985 /* LazyDetailedArticleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5AFB1327CD2EA8E255044E9 /* LazyDetailedArticleView.swift */; };
 		BE56ED2F290B3BE9006ADF67 /* DetailedPodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE56ED2E290B3BE9006ADF67 /* DetailedPodcastView.swift */; };
 		BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE71654029219DB700FF9A89 /* HTMLRendererHelper.swift */; };
 		BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */; };
@@ -25,6 +27,7 @@
 		BE890DFC29087409005D8DC7 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE890DFB29087409005D8DC7 /* Category.swift */; };
 		BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE890DFD29087659005D8DC7 /* ShortCategoryView.swift */; };
 		BE8A2E4C29066C7C00923FBF /* Podcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE8A2E4B29066C7C00923FBF /* Podcast.swift */; };
+		C47C765821AB1728150DA367 /* WPPostSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6021BCA1CC8E35F39047EFEF /* WPPostSummary.swift */; };
 		BE9381D228EAED6400ABB964 /* Tyflocentrum.xcdatamodeld in Sources */ = {isa = PBXBuildFile; fileRef = BE9381D028EAED6400ABB964 /* Tyflocentrum.xcdatamodeld */; };
 		BEA9ECD429204CD400718254 /* DetailedArticleCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEA9ECD329204CD400718254 /* DetailedArticleCategoryView.swift */; };
 		BEB8A67B291CE49C00A2836F /* DetailedCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEB8A67A291CE49C00A2836F /* DetailedCategoryView.swift */; };
@@ -93,6 +96,8 @@
 		BE1FDCD328F6DE7D00B9601B /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
 		BE2ACFFB292B67C1001914EB /* Changelog.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Changelog.rtf; sourceTree = "<group>"; };
 		BE55421B28FD548300CC0128 /* NewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsView.swift; sourceTree = "<group>"; };
+		D5AFB1327CD2EA8E255044E9 /* LazyDetailedArticleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LazyDetailedArticleView.swift; sourceTree = "<group>"; };
+		9646723B6391FE47334552EF /* LazyDetailedPodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LazyDetailedPodcastView.swift; sourceTree = "<group>"; };
 		BE56ED2E290B3BE9006ADF67 /* DetailedPodcastView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DetailedPodcastView.swift; sourceTree = "<group>"; };
 		BE64D6C12925A1F9001F9A45 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
 		BE64D6C62925A221001F9A45 /* CFNetwork.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CFNetwork.framework; path = System/Library/Frameworks/CFNetwork.framework; sourceTree = SDKROOT; };
@@ -108,6 +113,7 @@
 		BE890DFB29087409005D8DC7 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
 		BE890DFD29087659005D8DC7 /* ShortCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortCategoryView.swift; sourceTree = "<group>"; };
 		BE8A2E4B29066C7C00923FBF /* Podcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Podcast.swift; sourceTree = "<group>"; };
+		6021BCA1CC8E35F39047EFEF /* WPPostSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WPPostSummary.swift; sourceTree = "<group>"; };
 		BE9381D128EAED6400ABB964 /* Tyflocentrum.xcdatamodel */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcdatamodel; path = Tyflocentrum.xcdatamodel; sourceTree = "<group>"; };
 		BEA9ECD329204CD400718254 /* DetailedArticleCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedArticleCategoryView.swift; sourceTree = "<group>"; };
 		BEB8A67A291CE49C00A2836F /* DetailedCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedCategoryView.swift; sourceTree = "<group>"; };
@@ -219,6 +225,8 @@
 				78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */,
 				BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */,
 				BE55421B28FD548300CC0128 /* NewsView.swift */,
+				9646723B6391FE47334552EF /* LazyDetailedPodcastView.swift */,
+				D5AFB1327CD2EA8E255044E9 /* LazyDetailedArticleView.swift */,
 				BE77EE8929000AE0002087ED /* PodcastCategoriesView.swift */,
 				BE77EE8B29000B06002087ED /* ArticlesCategoriesView.swift */,
 				BE77EE8D29000B2C002087ED /* SearchView.swift */,
@@ -242,6 +250,7 @@
 			children = (
 				BE890DFB29087409005D8DC7 /* Category.swift */,
 				BE8A2E4B29066C7C00923FBF /* Podcast.swift */,
+				6021BCA1CC8E35F39047EFEF /* WPPostSummary.swift */,
 				BEDE145D292CE26E00C25C27 /* Comment.swift */,
 				BEC9AB96292E56FF009907EB /* Schedule.swift */,
 				BEF5F7ED292E8BE20065E572 /* ContactResponse.swift */,
@@ -439,6 +448,7 @@
 					E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
 					C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */,
 					D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */,
+					C47C765821AB1728150DA367 /* WPPostSummary.swift in Sources */,
 					BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
 					BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */,
 					BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,
@@ -454,6 +464,8 @@
 				BEBAB45F292931BB009967A0 /* MediaPlayerView.swift in Sources */,
 				BEF5F7EE292E8BE20065E572 /* ContactResponse.swift in Sources */,
 				BE55421C28FD548300CC0128 /* NewsView.swift in Sources */,
+				6E8B3030010D97CFDCD59665 /* LazyDetailedPodcastView.swift in Sources */,
+				DD8D357EC14072F7B8DCB985 /* LazyDetailedArticleView.swift in Sources */,
 				BEEC27DB292E775700F0D869 /* ContactView.swift in Sources */,
 				BEB8A67B291CE49C00A2836F /* DetailedCategoryView.swift in Sources */,
 				BE8A2E4C29066C7C00923FBF /* Podcast.swift in Sources */,
