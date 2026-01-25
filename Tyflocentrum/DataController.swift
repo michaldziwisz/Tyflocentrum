@@ -7,12 +7,31 @@
 import CoreData
 import Foundation
 
-class DataController: ObservableObject {
-	let container = NSPersistentContainer(name: "Tyflocentrum")
-	init() { // Tworzymy konstruktor
-		container.loadPersistentStores { description, error in // Ładujemy nasze dane. Jako, że jesteśmy pesymistami to zakładamy, że coś pójdzie nie tak.
-			if let error = error { // Jeżeli jest błąd, to...
-				fatalError("Failed to load the data model!\n\(error.localizedDescription)") // Z takiego błędu nie można się wykaraskać. Jedyen co to możemy pokazać błąd.
+final class DataController: ObservableObject {
+	let container: NSPersistentContainer
+
+	init(inMemory: Bool = false) {
+		container = NSPersistentContainer(name: "Tyflocentrum")
+
+		if inMemory {
+			let description = NSPersistentStoreDescription()
+			description.type = NSInMemoryStoreType
+			container.persistentStoreDescriptions = [description]
+		}
+
+		container.loadPersistentStores { [weak self] _, error in
+			guard let self else { return }
+			guard let error else { return }
+
+			print("Core Data store failed to load. Falling back to in-memory store.\n\(error.localizedDescription)")
+
+			let description = NSPersistentStoreDescription()
+			description.type = NSInMemoryStoreType
+			self.container.persistentStoreDescriptions = [description]
+			self.container.loadPersistentStores { _, error in
+				if let error {
+					print("In-memory Core Data store failed to load.\n\(error.localizedDescription)")
+				}
 			}
 		}
 	}

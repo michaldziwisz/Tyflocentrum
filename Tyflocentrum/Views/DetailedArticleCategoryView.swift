@@ -9,19 +9,38 @@ import Foundation
 import SwiftUI
 struct DetailedArticleCategoryView: View {
 	let category: Category
-	@State private var articles = [Podcast]()
 	@EnvironmentObject var api: TyfloAPI
+	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
 	var body: some View {
 		List {
-			ForEach(articles) {item in
+			AsyncListStatusSection(
+				errorMessage: viewModel.errorMessage,
+				isLoading: viewModel.isLoading,
+				hasLoaded: viewModel.hasLoaded,
+				isEmpty: viewModel.items.isEmpty,
+				emptyMessage: "Brak artykułów w tej kategorii.",
+				retryAction: { await viewModel.refresh { try await api.fetchArticles(for: category) } },
+				retryIdentifier: "categoryArticles.retry",
+				isRetryDisabled: viewModel.isLoading
+			)
+
+			ForEach(viewModel.items) { item in
 				NavigationLink {
 					DetailedArticleView(article: item)
 				} label: {
-					ShortPodcastView(podcast: item)
+					ShortPodcastView(podcast: item, showsListenAction: false)
 				}
+				.accessibilityRemoveTraits(.isButton)
 			}
-		}.task {
-			articles = await api.getArticles(for: category)
-		}.navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
+		}
+		.accessibilityIdentifier("categoryArticles.list")
+		.refreshable {
+			await viewModel.refresh { try await api.fetchArticles(for: category) }
+		}
+		.task {
+			await viewModel.loadIfNeeded { try await api.fetchArticles(for: category) }
+		}
+		.navigationTitle(category.name)
+		.navigationBarTitleDisplayMode(.inline)
 	}
 }

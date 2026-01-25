@@ -11,25 +11,67 @@ import SwiftUI
 struct DetailedPodcastView: View {
 	let podcast: Podcast
 	@EnvironmentObject var api: TyfloAPI
-	@EnvironmentObject var bass: BassHelper
 	@State private var comments = [Comment]()
 	var body: some View {
-		VStack {
-			HTMLTextView(text: podcast.content.rendered)
-			if comments.isEmpty {
-				Text("Brak komentarzy")
+		ScrollView {
+			VStack(alignment: .leading, spacing: 16) {
+				VStack(alignment: .leading, spacing: 6) {
+					Text(podcast.title.plainText)
+						.font(.title3.weight(.semibold))
+
+					Text(podcast.formattedDate)
+						.font(.subheadline)
+						.foregroundColor(.secondary)
+				}
+				.accessibilityElement(children: .combine)
+				.accessibilityAddTraits(.isHeader)
+				.accessibilityIdentifier("podcastDetail.header")
+
+				Text(podcast.content.plainText)
+					.font(.body)
+					.textSelection(.enabled)
+					.accessibilityIdentifier("podcastDetail.content")
+
+				Divider()
+
+				if comments.isEmpty {
+					Text("Brak komentarzy")
+						.foregroundColor(.secondary)
+						.accessibilityIdentifier("podcastDetail.commentsSummary")
+				}
+				else {
+					Text("\(comments.count) komentarzy")
+						.foregroundColor(.secondary)
+						.accessibilityIdentifier("podcastDetail.commentsSummary")
+				}
 			}
-			else {
-				Text("\(comments.count) komentarzy")
-			}
-		}.navigationTitle("\(podcast.title.rendered) z dnia \(podcast.date)").navigationBarTitleDisplayMode(.inline).task {
+			.padding()
+		}
+		.navigationTitle(podcast.title.plainText)
+		.navigationBarTitleDisplayMode(.inline)
+		.task {
 			comments = await api.getComments(for: podcast)
-		}.toolbar {
-			ShareLink("udostępnij", item: podcast.guid.rendered, message: Text("Posłuchaj audycji \(podcast.title.rendered) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"))
+		}
+		.toolbar {
+			ShareLink(
+				"Udostępnij",
+				item: podcast.guid.plainText,
+				message: Text("Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum")
+			)
+
 			NavigationLink {
-				MediaPlayerView(podcast: api.getListenableURL(for: podcast), canBeLive: false)
+				MediaPlayerView(
+					podcast: api.getListenableURL(for: podcast),
+					title: podcast.title.plainText,
+					subtitle: podcast.formattedDate,
+					canBeLive: false,
+					podcastPostID: podcast.id
+				)
 			} label: {
 				Text("Słuchaj")
+					.accessibilityLabel("Słuchaj audycji")
+					.accessibilityHint("Otwiera odtwarzacz audycji.")
+					.accessibilityIdentifier("podcastDetail.listen")
 			}
 		}
 	}

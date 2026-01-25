@@ -10,8 +10,18 @@ struct ShortCategoryView: View {
 	let category: Category
 	var body: some View {
 		HStack {
-			Text(category.name).font(.largeTitle)
-			Text("\(category.count)").font(.subheadline)
-		}.accessibilityElement(children: .combine)
+			Text(category.name)
+				.font(.headline)
+				.foregroundColor(.primary)
+			Spacer()
+			Text("\(category.count)")
+				.font(.subheadline)
+				.foregroundColor(.secondary)
+		}
+		.accessibilityElement(children: .ignore)
+		.accessibilityLabel(category.name)
+		.accessibilityValue("\(category.count) pozycji")
+		.accessibilityHint("Dwukrotnie stuknij, aby otworzyć kategorię.")
+		.accessibilityIdentifier("category.row.\(category.id)")
 	}
 }
