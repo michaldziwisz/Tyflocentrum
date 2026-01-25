@@ -150,6 +150,7 @@ struct AllArticlesView: View {
 private struct TyfloSwiatMagazineView: View {
 	@EnvironmentObject private var api: TyfloAPI
 	@StateObject private var viewModel = AsyncListViewModel<WPPostSummary>()
+	private let magazineRootPageID = 1409
 
 	private var issuesByYear: [(year: Int, issues: [WPPostSummary])] {
 		let grouped = Dictionary(grouping: viewModel.items) { issue in
@@ -195,8 +196,17 @@ private struct TyfloSwiatMagazineView: View {
 	}
 
 	private func fetchIssues() async throws -> [WPPostSummary] {
+		do {
+			let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100)
+			if !issues.isEmpty {
+				return issues
+			}
+		} catch {
+			// Fallback below.
+		}
+
 		let roots = try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
-		let rootID = roots.first?.id ?? 1409
+		let rootID = roots.first?.id ?? magazineRootPageID
 		return try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
 	}
 }

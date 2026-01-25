@@ -34,6 +34,8 @@ import Foundation
 	private func fetch<T: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> T {
 		var request = URLRequest(url: url)
 		request.cachePolicy = .reloadIgnoringLocalCacheData
+		request.timeoutInterval = 20
+		request.setValue("application/json", forHTTPHeaderField: "Accept")
 		let (data, response) = try await session.data(for: request)
 		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 			throw URLError(.badServerResponse)
@@ -44,6 +46,8 @@ import Foundation
 		private func fetchWPPage<Item: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> WPPage<Item> {
 			var request = URLRequest(url: url)
 			request.cachePolicy = .reloadIgnoringLocalCacheData
+			request.timeoutInterval = 20
+			request.setValue("application/json", forHTTPHeaderField: "Accept")
 			let (data, response) = try await session.data(for: request)
 			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 				throw URLError(.badServerResponse)
