@@ -182,6 +182,9 @@ private struct TyfloSwiatMagazineView: View {
 					Section {
 						Text(debugStage)
 							.foregroundColor(.secondary)
+
+						Text("Stan: items=\(viewModel.items.count), hasLoaded=\(viewModel.hasLoaded.description), isLoading=\(viewModel.isLoading.description)")
+							.foregroundColor(.secondary)
 					}
 				}
 			}
@@ -206,27 +209,31 @@ private struct TyfloSwiatMagazineView: View {
 	}
 
 	private func fetchIssues() async throws -> [WPPostSummary] {
-		try await withTimeout(seconds: 20) {
-			do {
-				debugStage = "Pobieram listę numerów…"
-				let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100)
-				if !issues.isEmpty {
-					debugStage = "Pobrano \(issues.count) numerów."
-					return issues
-				}
-				debugStage = "Brak numerów (parent=\(magazineRootPageID))."
-			} catch {
-				debugStage = "Błąd pobierania numerów (parent=\(magazineRootPageID))."
+		do {
+			debugStage = "Pobieram listę numerów…"
+			let issues = try await fetchWithTimeout(seconds: 20) {
+				try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100)
 			}
-
-			debugStage = "Fallback: pobieram stronę główną czasopisma…"
-			let roots = try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
-			let rootID = roots.first?.id ?? magazineRootPageID
-			debugStage = "Fallback: pobieram numery (parent=\(rootID))…"
-			let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
-			debugStage = "Fallback: pobrano \(issues.count) numerów."
-			return issues
+			debugStage = "Pobrano \(issues.count) numerów."
+			if !issues.isEmpty {
+				return issues
+			}
+		} catch {
+			debugStage = "Błąd pobierania numerów (parent=\(magazineRootPageID))."
 		}
+
+		debugStage = "Fallback: pobieram stronę główną czasopisma…"
+		let roots = try await fetchWithTimeout(seconds: 20) {
+			try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
+		}
+		let rootID = roots.first?.id ?? magazineRootPageID
+
+		debugStage = "Fallback: pobieram numery (parent=\(rootID))…"
+		let issues = try await fetchWithTimeout(seconds: 20) {
+			try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
+		}
+		debugStage = "Fallback: pobrano \(issues.count) numerów."
+		return issues
 	}
 }
 
@@ -234,19 +241,27 @@ private enum TyflocentrumTimeoutError: Error {
 	case timedOut
 }
 
-private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
-	try await withThrowingTaskGroup(of: T.self) { group in
-		group.addTask {
-			try await operation()
-		}
-		group.addTask {
-			try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-			throw TyflocentrumTimeoutError.timedOut
-		}
+private func fetchWithTimeout<T>(
+	seconds: TimeInterval,
+	operation: @escaping () async throws -> T
+) async throws -> T {
+	let fetchTask = Task {
+		try await operation()
+	}
 
-		let result = try await group.next()!
-		group.cancelAll()
+	let timeoutTask = Task {
+		try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+		fetchTask.cancel()
+		throw TyflocentrumTimeoutError.timedOut
+	}
+
+	do {
+		let result = try await fetchTask.value
+		timeoutTask.cancel()
 		return result
+	} catch {
+		timeoutTask.cancel()
+		throw error
 	}
 }
 
