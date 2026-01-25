@@ -259,11 +259,11 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(newsRetry.waitForExistence(timeout: 5))
 		newsRetry.tap()
 
-		let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-		XCTAssertTrue(initialNewsRow.waitForExistence(timeout: 5))
-		let refreshedNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.3").firstMatch
-		pullToRefresh(newsList, untilExists: refreshedNewsRow)
-		XCTAssertEqual(refreshedNewsRow.label, "Podcast. Test podcast 2")
+			let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(initialNewsRow.waitForExistence(timeout: 5))
+			let refreshedNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.3").firstMatch
+			pullToRefresh(newsList, untilExists: refreshedNewsRow, scrollToReveal: true)
+			XCTAssertEqual(refreshedNewsRow.label, "Podcast. Test podcast 2")
 
 		app.tabBars.buttons["Podcasty"].tap()
 		let podcastCategoriesList = app.descendants(matching: .any).matching(identifier: "podcastCategories.list").firstMatch
