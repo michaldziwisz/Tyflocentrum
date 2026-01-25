@@ -409,7 +409,7 @@ struct NewsView: View {
 	@State private var accessibilityLayoutChangeTask: Task<Void, Never>?
 
 	var body: some View {
-		NavigationStack {
+		NavigationView {
 			List {
 				AsyncListStatusSection(
 					errorMessage: viewModel.errorMessage,
