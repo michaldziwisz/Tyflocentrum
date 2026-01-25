@@ -456,25 +456,23 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(issueRow.waitForExistence(timeout: 5))
 		issueRow.tap()
 
-		let tocList = app.descendants(matching: .any).matching(identifier: "magazine.toc.list").firstMatch
-		if tocList.waitForExistence(timeout: 5) {
-			let pdfButton = app.descendants(matching: .any).matching(identifier: "magazine.issue.pdf").firstMatch
-			XCTAssertTrue(pdfButton.exists)
-
 			let articleRow = app.descendants(matching: .any).matching(identifier: "magazine.article.7774").firstMatch
-			XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
-			articleRow.tap()
+			if articleRow.waitForExistence(timeout: 5) {
+				let pdfButton = app.descendants(matching: .any).matching(identifier: "magazine.issue.pdf").firstMatch
+				XCTAssertTrue(pdfButton.exists)
 
-			let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
-			XCTAssertTrue(content.waitForExistence(timeout: 5))
-		} else {
-			let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
-			XCTAssertTrue(content.waitForExistence(timeout: 5))
+				articleRow.tap()
 
-			let pdfButton = app.descendants(matching: .any).matching(identifier: "magazine.issue.pdf.toolbar").firstMatch
-			XCTAssertTrue(pdfButton.exists)
+				let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+				XCTAssertTrue(content.waitForExistence(timeout: 5))
+			} else {
+				let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+				XCTAssertTrue(content.waitForExistence(timeout: 5))
+
+				let pdfButton = app.descendants(matching: .any).matching(identifier: "magazine.issue.pdf.toolbar").firstMatch
+				XCTAssertTrue(pdfButton.exists)
+			}
 		}
-	}
 
 	func testCanNavigateBackFromPodcastDetail() {
 		let app = makeApp()
