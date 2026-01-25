@@ -26,9 +26,9 @@ struct ContentView: View {
 				Image(systemName: "magnifyingglass")
 			}.tag("Search")
 			MoreView().tabItem {
-				Text("Więcej")
-				Image(systemName: "table.badge.more")
-			}.tag("More")
+				Text("Tyfloradio")
+				Image(systemName: "dot.radiowaves.left.and.right")
+			}.tag("Tyfloradio")
 		}
 	}
 }

@@ -47,17 +47,17 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		app.launch()
 
 		XCTAssertTrue(app.tabBars.buttons["Nowości"].waitForExistence(timeout: 5))
-		XCTAssertTrue(app.tabBars.buttons["Podcasty"].exists)
-		XCTAssertTrue(app.tabBars.buttons["Artykuły"].exists)
-		XCTAssertTrue(app.tabBars.buttons["Szukaj"].exists)
-		XCTAssertTrue(app.tabBars.buttons["Więcej"].exists)
-	}
+			XCTAssertTrue(app.tabBars.buttons["Podcasty"].exists)
+			XCTAssertTrue(app.tabBars.buttons["Artykuły"].exists)
+			XCTAssertTrue(app.tabBars.buttons["Szukaj"].exists)
+			XCTAssertTrue(app.tabBars.buttons["Tyfloradio"].exists)
+		}
 
 	func testCanOpenRadioPlayerFromMoreTab() {
 		let app = makeApp()
 		app.launch()
 
-		app.tabBars.buttons["Więcej"].tap()
+			app.tabBars.buttons["Tyfloradio"].tap()
 
 		let radioButton = app.descendants(matching: .any).matching(identifier: "more.tyfloradio").firstMatch
 		XCTAssertTrue(radioButton.waitForExistence(timeout: 5))
@@ -67,10 +67,10 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(playPauseButton.waitForExistence(timeout: 5))
 		XCTAssertEqual(playPauseButton.label, "Odtwarzaj")
 
-		let contactButton = app.descendants(matching: .any).matching(identifier: "player.contactRadio").firstMatch
-		XCTAssertTrue(contactButton.exists)
-		XCTAssertEqual(contactButton.label, "Skontaktuj się z radiem")
-	}
+			let contactButton = app.descendants(matching: .any).matching(identifier: "player.contactRadio").firstMatch
+			XCTAssertTrue(contactButton.exists)
+			XCTAssertEqual(contactButton.label, "Skontaktuj się z Tyfloradiem")
+		}
 
 	func testCanOpenPodcastPlayerAndSeeSeekControls() {
 		let app = makeApp()
@@ -149,7 +149,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let app = makeApp()
 		app.launch()
 
-		app.tabBars.buttons["Więcej"].tap()
+			app.tabBars.buttons["Tyfloradio"].tap()
 
 		let radioButton = app.descendants(matching: .any).matching(identifier: "more.tyfloradio").firstMatch
 		XCTAssertTrue(radioButton.waitForExistence(timeout: 5))
@@ -168,7 +168,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE"])
 		app.launch()
 
-		app.tabBars.buttons["Więcej"].tap()
+			app.tabBars.buttons["Tyfloradio"].tap()
 
 		let radioButton = app.descendants(matching: .any).matching(identifier: "more.tyfloradio").firstMatch
 		XCTAssertTrue(radioButton.waitForExistence(timeout: 5))

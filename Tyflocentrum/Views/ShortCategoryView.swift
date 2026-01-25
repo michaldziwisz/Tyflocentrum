@@ -25,3 +25,21 @@ struct ShortCategoryView: View {
 		.accessibilityIdentifier("category.row.\(category.id)")
 	}
 }
+
+struct AllCategoriesRowView: View {
+	let title: String
+	let accessibilityIdentifier: String
+
+	var body: some View {
+		HStack {
+			Text(title)
+				.font(.headline)
+				.foregroundColor(.primary)
+			Spacer()
+		}
+		.accessibilityElement(children: .ignore)
+		.accessibilityLabel(title)
+		.accessibilityHint("Dwukrotnie stuknij, aby wyświetlić treści ze wszystkich kategorii.")
+		.accessibilityIdentifier(accessibilityIdentifier)
+	}
+}

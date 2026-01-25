@@ -266,7 +266,7 @@ struct MediaPlayerView: View {
 			}
 
 			if canBeLive {
-				Button("Skontaktuj się z radiem") {
+				Button("Skontaktuj się z Tyfloradiem") {
 					Task {
 						await performLiveCheck()
 					}

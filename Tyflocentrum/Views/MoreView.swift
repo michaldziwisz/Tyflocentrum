@@ -37,13 +37,12 @@ struct MoreView: View {
 					} label: {
 						Text("Posłuchaj Tyfloradia")
 					}
-					.accessibilityRemoveTraits(.isButton)
 					.accessibilityHint("Otwiera odtwarzacz strumienia na żywo.")
 					.accessibilityIdentifier("more.tyfloradio")
 				}
 
 				Section {
-					Button("Skontaktuj się z radiem") {
+					Button("Skontaktuj się z Tyfloradiem") {
 						Task {
 							await performLiveCheck()
 						}
@@ -52,7 +51,7 @@ struct MoreView: View {
 					.accessibilityIdentifier("more.contactRadio")
 				}
 			}
-			.navigationTitle("Więcej")
+			.navigationTitle("Tyfloradio")
 			.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
 				Button("OK") {}
 			} message: {

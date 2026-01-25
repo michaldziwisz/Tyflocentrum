@@ -332,6 +332,131 @@ final class NewsFeedViewModel: ObservableObject {
 	}
 }
 
+@MainActor
+final class PostSummariesFeedViewModel: ObservableObject {
+	@Published private(set) var items: [WPPostSummary] = []
+	@Published private(set) var hasLoaded = false
+	@Published private(set) var isLoading = false
+	@Published private(set) var isLoadingMore = false
+	@Published private(set) var errorMessage: String?
+	@Published private(set) var loadMoreErrorMessage: String?
+	@Published private(set) var canLoadMore = false
+
+	private let perPage: Int
+	private var nextPage = 1
+	private var totalPages: Int?
+	private var seenIDs = Set<Int>()
+
+	init(perPage: Int = 50) {
+		self.perPage = perPage
+	}
+
+	func loadIfNeeded(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async {
+		guard !hasLoaded else { return }
+		await refresh(fetchPage: fetchPage)
+	}
+
+	func refresh(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async {
+		guard !isLoading else { return }
+		reset()
+
+		isLoading = true
+		defer { isLoading = false }
+
+		errorMessage = nil
+		loadMoreErrorMessage = nil
+
+		do {
+			_ = try await appendNextPage(fetchPage: fetchPage)
+			guard !Task.isCancelled else { return }
+			hasLoaded = true
+
+			if items.isEmpty {
+				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			}
+		} catch {
+			guard !Task.isCancelled else { return }
+			hasLoaded = true
+			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+		}
+	}
+
+	func loadMore(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async {
+		guard hasLoaded else {
+			await loadIfNeeded(fetchPage: fetchPage)
+			return
+		}
+		guard canLoadMore else { return }
+		guard !isLoadingMore else { return }
+
+		isLoadingMore = true
+		defer { isLoadingMore = false }
+
+		loadMoreErrorMessage = nil
+
+		let initialCount = items.count
+		do {
+			_ = try await appendNextPage(fetchPage: fetchPage)
+			guard !Task.isCancelled else { return }
+			if items.count == initialCount, canLoadMore {
+				loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
+			}
+		} catch {
+			guard !Task.isCancelled else { return }
+			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
+		}
+	}
+
+	private func reset() {
+		items.removeAll(keepingCapacity: true)
+		seenIDs.removeAll(keepingCapacity: true)
+		nextPage = 1
+		totalPages = nil
+		canLoadMore = false
+		hasLoaded = false
+		errorMessage = nil
+		loadMoreErrorMessage = nil
+	}
+
+	private func appendNextPage(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async throws -> Int {
+		guard nextPage > 0 else {
+			canLoadMore = false
+			return 0
+		}
+
+		let page = try await fetchPage(nextPage, perPage)
+
+		if let totalPages = page.totalPages {
+			self.totalPages = totalPages
+		}
+
+		nextPage += 1
+
+		var insertedCount = 0
+		if !page.items.isEmpty {
+			var newItems: [WPPostSummary] = []
+			newItems.reserveCapacity(page.items.count)
+			for item in page.items {
+				if seenIDs.insert(item.id).inserted {
+					newItems.append(item)
+					insertedCount += 1
+				}
+			}
+			items.append(contentsOf: newItems)
+		}
+
+		if page.items.isEmpty {
+			canLoadMore = false
+		} else if let totalPages = totalPages {
+			canLoadMore = nextPage <= totalPages
+		} else {
+			canLoadMore = page.items.count == perPage
+		}
+
+		return insertedCount
+	}
+}
+
 struct AsyncListStatusSection: View {
 	let errorMessage: String?
 	let isLoading: Bool
