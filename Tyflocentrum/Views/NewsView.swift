@@ -406,9 +406,10 @@ struct NewsView: View {
 	@StateObject private var viewModel = NewsFeedViewModel()
 	@State private var playerPodcast: Podcast?
 	@State private var didPostAccessibilityLayoutChange = false
+	@State private var accessibilityLayoutChangeTask: Task<Void, Never>?
 
 	var body: some View {
-		NavigationView {
+		NavigationStack {
 			List {
 				AsyncListStatusSection(
 					errorMessage: viewModel.errorMessage,
@@ -445,6 +446,10 @@ struct NewsView: View {
 						)
 					}
 					.accessibilityRemoveTraits(.isButton)
+					.onAppear {
+						guard item.id == viewModel.items.last?.id else { return }
+						Task { await viewModel.loadMore(api: api) }
+					}
 				}
 
 				if viewModel.errorMessage == nil, viewModel.hasLoaded {
@@ -458,27 +463,32 @@ struct NewsView: View {
 							.disabled(viewModel.isLoadingMore)
 						}
 					}
-					else if viewModel.canLoadMore {
+					else if viewModel.isLoadingMore {
 						Section {
 							ProgressView("Ładowanie starszych treści…")
-								.onAppear {
-									Task { await viewModel.loadMore(api: api) }
-								}
 						}
 					}
 				}
 			}
+			.scrollIndicators(.visible)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
 			.onChange(of: viewModel.items.count) { newCount in
 				if newCount == 0 {
 					didPostAccessibilityLayoutChange = false
+					accessibilityLayoutChangeTask?.cancel()
+					accessibilityLayoutChangeTask = nil
 					return
 				}
 				guard !didPostAccessibilityLayoutChange else { return }
 				didPostAccessibilityLayoutChange = true
-				UIAccessibility.post(notification: .layoutChanged, argument: nil)
+				accessibilityLayoutChangeTask?.cancel()
+				accessibilityLayoutChangeTask = Task {
+					try? await Task.sleep(nanoseconds: 250_000_000)
+					guard !Task.isCancelled else { return }
+					UIAccessibility.post(notification: .layoutChanged, argument: nil)
+				}
 			}
 			.accessibilityIdentifier("news.list")
 			.task {
