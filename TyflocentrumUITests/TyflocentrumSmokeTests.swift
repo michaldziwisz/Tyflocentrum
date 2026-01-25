@@ -12,7 +12,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		return app
 	}
 
-	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement) {
+	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
 		func dragDown() {
 			let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
 			let finish = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
@@ -22,6 +22,9 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		dragDown()
 		if !element.waitForExistence(timeout: 2) {
 			dragDown()
+		}
+		if scrollToReveal, !element.exists {
+			list.swipeUp()
 		}
 		XCTAssertTrue(element.waitForExistence(timeout: 5))
 	}
@@ -190,13 +193,13 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let app = makeApp()
 		app.launch()
 
-		let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
-		XCTAssertTrue(newsList.waitForExistence(timeout: 5))
-		let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-		XCTAssertTrue(initialNewsRow.waitForExistence(timeout: 5))
-		let refreshedNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.3").firstMatch
-		pullToRefresh(newsList, untilExists: refreshedNewsRow)
-		XCTAssertEqual(refreshedNewsRow.label, "Podcast. Test podcast 2")
+			let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
+			XCTAssertTrue(newsList.waitForExistence(timeout: 5))
+			let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(initialNewsRow.waitForExistence(timeout: 5))
+			let refreshedNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.3").firstMatch
+			pullToRefresh(newsList, untilExists: refreshedNewsRow, scrollToReveal: true)
+			XCTAssertEqual(refreshedNewsRow.label, "Podcast. Test podcast 2")
 
 		app.tabBars.buttons["Podcasty"].tap()
 		let podcastCategoriesList = app.descendants(matching: .any).matching(identifier: "podcastCategories.list").firstMatch
