@@ -155,9 +155,9 @@ final class NewsFeedViewModel: ObservableObject {
 	}
 
 	func refresh(api: TyfloAPI) async {
+		guard !isLoading else { return }
 		reset()
 
-		guard !isLoading else { return }
 		isLoading = true
 		defer { isLoading = false }
 
