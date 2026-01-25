@@ -147,7 +147,7 @@ private final class UITestURLProtocol: URLProtocol {
 						return (
 							200,
 							#"""
-							{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"<h2>Spis treści</h2><ul><li><a href=\\"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/\\">Test artykuł 1</a></li></ul><p>Pobierz PDF – <a href=\\"https://tyfloswiat.pl/wp-content/uploads/2025/08/Tyflo-4_2025.pdf\\">Tyflo 4_2025</a></p>"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7772"}}
+								{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"<h2>Spis treści</h2><ul><li><a href='https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/'>Test artykuł 1</a></li></ul><p>Pobierz PDF – <a href='https://tyfloswiat.pl/wp-content/uploads/2025/08/Tyflo-4_2025.pdf'>Tyflo 4_2025</a></p>"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7772"}}
 							"""#.data(using: .utf8) ?? Data()
 						)
 					}
