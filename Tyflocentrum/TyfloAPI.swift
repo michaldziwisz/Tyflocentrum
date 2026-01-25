@@ -5,6 +5,7 @@
 //  Created by Arkadiusz Świętnicki on 19/10/2022.
 //
 
+import Dispatch
 import Foundation
 
 	final class TyfloAPI: ObservableObject {
@@ -28,6 +29,52 @@ import Foundation
 		self.session = session
 	}
 
+	private static let defaultRequestTimeout: TimeInterval = 20
+
+	private func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+		let timeout = (request.timeoutInterval > 0) ? request.timeoutInterval : Self.defaultRequestTimeout
+
+		return try await withCheckedThrowingContinuation { continuation in
+			let lock = NSLock()
+			var hasResumed = false
+			var dataTask: URLSessionDataTask?
+
+			let timeoutWorkItem = DispatchWorkItem {
+				lock.lock()
+				defer { lock.unlock() }
+
+				guard !hasResumed else { return }
+				hasResumed = true
+				dataTask?.cancel()
+				continuation.resume(throwing: URLError(.timedOut))
+			}
+
+			dataTask = session.dataTask(with: request) { data, response, error in
+				lock.lock()
+				defer { lock.unlock() }
+
+				guard !hasResumed else { return }
+				hasResumed = true
+				timeoutWorkItem.cancel()
+
+				if let error {
+					continuation.resume(throwing: error)
+					return
+				}
+
+				guard let response else {
+					continuation.resume(throwing: URLError(.badServerResponse))
+					return
+				}
+
+				continuation.resume(returning: (data ?? Data(), response))
+			}
+
+			DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout, execute: timeoutWorkItem)
+			dataTask?.resume()
+		}
+	}
+
 		struct WPPage<Item: Decodable> {
 			let items: [Item]
 			let total: Int?
@@ -43,9 +90,9 @@ import Foundation
 	private func fetch<T: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> T {
 		var request = URLRequest(url: url)
 		request.cachePolicy = .reloadIgnoringLocalCacheData
-		request.timeoutInterval = 20
+		request.timeoutInterval = Self.defaultRequestTimeout
 		request.setValue("application/json", forHTTPHeaderField: "Accept")
-		let (data, response) = try await session.data(for: request)
+		let (data, response) = try await data(for: request)
 		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 			throw URLError(.badServerResponse)
 		}
@@ -55,9 +102,9 @@ import Foundation
 		private func fetchWPPage<Item: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> WPPage<Item> {
 			var request = URLRequest(url: url)
 			request.cachePolicy = .reloadIgnoringLocalCacheData
-			request.timeoutInterval = 20
+			request.timeoutInterval = Self.defaultRequestTimeout
 			request.setValue("application/json", forHTTPHeaderField: "Accept")
-			let (data, response) = try await session.data(for: request)
+			let (data, response) = try await data(for: request)
 			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 				throw URLError(.badServerResponse)
 			}
