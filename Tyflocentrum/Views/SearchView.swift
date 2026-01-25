@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 struct SearchView: View {
 	@EnvironmentObject var api: TyfloAPI
@@ -14,6 +15,10 @@ struct SearchView: View {
 	@State private var lastSearchQuery = ""
 	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
 	@State private var playerPodcast: Podcast?
+
+	private func dismissKeyboard() {
+		UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+	}
 
 	@MainActor
 	private func search(query: String) async {
@@ -31,6 +36,7 @@ struct SearchView: View {
 	}
 
 	private func performSearch() {
+		dismissKeyboard()
 		Task { await search(query: searchText) }
 	}
 
