@@ -186,7 +186,7 @@ private final class UITestURLProtocol: URLProtocol {
 					)
 				}
 
-				if queryItems.contains(where: { $0.name == "parent" && $0.value == "7772" }) {
+				if queryItems.contains(where: { $0.name == "parent" }) {
 					return (
 						200,
 						#"[{"id":7774,"date":"2025-08-20T12:16:01","title":{"rendered":"Test artykuł 1"},"excerpt":{"rendered":"Excerpt"},"link":"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
