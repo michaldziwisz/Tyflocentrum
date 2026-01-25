@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 enum NewsItemKind: String {
 	case podcast
@@ -411,91 +410,6 @@ struct NewsView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@StateObject private var viewModel = NewsFeedViewModel()
 	@State private var playerPodcast: Podcast?
-	@State private var didPostAccessibilityLayoutChange = false
-	@State private var accessibilityLayoutChangeTask: Task<Void, Never>?
-	@State private var listAccessibilityResetToken = UUID()
-	@State private var shouldResetListAccessibility = true
-	@State private var isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
-	@State private var loadMoreStartCount: Int?
-
-	private struct ScrollViewNudger: UIViewRepresentable {
-		let shouldNudge: Bool
-
-		func makeCoordinator() -> Coordinator {
-			Coordinator()
-		}
-
-		func makeUIView(context: Context) -> UIView {
-			UIView(frame: .zero)
-		}
-
-		func updateUIView(_ uiView: UIView, context: Context) {
-			if shouldNudge {
-				context.coordinator.scheduleNudge(from: uiView)
-			} else {
-				context.coordinator.reset()
-			}
-		}
-
-		final class Coordinator {
-			private var didNudge = false
-
-			func reset() {
-				didNudge = false
-			}
-
-			func scheduleNudge(from view: UIView) {
-				guard !didNudge else { return }
-				didNudge = true
-				nudgeScrollView(from: view, attemptsRemaining: 10)
-			}
-
-			private func nudgeScrollView(from view: UIView, attemptsRemaining: Int) {
-				guard attemptsRemaining > 0 else { return }
-
-				DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-					guard let scrollView = self.locateScrollView(from: view) else {
-						self.nudgeScrollView(from: view, attemptsRemaining: attemptsRemaining - 1)
-						return
-					}
-
-					let originalOffset = scrollView.contentOffset
-					let nudge: CGFloat = 1
-					let minY = -scrollView.adjustedContentInset.top
-					let maxY = max(minY, scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom)
-					let nudgedY = min(max(originalOffset.y + nudge, minY), maxY)
-					let nudgedOffset = CGPoint(x: originalOffset.x, y: nudgedY)
-
-					scrollView.setContentOffset(nudgedOffset, animated: false)
-					scrollView.setContentOffset(originalOffset, animated: false)
-					scrollView.flashScrollIndicators()
-				}
-			}
-
-			private func locateScrollView(from view: UIView) -> UIScrollView? {
-				var current: UIView? = view
-				while let currentView = current {
-					if let found = findFirstScrollView(in: currentView) {
-						return found
-					}
-					current = currentView.superview
-				}
-				return nil
-			}
-
-			private func findFirstScrollView(in view: UIView) -> UIScrollView? {
-				if let scrollView = view as? UIScrollView {
-					return scrollView
-				}
-				for subview in view.subviews {
-					if let found = findFirstScrollView(in: subview) {
-						return found
-					}
-				}
-				return nil
-			}
-		}
-	}
 
 	var body: some View {
 		NavigationView {
@@ -559,69 +473,15 @@ struct NewsView: View {
 					}
 				}
 			}
-			.id(listAccessibilityResetToken)
-			.background(
-				ScrollViewNudger(shouldNudge: isVoiceOverRunning && viewModel.hasLoaded && !viewModel.items.isEmpty)
-					.frame(width: 0, height: 0)
-			)
-			.scrollIndicators(.visible)
 			.refreshable {
 				await viewModel.refresh(api: api)
-			}
-			.onChange(of: viewModel.items.count) { newCount in
-				if newCount == 0 {
-					shouldResetListAccessibility = true
-					didPostAccessibilityLayoutChange = false
-					accessibilityLayoutChangeTask?.cancel()
-					accessibilityLayoutChangeTask = nil
-					return
-				}
-
-				guard isVoiceOverRunning else { return }
-
-				if shouldResetListAccessibility {
-					shouldResetListAccessibility = false
-					accessibilityLayoutChangeTask?.cancel()
-					accessibilityLayoutChangeTask = Task {
-						try? await Task.sleep(nanoseconds: 100_000_000)
-						guard !Task.isCancelled else { return }
-						listAccessibilityResetToken = UUID()
-						didPostAccessibilityLayoutChange = false
-						try? await Task.sleep(nanoseconds: 250_000_000)
-						guard !Task.isCancelled else { return }
-						didPostAccessibilityLayoutChange = true
-						UIAccessibility.post(notification: .layoutChanged, argument: nil)
-					}
-					return
-				}
-			}
-			.onChange(of: viewModel.isLoadingMore) { isLoadingMore in
-				guard isVoiceOverRunning else { return }
-
-				if isLoadingMore {
-					loadMoreStartCount = viewModel.items.count
-					return
-				}
-
-				guard let startCount = loadMoreStartCount else { return }
-				loadMoreStartCount = nil
-
-				guard viewModel.items.count > startCount else { return }
-				accessibilityLayoutChangeTask?.cancel()
-				accessibilityLayoutChangeTask = Task {
-					try? await Task.sleep(nanoseconds: 250_000_000)
-					guard !Task.isCancelled else { return }
-					UIAccessibility.post(notification: .layoutChanged, argument: nil)
-				}
 			}
 			.accessibilityIdentifier("news.list")
 			.task {
 				await viewModel.loadIfNeeded(api: api)
 			}
 			.navigationTitle("Nowości")
-		}
-		.onReceive(NotificationCenter.default.publisher(for: UIAccessibility.voiceOverStatusDidChangeNotification)) { _ in
-			isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
+			.navigationBarTitleDisplayMode(.inline)
 		}
 		.sheet(item: $playerPodcast) { podcast in
 			PodcastPlayerSheet(podcast: podcast)
