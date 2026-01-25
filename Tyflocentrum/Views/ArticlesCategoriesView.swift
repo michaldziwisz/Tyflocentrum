@@ -151,6 +151,7 @@ private struct TyfloSwiatMagazineView: View {
 	@EnvironmentObject private var api: TyfloAPI
 	@StateObject private var viewModel = AsyncListViewModel<WPPostSummary>()
 	private let magazineRootPageID = 1409
+	@State private var debugStage: String?
 
 	private var issuesByYear: [(year: Int, issues: [WPPostSummary])] {
 		let grouped = Dictionary(grouping: viewModel.items) { issue in
@@ -176,6 +177,15 @@ private struct TyfloSwiatMagazineView: View {
 				isRetryDisabled: viewModel.isLoading
 			)
 
+			if viewModel.isLoading || viewModel.errorMessage != nil {
+				if let debugStage {
+					Section {
+						Text(debugStage)
+							.foregroundColor(.secondary)
+					}
+				}
+			}
+
 			ForEach(issuesByYear, id: \.year) { group in
 				NavigationLink {
 					TyfloSwiatMagazineYearView(year: group.year, issues: group.issues)
@@ -196,18 +206,47 @@ private struct TyfloSwiatMagazineView: View {
 	}
 
 	private func fetchIssues() async throws -> [WPPostSummary] {
-		do {
-			let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100)
-			if !issues.isEmpty {
-				return issues
+		try await withTimeout(seconds: 20) {
+			do {
+				debugStage = "Pobieram listę numerów…"
+				let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100)
+				if !issues.isEmpty {
+					debugStage = "Pobrano \(issues.count) numerów."
+					return issues
+				}
+				debugStage = "Brak numerów (parent=\(magazineRootPageID))."
+			} catch {
+				debugStage = "Błąd pobierania numerów (parent=\(magazineRootPageID))."
 			}
-		} catch {
-			// Fallback below.
+
+			debugStage = "Fallback: pobieram stronę główną czasopisma…"
+			let roots = try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
+			let rootID = roots.first?.id ?? magazineRootPageID
+			debugStage = "Fallback: pobieram numery (parent=\(rootID))…"
+			let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
+			debugStage = "Fallback: pobrano \(issues.count) numerów."
+			return issues
+		}
+	}
+}
+
+private enum TyflocentrumTimeoutError: Error {
+	case timedOut
+}
+
+private func withTimeout<T>(seconds: TimeInterval, operation: @escaping () async throws -> T) async throws -> T {
+	try await withThrowingTaskGroup(of: T.self) { group in
+		group.addTask {
+			try await operation()
+		}
+		group.addTask {
+			try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+			throw TyflocentrumTimeoutError.timedOut
 		}
 
-		let roots = try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
-		let rootID = roots.first?.id ?? magazineRootPageID
-		return try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
+		let result = try await group.next()!
+		group.cancelAll()
+		return result
 	}
 }
 
