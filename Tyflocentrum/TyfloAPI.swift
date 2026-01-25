@@ -14,7 +14,16 @@ import Foundation
 		private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
 		private let wpPostFields = "id,date,title,excerpt,content,guid"
 		private let wpEmbedPostFields = "id,date,link,title,excerpt"
-	static let shared = TyfloAPI()
+
+	private static func makeSharedSession() -> URLSession {
+		let config = URLSessionConfiguration.default
+		config.waitsForConnectivity = false
+		config.timeoutIntervalForRequest = 20
+		config.timeoutIntervalForResource = 20
+		return URLSession(configuration: config)
+	}
+
+	static let shared = TyfloAPI(session: makeSharedSession())
 	init(session: URLSession = .shared) {
 		self.session = session
 	}
