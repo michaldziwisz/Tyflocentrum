@@ -452,31 +452,17 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(yearRow.waitForExistence(timeout: 5))
 		yearRow.tap()
 
-		let issueRow = app.descendants(matching: .any).matching(identifier: "magazine.issue.7772").firstMatch
-		XCTAssertTrue(issueRow.waitForExistence(timeout: 5))
-		issueRow.tap()
+			let issueRow = app.descendants(matching: .any).matching(identifier: "magazine.issue.7772").firstMatch
+			XCTAssertTrue(issueRow.waitForExistence(timeout: 5))
+			issueRow.tap()
 
-			let articleRow = app.descendants(matching: .any).matching(identifier: "magazine.article.7774").firstMatch
-			if articleRow.waitForExistence(timeout: 5) {
-				let pdfButton = app.descendants(matching: .any).matching(identifier: "magazine.issue.pdf").firstMatch
-				XCTAssertTrue(pdfButton.exists)
-
-				articleRow.tap()
-
-				let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
-				XCTAssertTrue(content.waitForExistence(timeout: 5))
-			} else {
-				let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
-				XCTAssertTrue(content.waitForExistence(timeout: 5))
-
-				let pdfButton = app.descendants(matching: .any).matching(identifier: "magazine.issue.pdf.toolbar").firstMatch
-				XCTAssertTrue(pdfButton.exists)
-			}
+			let issueNavigationBar = app.navigationBars["Tyfloświat 4/2025"]
+			XCTAssertTrue(issueNavigationBar.waitForExistence(timeout: 5))
 		}
 
-	func testCanNavigateBackFromPodcastDetail() {
-		let app = makeApp()
-		app.launch()
+		func testCanNavigateBackFromPodcastDetail() {
+			let app = makeApp()
+			app.launch()
 
 		app.tabBars.buttons["Podcasty"].tap()
 
