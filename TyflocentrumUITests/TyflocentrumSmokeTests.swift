@@ -14,13 +14,9 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
 			func dragDown() {
-				let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+				let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
 				let finish = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
 				start.press(forDuration: 0.05, thenDragTo: finish)
-			}
-
-			for _ in 0..<2 {
-				list.swipeDown()
 			}
 
 			dragDown()
@@ -37,7 +33,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 				list.swipeUp()
 			}
 		}
-			XCTAssertTrue(element.waitForExistence(timeout: 8))
+			XCTAssertTrue(element.waitForExistence(timeout: 5))
 		}
 
 	private func tapBackButton(in app: XCUIApplication) {
