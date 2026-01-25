@@ -142,7 +142,8 @@ final class NewsFeedViewModel: ObservableObject {
 	@Published private(set) var canLoadMore = false
 
 	private let sourcePerPage = 50
-	private let feedBatchSize = 20
+	private let initialBatchSize = 50
+	private let loadMoreBatchSize = 20
 
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
@@ -162,7 +163,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 		errorMessage = nil
 
-		await appendNextBatch(api: api, batchSize: feedBatchSize)
+		await appendNextBatch(api: api, batchSize: initialBatchSize)
 		hasLoaded = true
 
 		if items.isEmpty {
@@ -184,7 +185,7 @@ final class NewsFeedViewModel: ObservableObject {
 		loadMoreErrorMessage = nil
 
 		let initialCount = items.count
-		await appendNextBatch(api: api, batchSize: feedBatchSize)
+		await appendNextBatch(api: api, batchSize: loadMoreBatchSize)
 
 		if items.count == initialCount, canLoadMore {
 			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
@@ -411,72 +412,156 @@ struct NewsView: View {
 	@StateObject private var viewModel = NewsFeedViewModel()
 	@State private var playerPodcast: Podcast?
 
-	var body: some View {
-		NavigationView {
-			List {
-				AsyncListStatusSection(
-					errorMessage: viewModel.errorMessage,
-					isLoading: viewModel.isLoading,
-					hasLoaded: viewModel.hasLoaded,
-					isEmpty: viewModel.items.isEmpty,
-					emptyMessage: "Brak nowych treści.",
-					retryAction: { await viewModel.refresh(api: api) },
-					retryIdentifier: "news.retry",
-					isRetryDisabled: viewModel.isLoading
-				)
+	private struct NewsStatusView: View {
+		let errorMessage: String?
+		let isLoading: Bool
+		let hasLoaded: Bool
+		let isEmpty: Bool
+		let emptyMessage: String
+		let retryAction: (() async -> Void)?
+		let retryIdentifier: String?
+		let isRetryDisabled: Bool
 
-				ForEach(viewModel.items) { item in
-					let stubPodcast = item.post.asPodcastStub()
-					NavigationLink {
-						switch item.kind {
-						case .podcast:
-							LazyDetailedPodcastView(summary: item.post)
-						case .article:
-							LazyDetailedArticleView(summary: item.post)
+		var body: some View {
+			if let errorMessage {
+				VStack(alignment: .leading, spacing: 12) {
+					Text(errorMessage)
+						.foregroundColor(.secondary)
+
+					if let retryAction {
+						if let retryIdentifier {
+							Button("Spróbuj ponownie") {
+								Task { await retryAction() }
+							}
+							.accessibilityHint("Ponawia pobieranie danych.")
+							.accessibilityIdentifier(retryIdentifier)
+							.disabled(isRetryDisabled)
 						}
-					} label: {
-						ShortPodcastView(
-							podcast: stubPodcast,
-							showsListenAction: item.kind == .podcast,
-							onListen: item.kind == .podcast
-								? { playerPodcast = stubPodcast }
-								: nil,
-							leadingSystemImageName: item.kind.systemImageName,
-							accessibilityKindLabel: item.kind.label,
-							accessibilityIdentifierOverride: item.kind == .podcast
-								? nil
-								: "article.row.\(item.post.id)"
-						)
-					}
-					.accessibilityRemoveTraits(.isButton)
-					.onAppear {
-						guard item.id == viewModel.items.last?.id else { return }
-						Task { await viewModel.loadMore(api: api) }
+						else {
+							Button("Spróbuj ponownie") {
+								Task { await retryAction() }
+							}
+							.accessibilityHint("Ponawia pobieranie danych.")
+							.disabled(isRetryDisabled)
+						}
 					}
 				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal)
+				.padding(.vertical, 16)
+			}
+			else if isLoading && isEmpty {
+				ProgressView("Ładowanie…")
+					.frame(maxWidth: .infinity)
+					.padding(.vertical, 24)
+			}
+			else if hasLoaded && isEmpty {
+				Text(emptyMessage)
+					.foregroundColor(.secondary)
+					.frame(maxWidth: .infinity)
+					.padding(.vertical, 24)
+			}
+		}
+	}
 
-				if viewModel.errorMessage == nil, viewModel.hasLoaded {
-					if let loadMoreErrorMessage = viewModel.loadMoreErrorMessage {
-						Section {
-							Text(loadMoreErrorMessage)
-								.foregroundColor(.secondary)
-							Button("Spróbuj ponownie") {
-								Task { await viewModel.loadMore(api: api) }
-							}
-							.disabled(viewModel.isLoadingMore)
+	private struct NewsLoadMoreStatusView: View {
+		let errorMessage: String?
+		let isLoadingMore: Bool
+		let retryAction: (() async -> Void)?
+		let isRetryDisabled: Bool
+
+		var body: some View {
+			if let errorMessage {
+				VStack(alignment: .leading, spacing: 12) {
+					Text(errorMessage)
+						.foregroundColor(.secondary)
+
+					if let retryAction {
+						Button("Spróbuj ponownie") {
+							Task { await retryAction() }
 						}
+						.disabled(isRetryDisabled)
 					}
-					else if viewModel.isLoadingMore {
-						Section {
-							ProgressView("Ładowanie starszych treści…")
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal)
+				.padding(.vertical, 16)
+			}
+			else if isLoadingMore {
+				ProgressView("Ładowanie starszych treści…")
+					.frame(maxWidth: .infinity)
+					.padding(.vertical, 24)
+			}
+		}
+	}
+
+	var body: some View {
+		NavigationView {
+			ScrollView {
+				LazyVStack(alignment: .leading, spacing: 0) {
+					NewsStatusView(
+						errorMessage: viewModel.errorMessage,
+						isLoading: viewModel.isLoading,
+						hasLoaded: viewModel.hasLoaded,
+						isEmpty: viewModel.items.isEmpty,
+						emptyMessage: "Brak nowych treści.",
+						retryAction: { await viewModel.refresh(api: api) },
+						retryIdentifier: "news.retry",
+						isRetryDisabled: viewModel.isLoading
+					)
+
+					ForEach(viewModel.items) { item in
+						let stubPodcast = item.post.asPodcastStub()
+						NavigationLink {
+							switch item.kind {
+							case .podcast:
+								LazyDetailedPodcastView(summary: item.post)
+							case .article:
+								LazyDetailedArticleView(summary: item.post)
+							}
+						} label: {
+							ShortPodcastView(
+								podcast: stubPodcast,
+								showsListenAction: item.kind == .podcast,
+								onListen: item.kind == .podcast
+									? { playerPodcast = stubPodcast }
+									: nil,
+								leadingSystemImageName: item.kind.systemImageName,
+								accessibilityKindLabel: item.kind.label,
+								accessibilityIdentifierOverride: item.kind == .podcast
+									? nil
+									: "article.row.\(item.post.id)"
+							)
+							.padding(.horizontal)
+							.padding(.vertical, 12)
+							.frame(maxWidth: .infinity, alignment: .leading)
 						}
+						.buttonStyle(.plain)
+						.accessibilityRemoveTraits(.isButton)
+						.onAppear {
+							guard item.id == viewModel.items.last?.id else { return }
+							Task { await viewModel.loadMore(api: api) }
+						}
+
+						Divider()
+							.padding(.leading, 16)
+					}
+
+					if viewModel.errorMessage == nil, viewModel.hasLoaded {
+						NewsLoadMoreStatusView(
+							errorMessage: viewModel.loadMoreErrorMessage,
+							isLoadingMore: viewModel.isLoadingMore,
+							retryAction: { await viewModel.loadMore(api: api) },
+							isRetryDisabled: viewModel.isLoadingMore
+						)
 					}
 				}
 			}
+			.accessibilityIdentifier("news.list")
+			.scrollIndicators(.visible)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
-			.accessibilityIdentifier("news.list")
 			.task {
 				await viewModel.loadIfNeeded(api: api)
 			}
