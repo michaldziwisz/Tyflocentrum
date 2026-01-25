@@ -27,7 +27,7 @@ if [[ -z "$run_id" ]]; then
 fi
 
 tmp_dir="$(mktemp -d)"
-cleanup() { rm -rf "$tmp_dir"; }
+cleanup() { rm -r "$tmp_dir" 2>/dev/null || true; }
 trap cleanup EXIT
 
 gh run download "$run_id" --name "$ARTIFACT_NAME" --dir "$tmp_dir" >/dev/null
@@ -41,4 +41,3 @@ fi
 mkdir -p "$DEST_DIR"
 cp -f "$ipa_path" "$DEST_DIR/$DEST_FILE"
 echo "Saved $DEST_DIR/$DEST_FILE (from run $run_id)."
-

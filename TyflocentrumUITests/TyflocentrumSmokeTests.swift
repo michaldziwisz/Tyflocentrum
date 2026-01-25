@@ -249,9 +249,11 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
 		XCTAssertTrue(newsList.waitForExistence(timeout: 5))
-		XCTAssertTrue(newsList.staticTexts[errorMessage].waitForExistence(timeout: 5))
-		let newsRetry = newsList.buttons["Spróbuj ponownie"].firstMatch
-		XCTAssertTrue(newsRetry.exists)
+
+		XCTAssertTrue(app.staticTexts[errorMessage].firstMatch.waitForExistence(timeout: 5))
+
+		let newsRetry = app.descendants(matching: .any).matching(identifier: "news.retry").firstMatch
+		XCTAssertTrue(newsRetry.waitForExistence(timeout: 5))
 		newsRetry.tap()
 
 		let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
