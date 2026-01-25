@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import UIKit
 
 enum NewsItemKind: String {
 	case podcast
@@ -141,7 +142,7 @@ final class NewsFeedViewModel: ObservableObject {
 	@Published private(set) var loadMoreErrorMessage: String?
 	@Published private(set) var canLoadMore = false
 
-	private let sourcePerPage = 20
+	private let sourcePerPage = 50
 	private let feedBatchSize = 20
 
 	private var podcasts = SourceState(kind: .podcast)
@@ -407,6 +408,10 @@ struct NewsView: View {
 	@State private var playerPodcast: Podcast?
 	@State private var didPostAccessibilityLayoutChange = false
 	@State private var accessibilityLayoutChangeTask: Task<Void, Never>?
+	@State private var listAccessibilityResetToken = UUID()
+	@State private var shouldResetListAccessibility = true
+	@State private var isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
+	@State private var loadMoreStartCount: Int?
 
 	var body: some View {
 		NavigationView {
@@ -470,19 +475,50 @@ struct NewsView: View {
 					}
 				}
 			}
+			.id(listAccessibilityResetToken)
 			.scrollIndicators(.visible)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
 			.onChange(of: viewModel.items.count) { newCount in
 				if newCount == 0 {
+					shouldResetListAccessibility = true
 					didPostAccessibilityLayoutChange = false
 					accessibilityLayoutChangeTask?.cancel()
 					accessibilityLayoutChangeTask = nil
 					return
 				}
-				guard !didPostAccessibilityLayoutChange else { return }
-				didPostAccessibilityLayoutChange = true
+
+				guard isVoiceOverRunning else { return }
+
+				if shouldResetListAccessibility {
+					shouldResetListAccessibility = false
+					accessibilityLayoutChangeTask?.cancel()
+					accessibilityLayoutChangeTask = Task {
+						try? await Task.sleep(nanoseconds: 100_000_000)
+						guard !Task.isCancelled else { return }
+						listAccessibilityResetToken = UUID()
+						didPostAccessibilityLayoutChange = false
+						try? await Task.sleep(nanoseconds: 250_000_000)
+						guard !Task.isCancelled else { return }
+						didPostAccessibilityLayoutChange = true
+						UIAccessibility.post(notification: .layoutChanged, argument: nil)
+					}
+					return
+				}
+			}
+			.onChange(of: viewModel.isLoadingMore) { isLoadingMore in
+				guard isVoiceOverRunning else { return }
+
+				if isLoadingMore {
+					loadMoreStartCount = viewModel.items.count
+					return
+				}
+
+				guard let startCount = loadMoreStartCount else { return }
+				loadMoreStartCount = nil
+
+				guard viewModel.items.count > startCount else { return }
 				accessibilityLayoutChangeTask?.cancel()
 				accessibilityLayoutChangeTask = Task {
 					try? await Task.sleep(nanoseconds: 250_000_000)
@@ -495,6 +531,9 @@ struct NewsView: View {
 				await viewModel.loadIfNeeded(api: api)
 			}
 			.navigationTitle("Nowości")
+		}
+		.onReceive(NotificationCenter.default.publisher(for: UIAccessibility.voiceOverStatusDidChangeNotification)) { _ in
+			isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
 		}
 		.sheet(item: $playerPodcast) { podcast in
 			PodcastPlayerSheet(podcast: podcast)
