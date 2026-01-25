@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import UIKit
 
 enum NewsItemKind: String {
 	case podcast
@@ -56,39 +55,6 @@ struct NewsItem: Identifiable {
 			return lhs.kind.sortOrder < rhs.kind.sortOrder
 		}
 		return lhs.post.id > rhs.post.id
-	}
-}
-
-private struct VoiceOverQuickScroller: View {
-	let itemIDs: [String]
-	let scrollTo: (String) -> Void
-
-	@State private var value: Double = 0
-
-	var body: some View {
-		let maxIndex = max(0, itemIDs.count - 1)
-		let step = max(1, Double(maxIndex) / 20)
-
-		Slider(
-			value: Binding(
-				get: { min(max(value, 0), Double(maxIndex)) },
-				set: { newValue in
-					value = newValue
-					let index = Int(newValue.rounded())
-					guard index >= 0, index < itemIDs.count else { return }
-					scrollTo(itemIDs[index])
-				}
-			),
-			in: 0...Double(maxIndex),
-			step: step
-		)
-		.accessibilityLabel("Szybkie przewijanie")
-		.accessibilityValue("\(Int(value.rounded()) + 1) z \(max(1, itemIDs.count))")
-		.accessibilityHint("Przesuń w górę lub w dół, aby szybko przewijać listę.")
-		.accessibilityIdentifier("news.quickScroll")
-		.accessibilitySortPriority(1000)
-		.opacity(0.01)
-		.frame(width: 44, height: 44)
 	}
 }
 
@@ -439,77 +405,65 @@ struct NewsView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@StateObject private var viewModel = NewsFeedViewModel()
 	@State private var playerPodcast: Podcast?
-	@State private var isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
+	@State private var didPostAccessibilityLayoutChange = false
 
 	var body: some View {
 		NavigationView {
-			ScrollViewReader { proxy in
-				List {
-					AsyncListStatusSection(
-						errorMessage: viewModel.errorMessage,
-						isLoading: viewModel.isLoading,
-						hasLoaded: viewModel.hasLoaded,
-						isEmpty: viewModel.items.isEmpty,
-						emptyMessage: "Brak nowych treści.",
-						retryAction: { await viewModel.refresh(api: api) },
-						retryIdentifier: "news.retry",
-						isRetryDisabled: viewModel.isLoading
-					)
+			List {
+				AsyncListStatusSection(
+					errorMessage: viewModel.errorMessage,
+					isLoading: viewModel.isLoading,
+					hasLoaded: viewModel.hasLoaded,
+					isEmpty: viewModel.items.isEmpty,
+					emptyMessage: "Brak nowych treści.",
+					retryAction: { await viewModel.refresh(api: api) },
+					retryIdentifier: "news.retry",
+					isRetryDisabled: viewModel.isLoading
+				)
 
-					ForEach(viewModel.items) { item in
-						let stubPodcast = item.post.asPodcastStub()
-						NavigationLink {
-							switch item.kind {
-							case .podcast:
-								LazyDetailedPodcastView(summary: item.post)
-							case .article:
-								LazyDetailedArticleView(summary: item.post)
-							}
-						} label: {
-							ShortPodcastView(
-								podcast: stubPodcast,
-								showsListenAction: item.kind == .podcast,
-								onListen: item.kind == .podcast
-									? { playerPodcast = stubPodcast }
-									: nil,
-								leadingSystemImageName: item.kind.systemImageName,
-								accessibilityKindLabel: item.kind.label,
-								accessibilityIdentifierOverride: item.kind == .podcast
-									? nil
-									: "article.row.\(item.post.id)"
-							)
+				ForEach(viewModel.items) { item in
+					let stubPodcast = item.post.asPodcastStub()
+					NavigationLink {
+						switch item.kind {
+						case .podcast:
+							LazyDetailedPodcastView(summary: item.post)
+						case .article:
+							LazyDetailedArticleView(summary: item.post)
 						}
-						.accessibilityRemoveTraits(.isButton)
+					} label: {
+						ShortPodcastView(
+							podcast: stubPodcast,
+							showsListenAction: item.kind == .podcast,
+							onListen: item.kind == .podcast
+								? { playerPodcast = stubPodcast }
+								: nil,
+							leadingSystemImageName: item.kind.systemImageName,
+							accessibilityKindLabel: item.kind.label,
+							accessibilityIdentifierOverride: item.kind == .podcast
+								? nil
+								: "article.row.\(item.post.id)"
+						)
 					}
+					.accessibilityRemoveTraits(.isButton)
+				}
 
-					if viewModel.errorMessage == nil, viewModel.hasLoaded {
-						if let loadMoreErrorMessage = viewModel.loadMoreErrorMessage {
-							Section {
-								Text(loadMoreErrorMessage)
-									.foregroundColor(.secondary)
-								Button("Spróbuj ponownie") {
+				if viewModel.errorMessage == nil, viewModel.hasLoaded {
+					if let loadMoreErrorMessage = viewModel.loadMoreErrorMessage {
+						Section {
+							Text(loadMoreErrorMessage)
+								.foregroundColor(.secondary)
+							Button("Spróbuj ponownie") {
+								Task { await viewModel.loadMore(api: api) }
+							}
+							.disabled(viewModel.isLoadingMore)
+						}
+					}
+					else if viewModel.canLoadMore {
+						Section {
+							ProgressView("Ładowanie starszych treści…")
+								.onAppear {
 									Task { await viewModel.loadMore(api: api) }
 								}
-								.disabled(viewModel.isLoadingMore)
-							}
-						}
-						else if viewModel.canLoadMore {
-							Section {
-								ProgressView("Ładowanie starszych treści…")
-									.onAppear {
-										Task { await viewModel.loadMore(api: api) }
-									}
-							}
-						}
-					}
-				}
-				.accessibilityIdentifier("news.list")
-				.overlay(alignment: .trailing) {
-					if isVoiceOverRunning, !viewModel.items.isEmpty {
-						VoiceOverQuickScroller(itemIDs: viewModel.items.map(\.id)) { id in
-							withAnimation {
-								proxy.scrollTo(id, anchor: .top)
-							}
 						}
 					}
 				}
@@ -517,13 +471,20 @@ struct NewsView: View {
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
+			.onChange(of: viewModel.items.count) { newCount in
+				if newCount == 0 {
+					didPostAccessibilityLayoutChange = false
+					return
+				}
+				guard !didPostAccessibilityLayoutChange else { return }
+				didPostAccessibilityLayoutChange = true
+				UIAccessibility.post(notification: .layoutChanged, argument: nil)
+			}
+			.accessibilityIdentifier("news.list")
 			.task {
 				await viewModel.loadIfNeeded(api: api)
 			}
 			.navigationTitle("Nowości")
-		}
-		.onReceive(NotificationCenter.default.publisher(for: UIAccessibility.voiceOverStatusDidChangeNotification)) { _ in
-			isVoiceOverRunning = UIAccessibility.isVoiceOverRunning
 		}
 		.sheet(item: $playerPodcast) { podcast in
 			PodcastPlayerSheet(podcast: podcast)
