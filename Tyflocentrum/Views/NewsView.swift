@@ -262,6 +262,8 @@ final class NewsFeedViewModel: ObservableObject {
 		articles.didFailLastFetch = false
 
 		var added = 0
+		var newItems: [NewsItem] = []
+		newItems.reserveCapacity(batchSize)
 		while added < batchSize {
 			guard !Task.isCancelled else { return }
 
@@ -286,7 +288,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 			let item = NewsItem(kind: selected.kind, post: selected.post)
 			if seenIDs.insert(item.id).inserted {
-				items.append(item)
+				newItems.append(item)
 				added += 1
 			}
 
@@ -294,6 +296,9 @@ final class NewsFeedViewModel: ObservableObject {
 			articles.trimConsumedIfNeeded()
 		}
 
+		if !newItems.isEmpty {
+			items.append(contentsOf: newItems)
+		}
 		canLoadMore = podcasts.nextItem != nil || articles.nextItem != nil || podcasts.hasMore || articles.hasMore
 	}
 
