@@ -127,24 +127,79 @@ private final class UITestURLProtocol: URLProtocol {
 			)
 		}
 
-		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/categories") {
-			if shouldFailOnce(&didFailTyfloswiatCategories) {
-				return (500, Data("[]".utf8))
-			}
-			let requestIndex = nextRequestIndex(for: &tyfloswiatCategoriesRequestCount)
+			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/categories") {
+				if shouldFailOnce(&didFailTyfloswiatCategories) {
+					return (500, Data("[]".utf8))
+				}
+				let requestIndex = nextRequestIndex(for: &tyfloswiatCategoriesRequestCount)
 			if requestIndex <= 1 {
 				return (200, #"[{"id":20,"name":"Test artykuły","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8))
 			}
 			return (
 				200,
-				#"[{"id":20,"name":"Test artykuły","count":1},{"id":21,"name":"Test artykuły 2","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8)
-			)
-		}
+					#"[{"id":20,"name":"Test artykuły","count":1},{"id":21,"name":"Test artykuły 2","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8)
+				)
+			}
 
-		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
-			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-				return (
-					200,
+			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/pages") {
+				if let pageID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/pages/") {
+					if pageID == 7772 {
+						return (
+							200,
+							#"""
+							{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"<h2>Spis treści</h2><ul><li><a href=\\"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/\\">Test artykuł 1</a></li></ul><p>Pobierz PDF – <a href=\\"https://tyfloswiat.pl/wp-content/uploads/2025/08/Tyflo-4_2025.pdf\\">Tyflo 4_2025</a></p>"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7772"}}
+							"""#.data(using: .utf8) ?? Data()
+						)
+					}
+
+					if pageID == 7774 {
+						return (
+							200,
+							#"""
+							{"id":7774,"date":"2025-08-20T12:16:01","title":{"rendered":"Test artykuł 1"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7774"}}
+							"""#.data(using: .utf8) ?? Data()
+						)
+					}
+
+					return (
+						200,
+						#"""
+						{"id":\#(pageID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test strona"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=\#(pageID)"}}
+						"""#.data(using: .utf8) ?? Data()
+					)
+				}
+
+				let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+				let queryItems = components?.queryItems ?? []
+
+				if queryItems.contains(where: { $0.name == "slug" && $0.value == "czasopismo" }) {
+					return (
+						200,
+						#"[{"id":1409,"date":"2020-04-01T07:58:32","title":{"rendered":"Czasopismo Tyfloświat"},"excerpt":{"rendered":""},"link":"https://tyfloswiat.pl/czasopismo/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+					)
+				}
+
+				if queryItems.contains(where: { $0.name == "parent" && $0.value == "1409" }) {
+					return (
+						200,
+						#"[{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"link":"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+					)
+				}
+
+				if queryItems.contains(where: { $0.name == "parent" && $0.value == "7772" }) {
+					return (
+						200,
+						#"[{"id":7774,"date":"2025-08-20T12:16:01","title":{"rendered":"Test artykuł 1"},"excerpt":{"rendered":"Excerpt"},"link":"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+					)
+				}
+
+				return (200, Data("[]".utf8))
+			}
+
+			if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
+				if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+					return (
+						200,
 					#"""
 					{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=\#(postID)"},"link":"https://tyflopodcast.net/?p=\#(postID)"}
 					"""#.data(using: .utf8) ?? Data()

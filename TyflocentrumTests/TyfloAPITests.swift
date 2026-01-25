@@ -111,6 +111,104 @@ final class TyfloAPITests: XCTestCase {
 			await fulfillment(of: [requestMade], timeout: 1)
 		}
 
+		func testFetchTyfloswiatPagesUsesPagesEndpointAndSlugQuery() async {
+			let requestMade = expectation(description: "request made")
+
+			StubURLProtocol.requestHandler = { request in
+				requestMade.fulfill()
+				let url = try XCTUnwrap(request.url)
+
+				XCTAssertEqual(url.host, "tyfloswiat.pl")
+				XCTAssertTrue(url.path.contains("/wp-json/wp/v2/pages"))
+
+				let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+				let items = components.queryItems ?? []
+				XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
+				XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "1")
+				XCTAssertEqual(items.first(where: { $0.name == "slug" })?.value, "czasopismo")
+				XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				return (response, Data("[]".utf8))
+			}
+
+			let api = TyfloAPI(session: makeSession())
+			do {
+				let results = try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
+				XCTAssertTrue(results.isEmpty)
+			} catch {
+				XCTFail("Expected success but got error: \(error)")
+			}
+
+			await fulfillment(of: [requestMade], timeout: 1)
+		}
+
+		func testFetchTyfloswiatPageSummariesUsesParentAndEmbedFields() async {
+			let requestMade = expectation(description: "request made")
+
+			StubURLProtocol.requestHandler = { request in
+				requestMade.fulfill()
+				let url = try XCTUnwrap(request.url)
+
+				XCTAssertEqual(url.host, "tyfloswiat.pl")
+				XCTAssertTrue(url.path.contains("/wp-json/wp/v2/pages"))
+
+				let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+				let items = components.queryItems ?? []
+				XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
+				XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+				XCTAssertEqual(items.first(where: { $0.name == "parent" })?.value, "1409")
+				XCTAssertEqual(items.first(where: { $0.name == "orderby" })?.value, "date")
+				XCTAssertEqual(items.first(where: { $0.name == "order" })?.value, "desc")
+				XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				return (response, Data("[]".utf8))
+			}
+
+			let api = TyfloAPI(session: makeSession())
+			do {
+				let results = try await api.fetchTyfloswiatPageSummaries(parentPageID: 1409, perPage: 100)
+				XCTAssertTrue(results.isEmpty)
+			} catch {
+				XCTFail("Expected success but got error: \(error)")
+			}
+
+			await fulfillment(of: [requestMade], timeout: 1)
+		}
+
+		func testFetchTyfloswiatPageUsesPageEndpoint() async {
+			let requestMade = expectation(description: "request made")
+
+			StubURLProtocol.requestHandler = { request in
+				requestMade.fulfill()
+				let url = try XCTUnwrap(request.url)
+
+				XCTAssertEqual(url.host, "tyfloswiat.pl")
+				XCTAssertTrue(url.path.contains("/wp-json/wp/v2/pages/123"))
+
+				let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+				let items = components.queryItems ?? []
+				XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,title,excerpt,content,guid")
+
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				let payload = #"""
+				{"id":123,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=123"}}
+				"""#.data(using: .utf8) ?? Data()
+				return (response, payload)
+			}
+
+			let api = TyfloAPI(session: makeSession())
+			do {
+				let page = try await api.fetchTyfloswiatPage(id: 123)
+				XCTAssertEqual(page.id, 123)
+			} catch {
+				XCTFail("Expected success but got error: \(error)")
+			}
+
+			await fulfillment(of: [requestMade], timeout: 1)
+		}
+
 		func testGetLatestPodcastsUsesPerPage100() async {
 			let requestMade = expectation(description: "request made")
 
