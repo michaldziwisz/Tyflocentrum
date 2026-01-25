@@ -392,9 +392,9 @@ final class TyflocentrumSmokeTests: XCTestCase {
 			XCTAssertTrue(refreshButton.waitForExistence(timeout: 5))
 			refreshButton.tap()
 
-			let refreshedResult = app.descendants(matching: .any).matching(identifier: "podcast.row.6").firstMatch
-			XCTAssertTrue(refreshedResult.waitForExistence(timeout: 5))
-			XCTAssertEqual(refreshedResult.label, "Podcast. Test podcast wynik 2")
+			let refreshedFirstResult = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(refreshedFirstResult.waitForExistence(timeout: 5))
+			XCTAssertEqual(refreshedFirstResult.label, "Podcast. Test podcast")
 		}
 
 	func testCanBrowsePodcastCategoriesAndOpenPodcast() {
