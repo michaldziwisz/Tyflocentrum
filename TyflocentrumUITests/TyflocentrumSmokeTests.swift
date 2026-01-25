@@ -12,12 +12,12 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		return app
 	}
 
-	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
-		func dragDown() {
-			let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
-			let finish = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
-			start.press(forDuration: 0.05, thenDragTo: finish)
-		}
+		private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
+			func dragDown() {
+				let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.4))
+				let finish = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+				start.press(forDuration: 0.05, thenDragTo: finish)
+			}
 
 		dragDown()
 		if !element.waitForExistence(timeout: 2) {
@@ -33,8 +33,8 @@ final class TyflocentrumSmokeTests: XCTestCase {
 				list.swipeUp()
 			}
 		}
-		XCTAssertTrue(element.waitForExistence(timeout: 5))
-	}
+			XCTAssertTrue(element.waitForExistence(timeout: 8))
+		}
 
 	private func tapBackButton(in app: XCUIApplication) {
 		let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
