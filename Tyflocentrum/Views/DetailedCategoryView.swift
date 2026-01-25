@@ -10,18 +10,66 @@ import SwiftUI
 struct DetailedCategoryView: View {
 	let category: Category
 	@EnvironmentObject var api: TyfloAPI
-	@State private var podcasts = [Podcast]()
+	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
+	@State private var playerPodcast: Podcast?
 	var body: some View {
 		List {
-			ForEach(podcasts) {item in
+			AsyncListStatusSection(
+				errorMessage: viewModel.errorMessage,
+				isLoading: viewModel.isLoading,
+				hasLoaded: viewModel.hasLoaded,
+				isEmpty: viewModel.items.isEmpty,
+				emptyMessage: "Brak audycji w tej kategorii.",
+				retryAction: { await viewModel.refresh { try await api.fetchPodcasts(for: category) } },
+				retryIdentifier: "categoryPodcasts.retry",
+				isRetryDisabled: viewModel.isLoading
+			)
+
+			ForEach(viewModel.items) { item in
 				NavigationLink {
 					DetailedPodcastView(podcast: item)
 				} label: {
-					ShortPodcastView(podcast: item)
+					ShortPodcastView(
+						podcast: item,
+						onListen: {
+							playerPodcast = item
+						}
+					)
 				}
+				.accessibilityRemoveTraits(.isButton)
 			}
-		}.task {
-			podcasts = await api.getPodcast(for: category)
-		}.navigationTitle(category.name).navigationBarTitleDisplayMode(.inline)
+		}
+		.accessibilityIdentifier("categoryPodcasts.list")
+		.refreshable {
+			await viewModel.refresh { try await api.fetchPodcasts(for: category) }
+		}
+		.task {
+			await viewModel.loadIfNeeded { try await api.fetchPodcasts(for: category) }
+		}
+		.navigationTitle(category.name)
+		.navigationBarTitleDisplayMode(.inline)
+		.background(
+			NavigationLink(
+				destination: Group {
+					if let podcast = playerPodcast {
+						PodcastPlayerView(podcast: podcast)
+					}
+					else {
+						EmptyView()
+					}
+				},
+				isActive: Binding(
+					get: { playerPodcast != nil },
+					set: { isActive in
+						if !isActive {
+							playerPodcast = nil
+						}
+					}
+				)
+			) {
+				EmptyView()
+			}
+			.hidden()
+		)
 	}
 }
