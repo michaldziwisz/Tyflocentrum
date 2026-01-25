@@ -19,10 +19,14 @@ final class TyflocentrumSmokeTests: XCTestCase {
 				start.press(forDuration: 0.05, thenDragTo: finish)
 			}
 
-		dragDown()
-		if !element.waitForExistence(timeout: 2) {
+			for _ in 0..<2 {
+				list.swipeDown()
+			}
+
 			dragDown()
-		}
+			if !element.waitForExistence(timeout: 2) {
+				dragDown()
+			}
 		if scrollToReveal {
 			for _ in 0..<2 {
 				if element.waitForExistence(timeout: 0.5) { break }
