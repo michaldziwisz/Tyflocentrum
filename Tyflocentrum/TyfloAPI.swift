@@ -34,44 +34,124 @@ import Foundation
 	private func data(for request: URLRequest) async throws -> (Data, URLResponse) {
 		let timeout = (request.timeoutInterval > 0) ? request.timeoutInterval : Self.defaultRequestTimeout
 
-		return try await withCheckedThrowingContinuation { continuation in
-			let lock = NSLock()
-			var hasResumed = false
-			var dataTask: URLSessionDataTask?
+		final class PendingRequest {
+			private let lock = NSLock()
+			private var continuation: CheckedContinuation<(Data, URLResponse), Error>?
+			private var storedResult: Result<(Data, URLResponse), Error>?
+			private var dataTask: URLSessionDataTask?
+			private var timeoutWorkItem: DispatchWorkItem?
+			private var isResolved = false
 
-			let timeoutWorkItem = DispatchWorkItem {
+			func setContinuation(_ continuation: CheckedContinuation<(Data, URLResponse), Error>) {
 				lock.lock()
-				defer { lock.unlock() }
+				if isResolved, let storedResult {
+					self.storedResult = nil
+					let timeoutWorkItem = timeoutWorkItem
+					self.timeoutWorkItem = nil
+					lock.unlock()
 
-				guard !hasResumed else { return }
-				hasResumed = true
-				dataTask?.cancel()
-				continuation.resume(throwing: URLError(.timedOut))
+					timeoutWorkItem?.cancel()
+
+					switch storedResult {
+					case .success(let value):
+						continuation.resume(returning: value)
+					case .failure(let error):
+						continuation.resume(throwing: error)
+					}
+					return
+				}
+
+				self.continuation = continuation
+				lock.unlock()
 			}
 
-			dataTask = session.dataTask(with: request) { data, response, error in
+			func setDataTask(_ task: URLSessionDataTask) {
 				lock.lock()
-				defer { lock.unlock() }
+				dataTask = task
+				lock.unlock()
+			}
 
-				guard !hasResumed else { return }
-				hasResumed = true
-				timeoutWorkItem.cancel()
+			func setTimeoutWorkItem(_ item: DispatchWorkItem) {
+				lock.lock()
+				timeoutWorkItem = item
+				lock.unlock()
+			}
 
-				if let error {
+			func cancelDataTask() {
+				lock.lock()
+				let task = dataTask
+				lock.unlock()
+				task?.cancel()
+			}
+
+			func resolve(_ result: Result<(Data, URLResponse), Error>) {
+				lock.lock()
+				guard !isResolved else {
+					lock.unlock()
+					return
+				}
+				isResolved = true
+
+				let continuation = continuation
+				self.continuation = nil
+
+				if continuation == nil {
+					storedResult = result
+				}
+
+				let timeoutWorkItem = timeoutWorkItem
+				self.timeoutWorkItem = nil
+				lock.unlock()
+
+				timeoutWorkItem?.cancel()
+
+				guard let continuation else { return }
+				switch result {
+				case .success(let value):
+					continuation.resume(returning: value)
+				case .failure(let error):
 					continuation.resume(throwing: error)
-					return
 				}
-
-				guard let response else {
-					continuation.resume(throwing: URLError(.badServerResponse))
-					return
-				}
-
-				continuation.resume(returning: (data ?? Data(), response))
 			}
+		}
 
-			DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout, execute: timeoutWorkItem)
-			dataTask?.resume()
+		let pending = PendingRequest()
+		return try await withTaskCancellationHandler {
+			try await withCheckedThrowingContinuation { continuation in
+				pending.setContinuation(continuation)
+
+				guard !Task.isCancelled else {
+					pending.resolve(.failure(CancellationError()))
+					return
+				}
+
+				let timeoutWorkItem = DispatchWorkItem {
+					pending.cancelDataTask()
+					pending.resolve(.failure(URLError(.timedOut)))
+				}
+				pending.setTimeoutWorkItem(timeoutWorkItem)
+
+				let task = session.dataTask(with: request) { data, response, error in
+					if let error {
+						pending.resolve(.failure(error))
+						return
+					}
+
+					guard let response else {
+						pending.resolve(.failure(URLError(.badServerResponse)))
+						return
+					}
+
+					pending.resolve(.success((data ?? Data(), response)))
+				}
+				pending.setDataTask(task)
+
+				DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout, execute: timeoutWorkItem)
+				task.resume()
+			}
+		} onCancel: {
+			pending.cancelDataTask()
+			pending.resolve(.failure(CancellationError()))
 		}
 	}
 
