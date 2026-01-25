@@ -23,8 +23,11 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		if !element.waitForExistence(timeout: 2) {
 			dragDown()
 		}
-		if scrollToReveal, !element.exists {
-			list.swipeUp()
+		if scrollToReveal {
+			for _ in 0..<3 {
+				if element.exists { break }
+				list.swipeUp()
+			}
 		}
 		XCTAssertTrue(element.waitForExistence(timeout: 5))
 	}
