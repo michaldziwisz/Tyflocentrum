@@ -22,8 +22,8 @@ final class TyfloAPITests: XCTestCase {
 		XCTAssertEqual(items.first(where: { $0.name == "plik" })?.value, "0")
 	}
 
-	func testSearchEncodesQueryAndUsesPerPage100() async {
-		let requestMade = expectation(description: "request made")
+		func testSearchEncodesQueryAndUsesPerPage100() async {
+			let requestMade = expectation(description: "request made")
 
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
@@ -44,11 +44,75 @@ final class TyfloAPITests: XCTestCase {
 		let api = TyfloAPI(session: makeSession())
 		_ = await api.getPodcasts(for: "Ala ma kota")
 
-		await fulfillment(of: [requestMade], timeout: 1)
-	}
+			await fulfillment(of: [requestMade], timeout: 1)
+		}
 
-	func testGetLatestPodcastsUsesPerPage100() async {
-		let requestMade = expectation(description: "request made")
+		func testFetchPodcastSearchSummariesUsesEmbedFieldsAndSearchQuery() async {
+			let requestMade = expectation(description: "request made")
+
+			StubURLProtocol.requestHandler = { request in
+				requestMade.fulfill()
+				let url = try XCTUnwrap(request.url)
+
+				XCTAssertEqual(url.host, "tyflopodcast.net")
+				XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+				let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+				let items = components.queryItems ?? []
+				XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
+				XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+				XCTAssertEqual(items.first(where: { $0.name == "search" })?.value, "Ala ma kota")
+				XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				return (response, Data("[]".utf8))
+			}
+
+			let api = TyfloAPI(session: makeSession())
+			do {
+				let results = try await api.fetchPodcastSearchSummaries(matching: "  Ala ma kota ")
+				XCTAssertTrue(results.isEmpty)
+			} catch {
+				XCTFail("Expected success but got error: \(error)")
+			}
+
+			await fulfillment(of: [requestMade], timeout: 1)
+		}
+
+		func testFetchArticleSearchSummariesUsesWorldHostAndEmbedFields() async {
+			let requestMade = expectation(description: "request made")
+
+			StubURLProtocol.requestHandler = { request in
+				requestMade.fulfill()
+				let url = try XCTUnwrap(request.url)
+
+				XCTAssertEqual(url.host, "tyfloswiat.pl")
+				XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+				let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+				let items = components.queryItems ?? []
+				XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
+				XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+				XCTAssertEqual(items.first(where: { $0.name == "search" })?.value, "Test")
+				XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				return (response, Data("[]".utf8))
+			}
+
+			let api = TyfloAPI(session: makeSession())
+			do {
+				let results = try await api.fetchArticleSearchSummaries(matching: "Test")
+				XCTAssertTrue(results.isEmpty)
+			} catch {
+				XCTFail("Expected success but got error: \(error)")
+			}
+
+			await fulfillment(of: [requestMade], timeout: 1)
+		}
+
+		func testGetLatestPodcastsUsesPerPage100() async {
+			let requestMade = expectation(description: "request made")
 
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()

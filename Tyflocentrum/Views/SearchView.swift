@@ -9,11 +9,50 @@ import Foundation
 import SwiftUI
 import UIKit
 
+enum SearchScope: String, CaseIterable, Identifiable {
+	case podcasts
+	case articles
+	case all
+
+	var id: String { rawValue }
+
+	var title: String {
+		switch self {
+		case .podcasts:
+			return "Podcasty"
+		case .articles:
+			return "Artykuły"
+		case .all:
+			return "Oba"
+		}
+	}
+}
+
+struct SearchItem: Identifiable {
+	let kind: NewsItemKind
+	let post: WPPostSummary
+
+	var id: String {
+		"\(kind.rawValue).\(post.id)"
+	}
+
+	static func isSortedBefore(_ lhs: SearchItem, _ rhs: SearchItem) -> Bool {
+		if lhs.post.date != rhs.post.date {
+			return lhs.post.date > rhs.post.date
+		}
+		if lhs.kind.sortOrder != rhs.kind.sortOrder {
+			return lhs.kind.sortOrder < rhs.kind.sortOrder
+		}
+		return lhs.post.id > rhs.post.id
+	}
+}
+
 struct SearchView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@State private var searchText = ""
 	@State private var lastSearchQuery = ""
-	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
+	@State private var searchScope: SearchScope = .all
+	@StateObject private var viewModel = AsyncListViewModel<SearchItem>()
 	@State private var playerPodcast: Podcast?
 
 	private func dismissKeyboard() {
@@ -26,7 +65,24 @@ struct SearchView: View {
 		guard !trimmed.isEmpty else { return }
 		lastSearchQuery = trimmed
 
-		await viewModel.refresh { try await api.fetchPodcasts(matching: trimmed) }
+		await viewModel.refresh {
+			let items: [SearchItem]
+			switch searchScope {
+			case .podcasts:
+				let podcasts = try await api.fetchPodcastSearchSummaries(matching: trimmed)
+				items = podcasts.map { SearchItem(kind: .podcast, post: $0) }
+			case .articles:
+				let articles = try await api.fetchArticleSearchSummaries(matching: trimmed)
+				items = articles.map { SearchItem(kind: .article, post: $0) }
+			case .all:
+				async let podcasts = api.fetchPodcastSearchSummaries(matching: trimmed)
+				async let articles = api.fetchArticleSearchSummaries(matching: trimmed)
+				let (podcastPosts, articlePosts) = try await (podcasts, articles)
+				items = podcastPosts.map { SearchItem(kind: .podcast, post: $0) }
+					+ articlePosts.map { SearchItem(kind: .article, post: $0) }
+			}
+			return items.sorted(by: SearchItem.isSortedBefore)
+		}
 		let announcement = viewModel.errorMessage
 			?? (viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników.")
 		UIAccessibility.post(
@@ -44,6 +100,15 @@ struct SearchView: View {
 		NavigationView {
 			List {
 				Section {
+					Picker("Szukaj w", selection: $searchScope) {
+						ForEach(SearchScope.allCases) { scope in
+							Text(scope.title)
+								.tag(scope)
+						}
+					}
+					.pickerStyle(.segmented)
+					.accessibilityIdentifier("search.scope")
+
 					TextField("Podaj frazę do wyszukania", text: $searchText)
 						.accessibilityIdentifier("search.field")
 						.accessibilityHint("Wpisz tekst, a następnie użyj przycisku Szukaj.")
@@ -79,14 +144,27 @@ struct SearchView: View {
 				if viewModel.errorMessage == nil && !viewModel.items.isEmpty {
 					Section {
 						ForEach(viewModel.items) { item in
+							let stubPodcast = item.post.asPodcastStub()
+
 							NavigationLink {
-								DetailedPodcastView(podcast: item)
+								switch item.kind {
+								case .podcast:
+									LazyDetailedPodcastView(summary: item.post)
+								case .article:
+									LazyDetailedArticleView(summary: item.post)
+								}
 							} label: {
 								ShortPodcastView(
-									podcast: item,
-									onListen: {
-										playerPodcast = item
-									}
+									podcast: stubPodcast,
+									showsListenAction: item.kind == .podcast,
+									onListen: item.kind == .podcast
+										? { playerPodcast = stubPodcast }
+										: nil,
+									leadingSystemImageName: item.kind.systemImageName,
+									accessibilityKindLabel: item.kind.label,
+									accessibilityIdentifierOverride: item.kind == .article
+										? "article.row.\(item.post.id)"
+										: nil
 								)
 							}
 							.accessibilityRemoveTraits(.isButton)

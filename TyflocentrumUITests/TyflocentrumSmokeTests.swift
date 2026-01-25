@@ -107,11 +107,11 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertEqual(speedButton.label, "Zmień prędkość odtwarzania")
 	}
 
-	func testCanSearchAndOpenPodcastFromResults() {
-		let app = makeApp()
-		app.launch()
+		func testCanSearchAndOpenPodcastFromResults() {
+			let app = makeApp()
+			app.launch()
 
-		app.tabBars.buttons["Szukaj"].tap()
+			app.tabBars.buttons["Szukaj"].tap()
 
 		let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
 		XCTAssertTrue(searchField.waitForExistence(timeout: 5))
@@ -122,14 +122,42 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(searchButton.exists)
 		searchButton.tap()
 
-		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
-		XCTAssertEqual(podcastRow.label, "Test podcast")
-		podcastRow.tap()
+			let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+			XCTAssertEqual(podcastRow.label, "Podcast. Test podcast")
+			podcastRow.tap()
 
-		let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
-		XCTAssertTrue(content.waitForExistence(timeout: 5))
-	}
+			let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
+			XCTAssertTrue(content.waitForExistence(timeout: 5))
+		}
+
+		func testCanSearchArticlesWhenScopeIsArticles() {
+			let app = makeApp()
+			app.launch()
+
+			app.tabBars.buttons["Szukaj"].tap()
+
+			let scopePicker = app.segmentedControls["search.scope"]
+			XCTAssertTrue(scopePicker.waitForExistence(timeout: 5))
+			scopePicker.buttons["Artykuły"].tap()
+
+			let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
+			XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+			searchField.tap()
+			searchField.typeText("test")
+
+			let searchButton = app.descendants(matching: .any).matching(identifier: "search.button").firstMatch
+			XCTAssertTrue(searchButton.exists)
+			searchButton.tap()
+
+			let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
+			XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
+			XCTAssertEqual(articleRow.label, "Artykuł. Test artykuł")
+			articleRow.tap()
+
+			let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+			XCTAssertTrue(content.waitForExistence(timeout: 5))
+		}
 
 	func testCanOpenArticleFromNewsAndSeeReadableContent() {
 		let app = makeApp()
@@ -333,9 +361,9 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertEqual(refreshedArticle.label, "Test artykuł 2")
 	}
 
-	func testSearchShowsErrorAndRecoversViaRetryAndPullToRefresh() {
-		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
-		app.launch()
+		func testSearchShowsErrorAndRecoversViaRetryAndPullToRefresh() {
+			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
+			app.launch()
 
 		app.tabBars.buttons["Szukaj"].tap()
 
@@ -360,10 +388,10 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let firstResult = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
 		XCTAssertTrue(firstResult.waitForExistence(timeout: 5))
 
-		let refreshedResult = app.descendants(matching: .any).matching(identifier: "podcast.row.6").firstMatch
-		pullToRefresh(searchList, untilExists: refreshedResult)
-		XCTAssertEqual(refreshedResult.label, "Test podcast wynik 2")
-	}
+			let refreshedResult = app.descendants(matching: .any).matching(identifier: "podcast.row.6").firstMatch
+			pullToRefresh(searchList, untilExists: refreshedResult, scrollToReveal: true)
+			XCTAssertEqual(refreshedResult.label, "Podcast. Test podcast wynik 2")
+		}
 
 	func testCanBrowsePodcastCategoriesAndOpenPodcast() {
 		let app = makeApp()

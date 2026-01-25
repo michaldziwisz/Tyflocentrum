@@ -76,6 +76,7 @@ private final class UITestURLProtocol: URLProtocol {
 	private static var tyflopodcastSearchPostsRequestCount = 0
 	private static var tyfloswiatCategoriesRequestCount = 0
 	private static var tyfloswiatCategoryPostsRequestCount = 0
+	private static var tyfloswiatSearchPostsRequestCount = 0
 
 	private static var didFailTyflopodcastLatestPosts = false
 	private static var didFailTyflopodcastCategoryPosts = false
@@ -83,6 +84,7 @@ private final class UITestURLProtocol: URLProtocol {
 	private static var didFailTyflopodcastSearchPosts = false
 	private static var didFailTyfloswiatCategories = false
 	private static var didFailTyfloswiatCategoryPosts = false
+	private static var didFailTyfloswiatSearchPosts = false
 	private static var didFailTyfloswiatLatestPosts = false
 
 	override class func canInit(with request: URLRequest) -> Bool {
@@ -210,6 +212,25 @@ private final class UITestURLProtocol: URLProtocol {
 
 			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
 			let queryItems = components?.queryItems ?? []
+
+			if queryItems.contains(where: { $0.name == "search" }) {
+				if shouldFailOnce(&didFailTyfloswiatSearchPosts) {
+					return (500, Data("[]".utf8))
+				}
+
+				let requestIndex = nextRequestIndex(for: &tyfloswiatSearchPostsRequestCount)
+				if requestIndex <= 1 {
+					return (
+						200,
+						#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"},"link":"https://tyfloswiat.pl/?p=2"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+					)
+				}
+
+				return (
+					200,
+					#"[{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=2"},"link":"https://tyfloswiat.pl/?p=2"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+				)
+			}
 
 			if queryItems.contains(where: { $0.name == "categories" }) {
 				if shouldFailOnce(&didFailTyfloswiatCategoryPosts) {

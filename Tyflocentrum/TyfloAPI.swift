@@ -269,6 +269,44 @@ import Foundation
 			return try await fetch(url)
 		}
 
+		func fetchPodcastSearchSummaries(matching searchString: String) async throws -> [WPPostSummary] {
+			let trimmed = searchString.trimmingCharacters(in: .whitespacesAndNewlines)
+			guard let url = makeWPURL(
+				baseURL: tyfloPodcastBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [
+					URLQueryItem(name: "context", value: "embed"),
+					URLQueryItem(name: "per_page", value: "100"),
+					URLQueryItem(name: "search", value: trimmed),
+					URLQueryItem(name: "orderby", value: "date"),
+					URLQueryItem(name: "order", value: "desc"),
+					URLQueryItem(name: "_fields", value: wpEmbedPostFields),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
+			return try await fetch(url)
+		}
+
+		func fetchArticleSearchSummaries(matching searchString: String) async throws -> [WPPostSummary] {
+			let trimmed = searchString.trimmingCharacters(in: .whitespacesAndNewlines)
+			guard let url = makeWPURL(
+				baseURL: tyfloWorldBaseURL,
+				path: "wp/v2/posts",
+				queryItems: [
+					URLQueryItem(name: "context", value: "embed"),
+					URLQueryItem(name: "per_page", value: "100"),
+					URLQueryItem(name: "search", value: trimmed),
+					URLQueryItem(name: "orderby", value: "date"),
+					URLQueryItem(name: "order", value: "desc"),
+					URLQueryItem(name: "_fields", value: wpEmbedPostFields),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
+			return try await fetch(url)
+		}
+
 	func getPodcasts(for searchString: String) async -> [Podcast] {
 			do {
 				return try await fetchPodcasts(matching: searchString)
