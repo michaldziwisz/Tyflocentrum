@@ -23,7 +23,7 @@ enum SearchScope: String, CaseIterable, Identifiable {
 		case .articles:
 			return "Artykuły"
 		case .all:
-			return "Oba"
+			return "Wszystko"
 		}
 	}
 }
@@ -34,6 +34,49 @@ struct SearchItem: Identifiable {
 
 	var id: String {
 		"\(kind.rawValue).\(post.id)"
+	}
+
+	static func sortedByRelevance(_ items: [SearchItem], query: String) -> [SearchItem] {
+		let normalizedQuery = normalizeForSearch(query)
+		let normalizedTokens = normalizedQuery
+			.split(whereSeparator: \.isWhitespace)
+			.map(String.init)
+			.filter { $0.count > 1 }
+
+		struct ScoredItem {
+			let score: Int
+			let item: SearchItem
+		}
+
+		func score(for item: SearchItem) -> Int {
+			let normalizedTitle = normalizeForSearch(item.post.title.plainText)
+
+			if !normalizedQuery.isEmpty, normalizedTitle.contains(normalizedQuery) {
+				return 2
+			}
+
+			if !normalizedTokens.isEmpty, normalizedTokens.allSatisfy({ normalizedTitle.contains($0) }) {
+				return 1
+			}
+
+			return 0
+		}
+
+		return items
+			.map { ScoredItem(score: score(for: $0), item: $0) }
+			.sorted { lhs, rhs in
+				if lhs.score != rhs.score {
+					return lhs.score > rhs.score
+				}
+				return isSortedBefore(lhs.item, rhs.item)
+			}
+			.map(\.item)
+	}
+
+	private static func normalizeForSearch(_ value: String) -> String {
+		value
+			.folding(options: [.diacriticInsensitive, .caseInsensitive], locale: .current)
+			.trimmingCharacters(in: .whitespacesAndNewlines)
 	}
 
 	static func isSortedBefore(_ lhs: SearchItem, _ rhs: SearchItem) -> Bool {
@@ -81,7 +124,7 @@ struct SearchView: View {
 				items = podcastPosts.map { SearchItem(kind: .podcast, post: $0) }
 					+ articlePosts.map { SearchItem(kind: .article, post: $0) }
 			}
-			return items.sorted(by: SearchItem.isSortedBefore)
+			return SearchItem.sortedByRelevance(items, query: trimmed)
 		}
 		let announcement = viewModel.errorMessage
 			?? (viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników.")
