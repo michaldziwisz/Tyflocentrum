@@ -179,6 +179,29 @@ struct SearchView: View {
 				await search(query: query)
 			}
 			.navigationTitle("Szukaj")
+			.toolbar {
+				ToolbarItem(placement: .navigationBarTrailing) {
+					Button {
+						dismissKeyboard()
+						let query = lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+						if query.isEmpty {
+							performSearch()
+						} else {
+							Task { await search(query: query) }
+						}
+					} label: {
+						Image(systemName: "arrow.clockwise")
+					}
+					.accessibilityLabel("Odśwież wyniki")
+					.accessibilityHint("Ponawia wyszukiwanie dla ostatniej frazy.")
+					.accessibilityIdentifier("search.refresh")
+					.disabled(
+						viewModel.isLoading
+							|| (lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+								&& searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+					)
+				}
+			}
 			.background(
 				NavigationLink(
 					destination: Group {
