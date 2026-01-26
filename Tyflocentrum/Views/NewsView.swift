@@ -165,8 +165,8 @@ final class NewsFeedViewModel: ObservableObject {
 	@Published private(set) var canLoadMore = false
 
 	private let requestTimeoutSeconds: TimeInterval
-	private let sourcePerPage = 50
-	private let initialBatchSize = 50
+	private let sourcePerPage = 20
+	private let initialBatchSize = 20
 	private let loadMoreBatchSize = 20
 
 	private var podcasts = SourceState(kind: .podcast)
@@ -197,6 +197,10 @@ final class NewsFeedViewModel: ObservableObject {
 		errorMessage = nil
 
 		await appendNextBatch(api: api, batchSize: initialBatchSize)
+		if items.isEmpty, !Task.isCancelled {
+			try? await Task.sleep(nanoseconds: 250_000_000)
+			await appendNextBatch(api: api, batchSize: initialBatchSize)
+		}
 		hasLoaded = true
 
 		if items.isEmpty {

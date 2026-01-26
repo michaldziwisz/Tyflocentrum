@@ -486,6 +486,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testGetLatestPodcastsReturnsEmptyOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
@@ -498,7 +499,7 @@ final class TyfloAPITests: XCTestCase {
 		let podcasts = await api.getLatestPodcasts()
 		XCTAssertTrue(podcasts.isEmpty)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testGetCategoriesReturnsEmptyOnServerError() async {
@@ -521,6 +522,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testGetCategoriesReturnsEmptyOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
@@ -533,7 +535,7 @@ final class TyfloAPITests: XCTestCase {
 		let categories = await api.getCategories()
 		XCTAssertTrue(categories.isEmpty)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testGetPodcastForCategoryReturnsEmptyOnServerError() async {
@@ -557,6 +559,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testGetPodcastForCategoryReturnsEmptyOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 		let category = Category(name: "Test", id: 7, count: 0)
 
 		StubURLProtocol.requestHandler = { request in
@@ -570,7 +573,7 @@ final class TyfloAPITests: XCTestCase {
 		let podcasts = await api.getPodcast(for: category)
 		XCTAssertTrue(podcasts.isEmpty)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testGetArticleCategoriesReturnsEmptyOnServerError() async {
@@ -593,6 +596,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testGetArticleCategoriesReturnsEmptyOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
@@ -605,7 +609,7 @@ final class TyfloAPITests: XCTestCase {
 		let categories = await api.getArticleCategories()
 		XCTAssertTrue(categories.isEmpty)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testGetArticlesForCategoryReturnsEmptyOnServerError() async {
@@ -629,6 +633,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testGetArticlesForCategoryReturnsEmptyOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 		let category = Category(name: "Test", id: 9, count: 0)
 
 		StubURLProtocol.requestHandler = { request in
@@ -642,7 +647,7 @@ final class TyfloAPITests: XCTestCase {
 		let articles = await api.getArticles(for: category)
 		XCTAssertTrue(articles.isEmpty)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testGetCommentsReturnsEmptyOnServerError() async {
@@ -666,6 +671,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testGetCommentsReturnsEmptyOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 		let podcast = makePodcast(id: 123)
 
 		StubURLProtocol.requestHandler = { request in
@@ -679,7 +685,7 @@ final class TyfloAPITests: XCTestCase {
 		let comments = await api.getComments(for: podcast)
 		XCTAssertTrue(comments.isEmpty)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testSearchReturnsEmptyOnServerError() async {
@@ -702,6 +708,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testSearchReturnsEmptyOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
@@ -714,7 +721,7 @@ final class TyfloAPITests: XCTestCase {
 		let podcasts = await api.getPodcasts(for: "test")
 		XCTAssertTrue(podcasts.isEmpty)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testIsTPAvailableReturnsFalseOnServerError() async {
@@ -739,6 +746,7 @@ final class TyfloAPITests: XCTestCase {
 
 	func testIsTPAvailableReturnsFalseOnInvalidJSON() async {
 		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
 
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
@@ -753,7 +761,7 @@ final class TyfloAPITests: XCTestCase {
 		XCTAssertFalse(info.available)
 		XCTAssertNil(info.title)
 
-		await fulfillment(of: [requestMade], timeout: 1)
+		await fulfillment(of: [requestMade], timeout: 2)
 	}
 
 	func testContactRadioPostsJSON() async {

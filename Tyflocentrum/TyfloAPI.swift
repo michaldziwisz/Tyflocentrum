@@ -24,6 +24,8 @@ import Foundation
 		.networkConnectionLost,
 		.dnsLookupFailed,
 		.badServerResponse,
+		.cannotDecodeContentData,
+		.cannotParseResponse,
 	]
 
 	private static func makeSharedSession() -> URLSession {
@@ -106,7 +108,11 @@ import Foundation
 			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 				throw URLError(.badServerResponse)
 			}
-			return try decoder.decode(T.self, from: data)
+			do {
+				return try decoder.decode(T.self, from: data)
+			} catch {
+				throw URLError(.cannotDecodeContentData)
+			}
 		}
 		}
 
@@ -121,7 +127,12 @@ import Foundation
 					throw URLError(.badServerResponse)
 				}
 
-				let items = try decoder.decode([Item].self, from: data)
+				let items: [Item]
+				do {
+					items = try decoder.decode([Item].self, from: data)
+				} catch {
+					throw URLError(.cannotDecodeContentData)
+				}
 				let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
 				let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
 				return WPPage(items: items, total: total, totalPages: totalPages)
