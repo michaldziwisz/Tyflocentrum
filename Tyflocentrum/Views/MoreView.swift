@@ -25,32 +25,37 @@ struct MoreView: View {
 
 	var body: some View {
 		NavigationView {
-			List {
-				Section {
-					NavigationLink {
-						MediaPlayerView(
-							podcast: URL(string: "https://radio.tyflopodcast.net/hls/stream.m3u8")!,
-							title: "Tyfloradio",
-							subtitle: nil,
-							canBeLive: true
-						)
-					} label: {
-						Text("Posłuchaj Tyfloradia")
-					}
-					.accessibilityHint("Otwiera odtwarzacz strumienia na żywo.")
-					.accessibilityIdentifier("more.tyfloradio")
-				}
+			VStack(spacing: 16) {
+				Spacer()
 
-				Section {
-					Button("Skontaktuj się z Tyfloradiem") {
-						Task {
-							await performLiveCheck()
-						}
-					}
-					.accessibilityHint("Sprawdza, czy trwa audycja interaktywna i otwiera formularz kontaktu.")
-					.accessibilityIdentifier("more.contactRadio")
+				NavigationLink {
+					MediaPlayerView(
+						podcast: URL(string: "https://radio.tyflopodcast.net/hls/stream.m3u8")!,
+						title: "Tyfloradio",
+						subtitle: nil,
+						canBeLive: true
+					)
+				} label: {
+					Label("Posłuchaj Tyfloradia", systemImage: "dot.radiowaves.left.and.right")
+						.frame(maxWidth: .infinity, minHeight: 56)
 				}
+				.buttonStyle(.borderedProminent)
+				.accessibilityHint("Otwiera odtwarzacz strumienia na żywo.")
+				.accessibilityIdentifier("more.tyfloradio")
+
+				Button {
+					Task {
+						await performLiveCheck()
+					}
+				} label: {
+					Label("Skontaktuj się z Tyfloradiem", systemImage: "envelope")
+						.frame(maxWidth: .infinity, minHeight: 56)
+				}
+				.buttonStyle(.bordered)
+				.accessibilityHint("Sprawdza, czy trwa audycja interaktywna i otwiera formularz kontaktu.")
+				.accessibilityIdentifier("more.contactRadio")
 			}
+			.padding()
 			.navigationTitle("Tyfloradio")
 			.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
 				Button("OK") {}
