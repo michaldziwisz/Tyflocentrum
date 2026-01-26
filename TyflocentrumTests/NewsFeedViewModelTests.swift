@@ -92,6 +92,53 @@ final class NewsFeedViewModelTests: XCTestCase {
 		XCTAssertNil(viewModel.errorMessage)
 	}
 
+	@MainActor
+	func testLoadMoreStopsWhenNextPageContainsOnlyDuplicates() async {
+		StubURLProtocol.requestHandler = { request in
+			let url = try XCTUnwrap(request.url)
+			let headers = ["X-WP-TotalPages": "99"]
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: headers)!
+
+			let page = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+				.queryItems?
+				.first(where: { $0.name == "page" })?
+				.value
+
+			switch url.host {
+			case "tyflopodcast.net":
+				return (
+					response,
+					Self.postsResponseData(items: [
+						Self.postSummaryJSON(id: 1, date: "2026-01-20T00:59:40", title: "P1", link: "https://tyflopodcast.net/?p=1"),
+					])
+				)
+			case "tyfloswiat.pl":
+				// Always return the same item for every page.
+				return (
+					response,
+					Self.postsResponseData(items: [
+						Self.postSummaryJSON(id: 2, date: "2026-01-19T00:59:40", title: "A1", link: "https://tyfloswiat.pl/?p=2"),
+					])
+				)
+			default:
+				XCTFail("Unexpected host: \(url.host ?? "<nil>") page=\(page ?? "<nil>")")
+				return (response, Data("[]".utf8))
+			}
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let viewModel = NewsFeedViewModel(requestTimeoutSeconds: 2)
+
+		await viewModel.refresh(api: api)
+		XCTAssertTrue(viewModel.canLoadMore)
+
+		let initialCount = viewModel.items.count
+		await viewModel.loadMore(api: api)
+
+		XCTAssertEqual(viewModel.items.count, initialCount)
+		XCTAssertFalse(viewModel.canLoadMore)
+	}
+
 	private func makeSession() -> URLSession {
 		let config = URLSessionConfiguration.ephemeral
 		config.protocolClasses = [StubURLProtocol.self]
@@ -108,4 +155,3 @@ final class NewsFeedViewModelTests: XCTestCase {
 		Data("[\(items.joined(separator: ","))]".utf8)
 	}
 }
-

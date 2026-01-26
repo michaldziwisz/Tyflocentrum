@@ -123,36 +123,15 @@ final class AsyncListViewModel<Item>: ObservableObject {
 @MainActor
 final class NewsFeedViewModel: ObservableObject {
 	private struct SourceState {
-		var kind: NewsItemKind
+		let kind: NewsItemKind
 		var nextPage: Int = 1
 		var totalPages: Int?
-		var nextIndex: Int = 0
 		var hasMore: Bool = true
-		var didFailLastFetch: Bool = false
-		var buffer: [WPPostSummary] = []
-
-		var nextItem: WPPostSummary? {
-			guard nextIndex < buffer.count else { return nil }
-			return buffer[nextIndex]
-		}
-
-		mutating func advance() {
-			nextIndex += 1
-		}
 
 		mutating func reset() {
 			nextPage = 1
 			totalPages = nil
-			nextIndex = 0
 			hasMore = true
-			didFailLastFetch = false
-			buffer.removeAll(keepingCapacity: true)
-		}
-
-		mutating func trimConsumedIfNeeded(threshold: Int = 50) {
-			guard nextIndex >= threshold else { return }
-			buffer.removeFirst(nextIndex)
-			nextIndex = 0
 		}
 	}
 
@@ -165,9 +144,7 @@ final class NewsFeedViewModel: ObservableObject {
 	@Published private(set) var canLoadMore = false
 
 	private let requestTimeoutSeconds: TimeInterval
-	private let sourcePerPage = 20
-	private let initialBatchSize = 20
-	private let loadMoreBatchSize = 20
+	private let perPage: Int = 20
 
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
@@ -196,17 +173,42 @@ final class NewsFeedViewModel: ObservableObject {
 
 		errorMessage = nil
 
-		await appendNextBatch(api: api, batchSize: initialBatchSize)
-		let isRunningTests = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
-			|| ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
-		let shouldAutoRetryEmptyFirstBatch = !isRunningTests
-		if shouldAutoRetryEmptyFirstBatch, items.isEmpty, !Task.isCancelled {
-			try? await Task.sleep(nanoseconds: 250_000_000)
-			await appendNextBatch(api: api, batchSize: initialBatchSize)
+		var didLoadAnything = false
+
+		do {
+			let page = try await fetchNextPage(api: api, source: &podcasts)
+			let newItems = uniqueItems(from: page.items, kind: .podcast)
+			if !newItems.isEmpty {
+				items.append(contentsOf: newItems)
+				didLoadAnything = true
+			} else if !page.items.isEmpty {
+				podcasts.hasMore = false
+			}
+		} catch {
+			// Ignored: partial results are fine.
+		}
+
+		do {
+			let page = try await fetchNextPage(api: api, source: &articles)
+			let newItems = uniqueItems(from: page.items, kind: .article)
+			if !newItems.isEmpty {
+				items.append(contentsOf: newItems)
+				didLoadAnything = true
+			} else if !page.items.isEmpty {
+				articles.hasMore = false
+			}
+		} catch {
+			// Ignored: partial results are fine.
+		}
+
+		if !items.isEmpty {
+			items.sort(by: NewsItem.isSortedBefore)
 		}
 		hasLoaded = true
 
-		if items.isEmpty {
+		canLoadMore = podcasts.hasMore || articles.hasMore
+
+		if items.isEmpty, !didLoadAnything {
 			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 		}
 	}
@@ -225,7 +227,43 @@ final class NewsFeedViewModel: ObservableObject {
 		loadMoreErrorMessage = nil
 
 		let initialCount = items.count
-		await appendNextBatch(api: api, batchSize: loadMoreBatchSize)
+		var didAppendAnything = false
+
+		if podcasts.hasMore {
+			do {
+				let page = try await fetchNextPage(api: api, source: &podcasts)
+				let newItems = uniqueItems(from: page.items, kind: .podcast)
+				if !newItems.isEmpty {
+					items.append(contentsOf: newItems)
+					didAppendAnything = true
+				} else if !page.items.isEmpty {
+					podcasts.hasMore = false
+				}
+			} catch {
+				// ignored
+			}
+		}
+
+		if articles.hasMore {
+			do {
+				let page = try await fetchNextPage(api: api, source: &articles)
+				let newItems = uniqueItems(from: page.items, kind: .article)
+				if !newItems.isEmpty {
+					items.append(contentsOf: newItems)
+					didAppendAnything = true
+				} else if !page.items.isEmpty {
+					articles.hasMore = false
+				}
+			} catch {
+				// ignored
+			}
+		}
+
+		if didAppendAnything {
+			items.sort(by: NewsItem.isSortedBefore)
+		}
+
+		canLoadMore = podcasts.hasMore || articles.hasMore
 
 		if items.count == initialCount, canLoadMore {
 			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
@@ -243,137 +281,51 @@ final class NewsFeedViewModel: ObservableObject {
 		loadMoreErrorMessage = nil
 	}
 
-	private func fetchNextPage(api: TyfloAPI, source: inout SourceState) async -> Bool {
-		guard source.hasMore else { return true }
-		guard !source.didFailLastFetch else { return false }
+	private func fetchNextPage(api: TyfloAPI, source: inout SourceState) async throws -> TyfloAPI.WPPage<WPPostSummary> {
+		guard source.hasMore else { return TyfloAPI.WPPage(items: [], total: nil, totalPages: nil) }
 
-		do {
-			let nextPage = source.nextPage
-			let perPage = self.sourcePerPage
-
-			let page: TyfloAPI.WPPage<WPPostSummary>
-			switch source.kind {
-			case .podcast:
-				page = try await withTimeout(requestTimeoutSeconds) {
-					try await api.fetchPodcastSummariesPage(page: nextPage, perPage: perPage)
-				}
-			case .article:
-				page = try await withTimeout(requestTimeoutSeconds) {
-					try await api.fetchArticleSummariesPage(page: nextPage, perPage: perPage)
-				}
+		let nextPage = source.nextPage
+		let page: TyfloAPI.WPPage<WPPostSummary>
+		switch source.kind {
+		case .podcast:
+			page = try await withTimeout(requestTimeoutSeconds) {
+				try await api.fetchPodcastSummariesPage(page: nextPage, perPage: perPage)
 			}
-
-			if let totalPages = page.totalPages {
-				source.totalPages = totalPages
+		case .article:
+			page = try await withTimeout(requestTimeoutSeconds) {
+				try await api.fetchArticleSummariesPage(page: nextPage, perPage: perPage)
 			}
-
-			source.didFailLastFetch = false
-			source.nextPage += 1
-
-			let pageItems = page.items
-			if pageItems.isEmpty {
-				source.hasMore = false
-				return true
-			}
-
-			source.buffer.append(contentsOf: pageItems)
-
-			if let totalPages = source.totalPages {
-				source.hasMore = source.nextPage <= totalPages
-			} else if pageItems.count < sourcePerPage {
-				source.hasMore = false
-			}
-			return true
-		} catch {
-			source.didFailLastFetch = true
-			return false
 		}
+
+		if let totalPages = page.totalPages {
+			source.totalPages = totalPages
+		}
+
+		source.nextPage += 1
+
+		if page.items.isEmpty {
+			source.hasMore = false
+		} else if let totalPages = source.totalPages {
+			source.hasMore = source.nextPage <= totalPages
+		} else {
+			source.hasMore = page.items.count == perPage
+		}
+
+		return page
 	}
 
-	private func fetchNextPodcastPage(api: TyfloAPI) async -> Bool {
-		var source = podcasts
-		let result = await fetchNextPage(api: api, source: &source)
-		podcasts = source
-		return result
-	}
+	private func uniqueItems(from summaries: [WPPostSummary], kind: NewsItemKind) -> [NewsItem] {
+		guard !summaries.isEmpty else { return [] }
 
-	private func fetchNextArticlePage(api: TyfloAPI) async -> Bool {
-		var source = articles
-		let result = await fetchNextPage(api: api, source: &source)
-		articles = source
-		return result
-	}
-
-	private func appendNextBatch(api: TyfloAPI, batchSize: Int) async {
-		podcasts.didFailLastFetch = false
-		articles.didFailLastFetch = false
-
-		var added = 0
 		var newItems: [NewsItem] = []
-		newItems.reserveCapacity(batchSize)
-		while added < batchSize {
-			guard !Task.isCancelled else { return }
-
-			let podcastNext = podcasts.nextItem
-			let articleNext = articles.nextItem
-
-			if podcastNext == nil, podcasts.hasMore, articleNext == nil, articles.hasMore {
-				_ = await fetchNextPodcastPage(api: api)
-				_ = await fetchNextArticlePage(api: api)
-			}
-			else {
-				if podcastNext == nil && podcasts.hasMore {
-					_ = await fetchNextPodcastPage(api: api)
-				}
-				if articleNext == nil && articles.hasMore {
-					_ = await fetchNextArticlePage(api: api)
-				}
-			}
-
-			guard let selected = selectNextItem() else { break }
-
-			let item = NewsItem(kind: selected.kind, post: selected.post)
+		newItems.reserveCapacity(summaries.count)
+		for summary in summaries {
+			let item = NewsItem(kind: kind, post: summary)
 			if seenIDs.insert(item.id).inserted {
 				newItems.append(item)
-				added += 1
 			}
-
-			podcasts.trimConsumedIfNeeded()
-			articles.trimConsumedIfNeeded()
 		}
-
-		if !newItems.isEmpty {
-			items.append(contentsOf: newItems)
-		}
-		canLoadMore = podcasts.nextItem != nil || articles.nextItem != nil || podcasts.hasMore || articles.hasMore
-	}
-
-	private func selectNextItem() -> (kind: NewsItemKind, post: WPPostSummary)? {
-		let p = podcasts.nextItem
-		let a = articles.nextItem
-
-		switch (p, a) {
-		case (nil, nil):
-			return nil
-		case let (podcast?, nil):
-			podcasts.advance()
-			return (.podcast, podcast)
-		case let (nil, article?):
-			articles.advance()
-			return (.article, article)
-		case let (podcast?, article?):
-			if podcast.date != article.date {
-				if podcast.date > article.date {
-					podcasts.advance()
-					return (.podcast, podcast)
-				}
-				articles.advance()
-				return (.article, article)
-			}
-
-			podcasts.advance()
-			return (.podcast, podcast)
-		}
+		return newItems
 	}
 }
 
@@ -583,153 +535,71 @@ struct NewsView: View {
 	@StateObject private var viewModel = NewsFeedViewModel()
 	@State private var playerPodcast: Podcast?
 
-	private struct NewsStatusView: View {
-		let errorMessage: String?
-		let isLoading: Bool
-		let hasLoaded: Bool
-		let isEmpty: Bool
-		let emptyMessage: String
-		let retryAction: (() async -> Void)?
-		let retryIdentifier: String?
-		let isRetryDisabled: Bool
-
-		var body: some View {
-			if let errorMessage {
-				VStack(alignment: .leading, spacing: 12) {
-					Text(errorMessage)
-						.foregroundColor(.secondary)
-
-					if let retryAction {
-						if let retryIdentifier {
-							Button("Spróbuj ponownie") {
-								Task { await retryAction() }
-							}
-							.accessibilityHint("Ponawia pobieranie danych.")
-							.accessibilityIdentifier(retryIdentifier)
-							.disabled(isRetryDisabled)
-						}
-						else {
-							Button("Spróbuj ponownie") {
-								Task { await retryAction() }
-							}
-							.accessibilityHint("Ponawia pobieranie danych.")
-							.disabled(isRetryDisabled)
-						}
-					}
-				}
-				.frame(maxWidth: .infinity, alignment: .leading)
-				.padding(.horizontal)
-				.padding(.vertical, 16)
-			}
-			else if isLoading && isEmpty {
-				ProgressView("Ładowanie…")
-					.frame(maxWidth: .infinity)
-					.padding(.vertical, 24)
-			}
-			else if hasLoaded && isEmpty {
-				Text(emptyMessage)
-					.foregroundColor(.secondary)
-					.frame(maxWidth: .infinity)
-					.padding(.vertical, 24)
-			}
-		}
-	}
-
-	private struct NewsLoadMoreStatusView: View {
-		let errorMessage: String?
-		let isLoadingMore: Bool
-		let retryAction: (() async -> Void)?
-		let isRetryDisabled: Bool
-
-		var body: some View {
-			if let errorMessage {
-				VStack(alignment: .leading, spacing: 12) {
-					Text(errorMessage)
-						.foregroundColor(.secondary)
-
-					if let retryAction {
-						Button("Spróbuj ponownie") {
-							Task { await retryAction() }
-						}
-						.disabled(isRetryDisabled)
-					}
-				}
-				.frame(maxWidth: .infinity, alignment: .leading)
-				.padding(.horizontal)
-				.padding(.vertical, 16)
-			}
-			else if isLoadingMore {
-				ProgressView("Ładowanie starszych treści…")
-					.frame(maxWidth: .infinity)
-					.padding(.vertical, 24)
-			}
-		}
-	}
-
 	var body: some View {
 		NavigationView {
-			ScrollView {
-				LazyVStack(alignment: .leading, spacing: 0) {
-					NewsStatusView(
-						errorMessage: viewModel.errorMessage,
-						isLoading: viewModel.isLoading,
-						hasLoaded: viewModel.hasLoaded,
-						isEmpty: viewModel.items.isEmpty,
-						emptyMessage: "Brak nowych treści.",
-						retryAction: { await viewModel.refresh(api: api) },
-						retryIdentifier: "news.retry",
-						isRetryDisabled: viewModel.isLoading
-					)
+			List {
+				AsyncListStatusSection(
+					errorMessage: viewModel.errorMessage,
+					isLoading: viewModel.isLoading,
+					hasLoaded: viewModel.hasLoaded,
+					isEmpty: viewModel.items.isEmpty,
+					emptyMessage: "Brak nowych treści.",
+					retryAction: { await viewModel.refresh(api: api) },
+					retryIdentifier: "news.retry",
+					isRetryDisabled: viewModel.isLoading
+				)
 
-					ForEach(viewModel.items) { item in
-						let stubPodcast = item.post.asPodcastStub()
-						NavigationLink {
-							switch item.kind {
-							case .podcast:
-								LazyDetailedPodcastView(summary: item.post)
-							case .article:
-								LazyDetailedArticleView(summary: item.post)
-							}
-						} label: {
-							ShortPodcastView(
-								podcast: stubPodcast,
-								showsListenAction: item.kind == .podcast,
-								onListen: item.kind == .podcast
-									? { playerPodcast = stubPodcast }
-									: nil,
-								leadingSystemImageName: item.kind.systemImageName,
-								accessibilityKindLabel: item.kind.label,
-								accessibilityIdentifierOverride: item.kind == .podcast
-									? nil
-									: "article.row.\(item.post.id)"
-							)
-							.padding(.horizontal)
-							.padding(.vertical, 12)
-							.frame(maxWidth: .infinity, alignment: .leading)
+				ForEach(viewModel.items) { item in
+					let stubPodcast = item.post.asPodcastStub()
+
+					NavigationLink {
+						switch item.kind {
+						case .podcast:
+							LazyDetailedPodcastView(summary: item.post)
+						case .article:
+							LazyDetailedArticleView(summary: item.post)
 						}
-						.buttonStyle(.plain)
-						.accessibilityRemoveTraits(.isButton)
-						.onAppear {
-							guard item.id == viewModel.items.last?.id else { return }
-							Task { await viewModel.loadMore(api: api) }
-						}
-
-						Divider()
-							.padding(.leading, 16)
-					}
-
-					if viewModel.errorMessage == nil, viewModel.hasLoaded {
-						NewsLoadMoreStatusView(
-							errorMessage: viewModel.loadMoreErrorMessage,
-							isLoadingMore: viewModel.isLoadingMore,
-							retryAction: { await viewModel.loadMore(api: api) },
-							isRetryDisabled: viewModel.isLoadingMore
+					} label: {
+						ShortPodcastView(
+							podcast: stubPodcast,
+							showsListenAction: item.kind == .podcast,
+							onListen: item.kind == .podcast
+								? { playerPodcast = stubPodcast }
+								: nil,
+							leadingSystemImageName: item.kind.systemImageName,
+							accessibilityKindLabel: item.kind.label,
+							accessibilityIdentifierOverride: item.kind == .podcast
+								? nil
+								: "article.row.\(item.post.id)"
 						)
+					}
+					.accessibilityRemoveTraits(.isButton)
+					.onAppear {
+						guard item.id == viewModel.items.last?.id else { return }
+						Task { await viewModel.loadMore(api: api) }
+					}
+				}
+
+				if viewModel.errorMessage == nil, viewModel.hasLoaded {
+					if let loadMoreError = viewModel.loadMoreErrorMessage {
+						Section {
+							Text(loadMoreError)
+								.foregroundColor(.secondary)
+
+							Button("Spróbuj ponownie") {
+								Task { await viewModel.loadMore(api: api) }
+							}
+							.disabled(viewModel.isLoadingMore)
+						}
+					}
+					else if viewModel.isLoadingMore {
+						Section {
+							ProgressView("Ładowanie starszych treści…")
+						}
 					}
 				}
 			}
 			.accessibilityIdentifier("news.list")
-			.scrollIndicators(.visible)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
