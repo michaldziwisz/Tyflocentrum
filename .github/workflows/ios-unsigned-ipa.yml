@@ -44,9 +44,9 @@ jobs:
         run: |
           mkdir -p Payload
           cp -R build/Tyflocentrum.xcarchive/Products/Applications/*.app Payload/
-          /usr/bin/zip -r Tyflocentrum-unsigned.ipa Payload
+          /usr/bin/zip -r tyflocentrum.ipa Payload
 
       - uses: actions/upload-artifact@v4
         with:
           name: Tyflocentrum-unsigned-ipa
-          path: Tyflocentrum-unsigned.ipa
+          path: tyflocentrum.ipa
