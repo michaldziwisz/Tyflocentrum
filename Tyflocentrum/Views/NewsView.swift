@@ -126,12 +126,33 @@ final class NewsFeedViewModel: ObservableObject {
 		let kind: NewsItemKind
 		var nextPage: Int = 1
 		var totalPages: Int?
+		var nextIndex: Int = 0
 		var hasMore: Bool = true
+		var didFailLastFetch: Bool = false
+		var buffer: [WPPostSummary] = []
+
+		var nextItem: WPPostSummary? {
+			guard nextIndex < buffer.count else { return nil }
+			return buffer[nextIndex]
+		}
+
+		mutating func advance() {
+			nextIndex += 1
+		}
 
 		mutating func reset() {
 			nextPage = 1
 			totalPages = nil
+			nextIndex = 0
 			hasMore = true
+			didFailLastFetch = false
+			buffer.removeAll(keepingCapacity: true)
+		}
+
+		mutating func trimConsumedIfNeeded(threshold: Int = 50) {
+			guard nextIndex >= threshold else { return }
+			buffer.removeFirst(nextIndex)
+			nextIndex = 0
 		}
 	}
 
@@ -144,19 +165,29 @@ final class NewsFeedViewModel: ObservableObject {
 	@Published private(set) var canLoadMore = false
 
 	private let requestTimeoutSeconds: TimeInterval
-	private let perPage: Int = 20
+	private let sourcePerPage: Int
+	private let initialBatchSize: Int
+	private let loadMoreBatchSize: Int
 
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
 	private var seenIDs = Set<String>()
 
-	init(requestTimeoutSeconds: TimeInterval = 20) {
+	init(
+		requestTimeoutSeconds: TimeInterval = 20,
+		sourcePerPage: Int = 20,
+		initialBatchSize: Int = 20,
+		loadMoreBatchSize: Int = 20
+	) {
 		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
 			self.requestTimeoutSeconds = 2
 		}
 		else {
 			self.requestTimeoutSeconds = requestTimeoutSeconds
 		}
+		self.sourcePerPage = max(1, sourcePerPage)
+		self.initialBatchSize = max(1, initialBatchSize)
+		self.loadMoreBatchSize = max(1, loadMoreBatchSize)
 	}
 
 	func loadIfNeeded(api: TyfloAPI) async {
@@ -173,42 +204,10 @@ final class NewsFeedViewModel: ObservableObject {
 
 		errorMessage = nil
 
-		var didLoadAnything = false
-
-		do {
-			let page = try await fetchNextPodcastPage(api: api)
-			let newItems = uniqueItems(from: page.items, kind: .podcast)
-			if !newItems.isEmpty {
-				items.append(contentsOf: newItems)
-				didLoadAnything = true
-			} else if !page.items.isEmpty {
-				podcasts.hasMore = false
-			}
-		} catch {
-			// Ignored: partial results are fine.
-		}
-
-		do {
-			let page = try await fetchNextArticlePage(api: api)
-			let newItems = uniqueItems(from: page.items, kind: .article)
-			if !newItems.isEmpty {
-				items.append(contentsOf: newItems)
-				didLoadAnything = true
-			} else if !page.items.isEmpty {
-				articles.hasMore = false
-			}
-		} catch {
-			// Ignored: partial results are fine.
-		}
-
-		if !items.isEmpty {
-			items.sort(by: NewsItem.isSortedBefore)
-		}
+		await appendNextBatch(api: api, batchSize: initialBatchSize)
 		hasLoaded = true
 
-		canLoadMore = podcasts.hasMore || articles.hasMore
-
-		if items.isEmpty, !didLoadAnything {
+		if items.isEmpty {
 			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 		}
 	}
@@ -227,43 +226,7 @@ final class NewsFeedViewModel: ObservableObject {
 		loadMoreErrorMessage = nil
 
 		let initialCount = items.count
-		var didAppendAnything = false
-
-		if podcasts.hasMore {
-			do {
-				let page = try await fetchNextPodcastPage(api: api)
-				let newItems = uniqueItems(from: page.items, kind: .podcast)
-				if !newItems.isEmpty {
-					items.append(contentsOf: newItems)
-					didAppendAnything = true
-				} else if !page.items.isEmpty {
-					podcasts.hasMore = false
-				}
-			} catch {
-				// ignored
-			}
-		}
-
-		if articles.hasMore {
-			do {
-				let page = try await fetchNextArticlePage(api: api)
-				let newItems = uniqueItems(from: page.items, kind: .article)
-				if !newItems.isEmpty {
-					items.append(contentsOf: newItems)
-					didAppendAnything = true
-				} else if !page.items.isEmpty {
-					articles.hasMore = false
-				}
-			} catch {
-				// ignored
-			}
-		}
-
-		if didAppendAnything {
-			items.sort(by: NewsItem.isSortedBefore)
-		}
-
-		canLoadMore = podcasts.hasMore || articles.hasMore
+		await appendNextBatch(api: api, batchSize: loadMoreBatchSize)
 
 		if items.count == initialCount, canLoadMore {
 			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
@@ -281,65 +244,137 @@ final class NewsFeedViewModel: ObservableObject {
 		loadMoreErrorMessage = nil
 	}
 
-	private func fetchNextPodcastPage(api: TyfloAPI) async throws -> TyfloAPI.WPPage<WPPostSummary> {
+	private func fetchNextPage(api: TyfloAPI, source: inout SourceState) async -> Bool {
+		guard source.hasMore else { return true }
+		guard !source.didFailLastFetch else { return false }
+
+		do {
+			let nextPage = source.nextPage
+			let perPage = self.sourcePerPage
+
+			let page: TyfloAPI.WPPage<WPPostSummary>
+			switch source.kind {
+			case .podcast:
+				page = try await withTimeout(requestTimeoutSeconds) {
+					try await api.fetchPodcastSummariesPage(page: nextPage, perPage: perPage)
+				}
+			case .article:
+				page = try await withTimeout(requestTimeoutSeconds) {
+					try await api.fetchArticleSummariesPage(page: nextPage, perPage: perPage)
+				}
+			}
+
+			if let totalPages = page.totalPages {
+				source.totalPages = totalPages
+			}
+
+			source.didFailLastFetch = false
+			source.nextPage += 1
+
+			let pageItems = page.items
+			if pageItems.isEmpty {
+				source.hasMore = false
+				return true
+			}
+
+			source.buffer.append(contentsOf: pageItems)
+
+			if let totalPages = source.totalPages {
+				source.hasMore = source.nextPage <= totalPages
+			} else if pageItems.count < perPage {
+				source.hasMore = false
+			}
+			return true
+		} catch {
+			source.didFailLastFetch = true
+			return false
+		}
+	}
+
+	private func fetchNextPodcastPage(api: TyfloAPI) async -> Bool {
 		var source = podcasts
-		let page = try await fetchNextPage(api: api, source: &source)
+		let result = await fetchNextPage(api: api, source: &source)
 		podcasts = source
-		return page
+		return result
 	}
 
-	private func fetchNextArticlePage(api: TyfloAPI) async throws -> TyfloAPI.WPPage<WPPostSummary> {
+	private func fetchNextArticlePage(api: TyfloAPI) async -> Bool {
 		var source = articles
-		let page = try await fetchNextPage(api: api, source: &source)
+		let result = await fetchNextPage(api: api, source: &source)
 		articles = source
-		return page
+		return result
 	}
 
-	private func fetchNextPage(api: TyfloAPI, source: inout SourceState) async throws -> TyfloAPI.WPPage<WPPostSummary> {
-		guard source.hasMore else { return TyfloAPI.WPPage(items: [], total: nil, totalPages: nil) }
+	private func appendNextBatch(api: TyfloAPI, batchSize: Int) async {
+		podcasts.didFailLastFetch = false
+		articles.didFailLastFetch = false
 
-		let nextPage = source.nextPage
-		let page: TyfloAPI.WPPage<WPPostSummary>
-		switch source.kind {
-		case .podcast:
-			page = try await withTimeout(requestTimeoutSeconds) {
-				try await api.fetchPodcastSummariesPage(page: nextPage, perPage: self.perPage)
-			}
-		case .article:
-			page = try await withTimeout(requestTimeoutSeconds) {
-				try await api.fetchArticleSummariesPage(page: nextPage, perPage: self.perPage)
-			}
-		}
-
-		if let totalPages = page.totalPages {
-			source.totalPages = totalPages
-		}
-
-		source.nextPage += 1
-
-		if page.items.isEmpty {
-			source.hasMore = false
-		} else if let totalPages = source.totalPages {
-			source.hasMore = source.nextPage <= totalPages
-		} else {
-			source.hasMore = page.items.count == perPage
-		}
-
-		return page
-	}
-
-	private func uniqueItems(from summaries: [WPPostSummary], kind: NewsItemKind) -> [NewsItem] {
-		guard !summaries.isEmpty else { return [] }
-
+		var added = 0
 		var newItems: [NewsItem] = []
-		newItems.reserveCapacity(summaries.count)
-		for summary in summaries {
-			let item = NewsItem(kind: kind, post: summary)
+		newItems.reserveCapacity(batchSize)
+		var iterations = 0
+		let maxIterations = max(250, batchSize * 50)
+
+		while added < batchSize {
+			guard !Task.isCancelled else { return }
+
+			iterations += 1
+			if iterations > maxIterations { break }
+
+			let podcastNext = podcasts.nextItem
+			let articleNext = articles.nextItem
+
+			if podcastNext == nil && podcasts.hasMore {
+				_ = await fetchNextPodcastPage(api: api)
+			}
+			if articleNext == nil && articles.hasMore {
+				_ = await fetchNextArticlePage(api: api)
+			}
+
+			guard let selected = selectNextItem() else { break }
+
+			let item = NewsItem(kind: selected.kind, post: selected.post)
 			if seenIDs.insert(item.id).inserted {
 				newItems.append(item)
+				added += 1
 			}
+
+			podcasts.trimConsumedIfNeeded()
+			articles.trimConsumedIfNeeded()
 		}
-		return newItems
+
+		if !newItems.isEmpty {
+			items.append(contentsOf: newItems)
+		}
+		canLoadMore = podcasts.nextItem != nil || articles.nextItem != nil || podcasts.hasMore || articles.hasMore
+	}
+
+	private func selectNextItem() -> (kind: NewsItemKind, post: WPPostSummary)? {
+		let p = podcasts.nextItem
+		let a = articles.nextItem
+
+		switch (p, a) {
+		case (nil, nil):
+			return nil
+		case let (podcast?, nil):
+			podcasts.advance()
+			return (.podcast, podcast)
+		case let (nil, article?):
+			articles.advance()
+			return (.article, article)
+		case let (podcast?, article?):
+			if podcast.date != article.date {
+				if podcast.date > article.date {
+					podcasts.advance()
+					return (.podcast, podcast)
+				}
+				articles.advance()
+				return (.article, article)
+			}
+
+			podcasts.advance()
+			return (.podcast, podcast)
+		}
 	}
 }
 

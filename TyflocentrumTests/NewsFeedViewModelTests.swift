@@ -93,50 +93,56 @@ final class NewsFeedViewModelTests: XCTestCase {
 	}
 
 	@MainActor
-	func testLoadMoreStopsWhenNextPageContainsOnlyDuplicates() async {
+	func testRefreshKeepsChronologicalOrderWhenOneSourcePageContainsVeryOldItems() async {
 		StubURLProtocol.requestHandler = { request in
 			let url = try XCTUnwrap(request.url)
-			let headers = ["X-WP-TotalPages": "99"]
-			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: headers)!
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: ["X-WP-TotalPages": "2"])!
 
-			let page = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+			let page = Int(URLComponents(url: url, resolvingAgainstBaseURL: false)?
 				.queryItems?
 				.first(where: { $0.name == "page" })?
-				.value
+				.value ?? "1") ?? 1
 
 			switch url.host {
 			case "tyflopodcast.net":
-				return (
-					response,
-					Self.postsResponseData(items: [
+				if page == 1 {
+					return (response, Self.postsResponseData(items: [
 						Self.postSummaryJSON(id: 1, date: "2026-01-20T00:59:40", title: "P1", link: "https://tyflopodcast.net/?p=1"),
-					])
-				)
+						Self.postSummaryJSON(id: 2, date: "2026-01-18T00:59:40", title: "P2", link: "https://tyflopodcast.net/?p=2"),
+					]))
+				}
+				return (response, Self.postsResponseData(items: [
+					Self.postSummaryJSON(id: 3, date: "2026-01-17T00:59:40", title: "P3", link: "https://tyflopodcast.net/?p=3"),
+					Self.postSummaryJSON(id: 4, date: "2026-01-16T00:59:40", title: "P4", link: "https://tyflopodcast.net/?p=4"),
+				]))
 			case "tyfloswiat.pl":
-				// Always return the same item for every page.
-				return (
-					response,
-					Self.postsResponseData(items: [
-						Self.postSummaryJSON(id: 2, date: "2026-01-19T00:59:40", title: "A1", link: "https://tyfloswiat.pl/?p=2"),
-					])
-				)
+				return (response, Self.postsResponseData(items: [
+					Self.postSummaryJSON(id: 10, date: "2026-01-19T00:59:40", title: "A1", link: "https://tyfloswiat.pl/?p=10"),
+					// Very old item that should not “jump ahead” of still-available newer podcasts.
+					Self.postSummaryJSON(id: 11, date: "2025-01-01T00:00:00", title: "A2", link: "https://tyfloswiat.pl/?p=11"),
+				]))
 			default:
-				XCTFail("Unexpected host: \(url.host ?? "<nil>") page=\(page ?? "<nil>")")
+				XCTFail("Unexpected host: \(url.host ?? "<nil>") page=\(page)")
 				return (response, Data("[]".utf8))
 			}
 		}
 
 		let api = TyfloAPI(session: makeSession())
-		let viewModel = NewsFeedViewModel(requestTimeoutSeconds: 2)
+		let viewModel = NewsFeedViewModel(
+			requestTimeoutSeconds: 2,
+			sourcePerPage: 2,
+			initialBatchSize: 4,
+			loadMoreBatchSize: 4
+		)
 
 		await viewModel.refresh(api: api)
-		XCTAssertTrue(viewModel.canLoadMore)
 
-		let initialCount = viewModel.items.count
-		await viewModel.loadMore(api: api)
-
-		XCTAssertEqual(viewModel.items.count, initialCount)
-		XCTAssertFalse(viewModel.canLoadMore)
+		XCTAssertEqual(viewModel.items.map(\.id), [
+			"podcast.1",
+			"article.10",
+			"podcast.2",
+			"podcast.3",
+		])
 	}
 
 	private func makeSession() -> URLSession {
