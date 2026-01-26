@@ -615,6 +615,30 @@ final class AsyncListViewModelTests: XCTestCase {
 		XCTAssertTrue(viewModel.items.isEmpty)
 		XCTAssertEqual(viewModel.errorMessage, "Nie udało się pobrać danych. Spróbuj ponownie.")
 	}
+
+	func testLoadTimesOutAndShowsRetryMessage() async {
+		let viewModel = AsyncListViewModel<Int>()
+
+		await viewModel.load({
+			try await Task.sleep(nanoseconds: 1_000_000_000)
+			return [1]
+		}, timeoutSeconds: 0.01)
+
+		XCTAssertTrue(viewModel.hasLoaded)
+		XCTAssertTrue(viewModel.items.isEmpty)
+		XCTAssertFalse(viewModel.isLoading)
+		XCTAssertEqual(viewModel.errorMessage, "Ładowanie trwa zbyt długo. Spróbuj ponownie.")
+	}
+
+	func testSeedPrefillsItemsWithoutMarkingLoaded() {
+		let viewModel = AsyncListViewModel<Int>()
+		viewModel.seed([1, 2, 3])
+
+		XCTAssertEqual(viewModel.items, [1, 2, 3])
+		XCTAssertFalse(viewModel.hasLoaded)
+		XCTAssertFalse(viewModel.isLoading)
+		XCTAssertNil(viewModel.errorMessage)
+	}
 }
 
 @MainActor

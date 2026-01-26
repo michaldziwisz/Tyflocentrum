@@ -5,6 +5,7 @@
 //  Created by Arkadiusz Świętnicki on 17/10/2022.
 //
 
+import Foundation
 import SwiftUI
 
 enum NewsItemKind: String {
@@ -61,39 +62,103 @@ struct NewsItem: Identifiable {
 
 @MainActor
 final class AsyncListViewModel<Item>: ObservableObject {
+	private struct TimeoutError: Error {}
+
+	private static let fallbackErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+	private static let timeoutErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
+
 	@Published private(set) var items: [Item] = []
 	@Published private(set) var hasLoaded = false
 	@Published private(set) var isLoading = false
 	@Published private(set) var errorMessage: String?
 
-	func loadIfNeeded(_ fetch: @escaping () async throws -> [Item]) async {
-		guard !hasLoaded else { return }
-		await load(fetch)
+	func seed(_ cachedItems: [Item]) {
+		guard items.isEmpty else { return }
+		guard !cachedItems.isEmpty else { return }
+		items = cachedItems
 	}
 
-	func refresh(_ fetch: @escaping () async throws -> [Item]) async {
+	func loadIfNeeded(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
+		guard !hasLoaded else { return }
+		await load(fetch, timeoutSeconds: timeoutSeconds)
+	}
+
+	func refresh(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
 		items.removeAll(keepingCapacity: true)
 		hasLoaded = false
 		errorMessage = nil
-		await load(fetch)
+		await load(fetch, timeoutSeconds: timeoutSeconds)
 	}
 
-	func load(_ fetch: @escaping () async throws -> [Item]) async {
+	func load(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
 		guard !isLoading else { return }
 		isLoading = true
 		defer { isLoading = false }
 
 		errorMessage = nil
-		do {
-			let loadedItems = try await fetch()
-			guard !Task.isCancelled else { return }
 
+		let fetchTask = Task { try await fetch() }
+		let result: Result<[Item], Error>
+		if timeoutSeconds > 0 {
+			let timeoutTask = Task<[Item], Error> {
+				try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
+				throw TimeoutError()
+			}
+			result = await race(fetchTask: fetchTask, timeoutTask: timeoutTask)
+		}
+		else {
+			result = await fetchTask.result
+		}
+
+		guard !Task.isCancelled else { return }
+
+		switch result {
+		case .success(let loadedItems):
 			items = loadedItems
 			hasLoaded = true
-		} catch {
-			guard !Task.isCancelled else { return }
-			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+		case .failure(let error):
+			if error is TimeoutError {
+				errorMessage = Self.timeoutErrorMessage
+			}
+			else {
+				errorMessage = Self.fallbackErrorMessage
+			}
 			hasLoaded = true
+		}
+	}
+
+	private func race(fetchTask: Task<[Item], Error>, timeoutTask: Task<[Item], Error>) async -> Result<[Item], Error> {
+		await withCheckedContinuation { continuation in
+			let lock = NSLock()
+			var didResume = false
+			var fetchWatcher: Task<Void, Never>?
+			var timeoutWatcher: Task<Void, Never>?
+
+			func resume(_ result: Result<[Item], Error>) {
+				lock.lock()
+				guard !didResume else {
+					lock.unlock()
+					return
+				}
+				didResume = true
+				lock.unlock()
+
+				fetchWatcher?.cancel()
+				timeoutWatcher?.cancel()
+				continuation.resume(returning: result)
+			}
+
+			fetchWatcher = Task {
+				let result = await fetchTask.result
+				timeoutTask.cancel()
+				resume(result)
+			}
+
+			timeoutWatcher = Task {
+				let result = await timeoutTask.result
+				fetchTask.cancel()
+				resume(result)
+			}
 		}
 	}
 }

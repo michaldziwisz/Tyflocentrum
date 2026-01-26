@@ -151,6 +151,8 @@ private struct TyfloSwiatMagazineView: View {
 	@EnvironmentObject private var api: TyfloAPI
 	@StateObject private var viewModel = AsyncListViewModel<WPPostSummary>()
 	private let magazineRootPageID = 1409
+	private static let issuesCacheKey = "magazine.issues.cache.v1"
+	private let loadTimeoutSeconds: TimeInterval = 15
 
 	private var issuesByYear: [(year: Int, issues: [WPPostSummary])] {
 		let grouped = Dictionary(grouping: viewModel.items) { issue in
@@ -171,10 +173,10 @@ private struct TyfloSwiatMagazineView: View {
 				hasLoaded: viewModel.hasLoaded,
 				isEmpty: viewModel.items.isEmpty,
 				emptyMessage: "Brak numerów czasopisma.",
-				retryAction: { await viewModel.refresh(fetchIssues) },
+				retryAction: { await viewModel.refresh(fetchIssues, timeoutSeconds: loadTimeoutSeconds) },
 				retryIdentifier: "magazine.retry",
-					isRetryDisabled: viewModel.isLoading
-				)
+				isRetryDisabled: viewModel.isLoading
+			)
 
 			ForEach(issuesByYear, id: \.year) { group in
 				NavigationLink {
@@ -187,10 +189,11 @@ private struct TyfloSwiatMagazineView: View {
 		}
 		.accessibilityIdentifier("magazine.years.list")
 		.refreshable {
-			await viewModel.refresh(fetchIssues)
+			await viewModel.refresh(fetchIssues, timeoutSeconds: loadTimeoutSeconds)
 		}
 		.task {
-			await viewModel.loadIfNeeded(fetchIssues)
+			viewModel.seed(loadCachedIssues())
+			await viewModel.loadIfNeeded(fetchIssues, timeoutSeconds: loadTimeoutSeconds)
 		}
 		.navigationTitle("Czasopismo TyfloŚwiat")
 	}
@@ -199,6 +202,7 @@ private struct TyfloSwiatMagazineView: View {
 		do {
 			let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100)
 			if !issues.isEmpty {
+				storeCachedIssues(issues)
 				return issues
 			}
 		} catch {
@@ -207,7 +211,21 @@ private struct TyfloSwiatMagazineView: View {
 
 		let roots = try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
 		let rootID = roots.first?.id ?? magazineRootPageID
-		return try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
+		let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
+		if !issues.isEmpty {
+			storeCachedIssues(issues)
+		}
+		return issues
+	}
+
+	private func loadCachedIssues() -> [WPPostSummary] {
+		guard let data = UserDefaults.standard.data(forKey: Self.issuesCacheKey) else { return [] }
+		return (try? JSONDecoder().decode([WPPostSummary].self, from: data)) ?? []
+	}
+
+	private func storeCachedIssues(_ issues: [WPPostSummary]) {
+		guard let data = try? JSONEncoder().encode(issues) else { return }
+		UserDefaults.standard.set(data, forKey: Self.issuesCacheKey)
 	}
 }
 

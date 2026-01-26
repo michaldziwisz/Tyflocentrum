@@ -5,7 +5,6 @@
 //  Created by Arkadiusz Świętnicki on 19/10/2022.
 //
 
-import Dispatch
 import Foundation
 
 	final class TyfloAPI: ObservableObject {
@@ -29,132 +28,6 @@ import Foundation
 		self.session = session
 	}
 
-	private static let defaultRequestTimeout: TimeInterval = 20
-
-	private func data(for request: URLRequest) async throws -> (Data, URLResponse) {
-		let timeout = (request.timeoutInterval > 0) ? request.timeoutInterval : Self.defaultRequestTimeout
-
-		final class PendingRequest {
-			private let lock = NSLock()
-			private var continuation: CheckedContinuation<(Data, URLResponse), Error>?
-			private var storedResult: Result<(Data, URLResponse), Error>?
-			private var dataTask: URLSessionDataTask?
-			private var timeoutWorkItem: DispatchWorkItem?
-			private var isResolved = false
-
-			func setContinuation(_ continuation: CheckedContinuation<(Data, URLResponse), Error>) {
-				lock.lock()
-				if isResolved, let storedResult {
-					self.storedResult = nil
-					let timeoutWorkItem = timeoutWorkItem
-					self.timeoutWorkItem = nil
-					lock.unlock()
-
-					timeoutWorkItem?.cancel()
-
-					switch storedResult {
-					case .success(let value):
-						continuation.resume(returning: value)
-					case .failure(let error):
-						continuation.resume(throwing: error)
-					}
-					return
-				}
-
-				self.continuation = continuation
-				lock.unlock()
-			}
-
-			func setDataTask(_ task: URLSessionDataTask) {
-				lock.lock()
-				dataTask = task
-				lock.unlock()
-			}
-
-			func setTimeoutWorkItem(_ item: DispatchWorkItem) {
-				lock.lock()
-				timeoutWorkItem = item
-				lock.unlock()
-			}
-
-			func cancelDataTask() {
-				lock.lock()
-				let task = dataTask
-				lock.unlock()
-				task?.cancel()
-			}
-
-			func resolve(_ result: Result<(Data, URLResponse), Error>) {
-				lock.lock()
-				guard !isResolved else {
-					lock.unlock()
-					return
-				}
-				isResolved = true
-
-				let continuation = continuation
-				self.continuation = nil
-
-				if continuation == nil {
-					storedResult = result
-				}
-
-				let timeoutWorkItem = timeoutWorkItem
-				self.timeoutWorkItem = nil
-				lock.unlock()
-
-				timeoutWorkItem?.cancel()
-
-				guard let continuation else { return }
-				switch result {
-				case .success(let value):
-					continuation.resume(returning: value)
-				case .failure(let error):
-					continuation.resume(throwing: error)
-				}
-			}
-		}
-
-		let pending = PendingRequest()
-		return try await withTaskCancellationHandler {
-			try await withCheckedThrowingContinuation { continuation in
-				pending.setContinuation(continuation)
-
-				guard !Task.isCancelled else {
-					pending.resolve(.failure(CancellationError()))
-					return
-				}
-
-				let timeoutWorkItem = DispatchWorkItem {
-					pending.cancelDataTask()
-					pending.resolve(.failure(URLError(.timedOut)))
-				}
-				pending.setTimeoutWorkItem(timeoutWorkItem)
-
-				let task = session.dataTask(with: request) { data, response, error in
-					if let error {
-						pending.resolve(.failure(error))
-						return
-					}
-
-					guard let response else {
-						pending.resolve(.failure(URLError(.badServerResponse)))
-						return
-					}
-
-					pending.resolve(.success((data ?? Data(), response)))
-				}
-				pending.setDataTask(task)
-
-				DispatchQueue.global(qos: .userInitiated).asyncAfter(deadline: .now() + timeout, execute: timeoutWorkItem)
-				task.resume()
-			}
-		} onCancel: {
-			pending.cancelDataTask()
-			pending.resolve(.failure(CancellationError()))
-		}
-	}
-
 		struct WPPage<Item: Decodable> {
 			let items: [Item]
 			let total: Int?
@@ -170,9 +43,9 @@ import Foundation
 	private func fetch<T: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> T {
 		var request = URLRequest(url: url)
 		request.cachePolicy = .reloadIgnoringLocalCacheData
-		request.timeoutInterval = Self.defaultRequestTimeout
+		request.timeoutInterval = 20
 		request.setValue("application/json", forHTTPHeaderField: "Accept")
-		let (data, response) = try await data(for: request)
+		let (data, response) = try await session.data(for: request)
 		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 			throw URLError(.badServerResponse)
 		}
@@ -182,9 +55,9 @@ import Foundation
 		private func fetchWPPage<Item: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> WPPage<Item> {
 			var request = URLRequest(url: url)
 			request.cachePolicy = .reloadIgnoringLocalCacheData
-			request.timeoutInterval = Self.defaultRequestTimeout
+			request.timeoutInterval = 20
 			request.setValue("application/json", forHTTPHeaderField: "Accept")
-			let (data, response) = try await data(for: request)
+			let (data, response) = try await session.data(for: request)
 			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 				throw URLError(.badServerResponse)
 			}
