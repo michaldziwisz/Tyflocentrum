@@ -64,9 +64,6 @@ struct NewsItem: Identifiable {
 final class AsyncListViewModel<Item>: ObservableObject {
 	private struct TimeoutError: Error {}
 
-	private static let fallbackErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
-	private static let timeoutErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
-
 	@Published private(set) var items: [Item] = []
 	@Published private(set) var hasLoaded = false
 	@Published private(set) var isLoading = false
@@ -95,6 +92,9 @@ final class AsyncListViewModel<Item>: ObservableObject {
 		isLoading = true
 		defer { isLoading = false }
 
+		let fallbackErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+		let timeoutErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
+
 		errorMessage = nil
 
 		let fetchTask = Task { try await fetch() }
@@ -118,10 +118,10 @@ final class AsyncListViewModel<Item>: ObservableObject {
 			hasLoaded = true
 		case .failure(let error):
 			if error is TimeoutError {
-				errorMessage = Self.timeoutErrorMessage
+				errorMessage = timeoutErrorMessage
 			}
 			else {
-				errorMessage = Self.fallbackErrorMessage
+				errorMessage = fallbackErrorMessage
 			}
 			hasLoaded = true
 		}
