@@ -19,7 +19,7 @@ struct LazyDetailedArticleView: View {
 		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
 			return 2
 		}
-		return 15
+		return 45
 	}
 
 	var body: some View {

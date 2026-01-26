@@ -15,11 +15,22 @@ import Foundation
 		private let wpPostFields = "id,date,title,excerpt,content,guid"
 		private let wpEmbedPostFields = "id,date,link,title,excerpt"
 
+	private static let requestTimeoutSeconds: TimeInterval = 30
+	private static let retryableErrorCodes: Set<URLError.Code> = [
+		.notConnectedToInternet,
+		.timedOut,
+		.cannotFindHost,
+		.cannotConnectToHost,
+		.networkConnectionLost,
+		.dnsLookupFailed,
+		.badServerResponse,
+	]
+
 	private static func makeSharedSession() -> URLSession {
 		let config = URLSessionConfiguration.default
-		config.waitsForConnectivity = false
-		config.timeoutIntervalForRequest = 20
-		config.timeoutIntervalForResource = 20
+		config.waitsForConnectivity = true
+		config.timeoutIntervalForRequest = requestTimeoutSeconds
+		config.timeoutIntervalForResource = requestTimeoutSeconds
 		return URLSession(configuration: config)
 	}
 
@@ -40,32 +51,81 @@ import Foundation
 		return components.url
 	}
 
+	private static func isRetryableError(_ error: Error) -> Bool {
+		if error is AsyncTimeoutError {
+			return true
+		}
+		if error is CancellationError {
+			return false
+		}
+		if let urlError = error as? URLError {
+			return retryableErrorCodes.contains(urlError.code)
+		}
+		return false
+	}
+
+	private static func retryDelayNanoseconds(forAttempt attempt: Int) -> UInt64 {
+		switch attempt {
+		case 1:
+			return 250_000_000
+		default:
+			return 500_000_000
+		}
+	}
+
+	private func withRetry<T>(
+		maxAttempts: Int = 2,
+		operation: @escaping () async throws -> T
+	) async throws -> T {
+		precondition(maxAttempts > 0)
+
+		var attempt = 0
+		while true {
+			attempt += 1
+			do {
+				return try await operation()
+			} catch {
+				if Task.isCancelled {
+					throw error
+				}
+				guard attempt < maxAttempts, Self.isRetryableError(error) else {
+					throw error
+				}
+				try? await Task.sleep(nanoseconds: Self.retryDelayNanoseconds(forAttempt: attempt))
+			}
+		}
+	}
+
 	private func fetch<T: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> T {
 		var request = URLRequest(url: url)
 		request.cachePolicy = .reloadIgnoringLocalCacheData
-		request.timeoutInterval = 20
+		request.timeoutInterval = Self.requestTimeoutSeconds
 		request.setValue("application/json", forHTTPHeaderField: "Accept")
-		let (data, response) = try await session.data(for: request)
-		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-			throw URLError(.badServerResponse)
-		}
+		return try await withRetry {
+			let (data, response) = try await session.data(for: request)
+			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+				throw URLError(.badServerResponse)
+			}
 			return try decoder.decode(T.self, from: data)
+		}
 		}
 
 		private func fetchWPPage<Item: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> WPPage<Item> {
 			var request = URLRequest(url: url)
 			request.cachePolicy = .reloadIgnoringLocalCacheData
-			request.timeoutInterval = 20
+			request.timeoutInterval = Self.requestTimeoutSeconds
 			request.setValue("application/json", forHTTPHeaderField: "Accept")
-			let (data, response) = try await session.data(for: request)
-			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-				throw URLError(.badServerResponse)
-			}
+			return try await withRetry {
+				let (data, response) = try await session.data(for: request)
+				guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+					throw URLError(.badServerResponse)
+				}
 
-			let items = try decoder.decode([Item].self, from: data)
-			let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
-			let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
-			return WPPage(items: items, total: total, totalPages: totalPages)
+				let items = try decoder.decode([Item].self, from: data)
+				let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
+				let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
+				return WPPage(items: items, total: total, totalPages: totalPages)
+			}
 		}
 
 		func fetchLatestPodcasts() async throws -> [Podcast] {

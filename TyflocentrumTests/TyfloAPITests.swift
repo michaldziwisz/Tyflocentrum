@@ -920,6 +920,31 @@ final class TyfloAPITests: XCTestCase {
 		return data
 	}
 
+	func testFetchPodcastSummariesPageRetriesOnceOnServerError() async throws {
+		let responseBody = #"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"link":"https://tyflopodcast.net/?p=1"}]"#
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+
+			let statusCode = requestCount == 1 ? 500 : 200
+			let headers = [
+				"X-WP-Total": "1",
+				"X-WP-TotalPages": "1",
+			]
+			let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: headers)!
+			return (response, Data(responseBody.utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let page = try await api.fetchPodcastSummariesPage(page: 1, perPage: 1)
+
+		XCTAssertEqual(requestCount, 2)
+		XCTAssertEqual(page.items.count, 1)
+		XCTAssertEqual(page.totalPages, 1)
+	}
+
 	private func makeSession() -> URLSession {
 		let config = URLSessionConfiguration.ephemeral
 		config.protocolClasses = [StubURLProtocol.self]

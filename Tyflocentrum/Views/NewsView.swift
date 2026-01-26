@@ -73,18 +73,18 @@ final class AsyncListViewModel<Item>: ObservableObject {
 		items = cachedItems
 	}
 
-	func loadIfNeeded(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
+	func loadIfNeeded(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 45) async {
 		guard !hasLoaded else { return }
 		await load(fetch, timeoutSeconds: timeoutSeconds)
 	}
 
-	func refresh(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
+	func refresh(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 45) async {
 		hasLoaded = false
 		errorMessage = nil
 		await load(fetch, timeoutSeconds: timeoutSeconds)
 	}
 
-	func load(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
+	func load(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 45) async {
 		guard !isLoading else { return }
 		isLoading = true
 
@@ -173,7 +173,7 @@ final class NewsFeedViewModel: ObservableObject {
 	private var articles = SourceState(kind: .article)
 	private var seenIDs = Set<String>()
 
-	init(requestTimeoutSeconds: TimeInterval = 15) {
+	init(requestTimeoutSeconds: TimeInterval = 45) {
 		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
 			self.requestTimeoutSeconds = 2
 		}
