@@ -176,7 +176,7 @@ final class NewsFeedViewModel: ObservableObject {
 		var didLoadAnything = false
 
 		do {
-			let page = try await fetchNextPage(api: api, source: &podcasts)
+			let page = try await fetchNextPodcastPage(api: api)
 			let newItems = uniqueItems(from: page.items, kind: .podcast)
 			if !newItems.isEmpty {
 				items.append(contentsOf: newItems)
@@ -189,7 +189,7 @@ final class NewsFeedViewModel: ObservableObject {
 		}
 
 		do {
-			let page = try await fetchNextPage(api: api, source: &articles)
+			let page = try await fetchNextArticlePage(api: api)
 			let newItems = uniqueItems(from: page.items, kind: .article)
 			if !newItems.isEmpty {
 				items.append(contentsOf: newItems)
@@ -231,7 +231,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 		if podcasts.hasMore {
 			do {
-				let page = try await fetchNextPage(api: api, source: &podcasts)
+				let page = try await fetchNextPodcastPage(api: api)
 				let newItems = uniqueItems(from: page.items, kind: .podcast)
 				if !newItems.isEmpty {
 					items.append(contentsOf: newItems)
@@ -246,7 +246,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 		if articles.hasMore {
 			do {
-				let page = try await fetchNextPage(api: api, source: &articles)
+				let page = try await fetchNextArticlePage(api: api)
 				let newItems = uniqueItems(from: page.items, kind: .article)
 				if !newItems.isEmpty {
 					items.append(contentsOf: newItems)
@@ -281,6 +281,20 @@ final class NewsFeedViewModel: ObservableObject {
 		loadMoreErrorMessage = nil
 	}
 
+	private func fetchNextPodcastPage(api: TyfloAPI) async throws -> TyfloAPI.WPPage<WPPostSummary> {
+		var source = podcasts
+		let page = try await fetchNextPage(api: api, source: &source)
+		podcasts = source
+		return page
+	}
+
+	private func fetchNextArticlePage(api: TyfloAPI) async throws -> TyfloAPI.WPPage<WPPostSummary> {
+		var source = articles
+		let page = try await fetchNextPage(api: api, source: &source)
+		articles = source
+		return page
+	}
+
 	private func fetchNextPage(api: TyfloAPI, source: inout SourceState) async throws -> TyfloAPI.WPPage<WPPostSummary> {
 		guard source.hasMore else { return TyfloAPI.WPPage(items: [], total: nil, totalPages: nil) }
 
@@ -289,11 +303,11 @@ final class NewsFeedViewModel: ObservableObject {
 		switch source.kind {
 		case .podcast:
 			page = try await withTimeout(requestTimeoutSeconds) {
-				try await api.fetchPodcastSummariesPage(page: nextPage, perPage: perPage)
+				try await api.fetchPodcastSummariesPage(page: nextPage, perPage: self.perPage)
 			}
 		case .article:
 			page = try await withTimeout(requestTimeoutSeconds) {
-				try await api.fetchArticleSummariesPage(page: nextPage, perPage: perPage)
+				try await api.fetchArticleSummariesPage(page: nextPage, perPage: self.perPage)
 			}
 		}
 
