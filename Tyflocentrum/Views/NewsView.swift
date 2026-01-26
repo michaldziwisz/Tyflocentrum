@@ -81,7 +81,6 @@ final class AsyncListViewModel<Item>: ObservableObject {
 	}
 
 	func refresh(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
-		items.removeAll(keepingCapacity: true)
 		hasLoaded = false
 		errorMessage = nil
 		await load(fetch, timeoutSeconds: timeoutSeconds)
@@ -97,26 +96,36 @@ final class AsyncListViewModel<Item>: ObservableObject {
 
 		errorMessage = nil
 
-		let fetchTask = Task { try await fetch() }
-		let result: Result<[Item], Error>
-		if timeoutSeconds > 0 {
-			let timeoutTask = Task<[Item], Error> {
-				try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
-				throw TimeoutError()
+		do {
+			let loadedItems: [Item]
+			if timeoutSeconds > 0 {
+				loadedItems = try await withThrowingTaskGroup(of: [Item].self) { group in
+					group.addTask {
+						try await fetch()
+					}
+					group.addTask {
+						try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
+						throw TimeoutError()
+					}
+
+					guard let first = try await group.next() else {
+						throw CancellationError()
+					}
+
+					group.cancelAll()
+					return first
+				}
 			}
-			result = await race(fetchTask: fetchTask, timeoutTask: timeoutTask)
-		}
-		else {
-			result = await fetchTask.result
-		}
+			else {
+				loadedItems = try await fetch()
+			}
 
-		guard !Task.isCancelled else { return }
-
-		switch result {
-		case .success(let loadedItems):
+			guard !Task.isCancelled else { return }
 			items = loadedItems
 			hasLoaded = true
-		case .failure(let error):
+		} catch {
+			guard !Task.isCancelled else { return }
+
 			if error is TimeoutError {
 				errorMessage = timeoutErrorMessage
 			}
@@ -124,41 +133,6 @@ final class AsyncListViewModel<Item>: ObservableObject {
 				errorMessage = fallbackErrorMessage
 			}
 			hasLoaded = true
-		}
-	}
-
-	private func race(fetchTask: Task<[Item], Error>, timeoutTask: Task<[Item], Error>) async -> Result<[Item], Error> {
-		await withCheckedContinuation { continuation in
-			let lock = NSLock()
-			var didResume = false
-			var fetchWatcher: Task<Void, Never>?
-			var timeoutWatcher: Task<Void, Never>?
-
-			func resume(_ result: Result<[Item], Error>) {
-				lock.lock()
-				guard !didResume else {
-					lock.unlock()
-					return
-				}
-				didResume = true
-				lock.unlock()
-
-				fetchWatcher?.cancel()
-				timeoutWatcher?.cancel()
-				continuation.resume(returning: result)
-			}
-
-			fetchWatcher = Task {
-				let result = await fetchTask.result
-				timeoutTask.cancel()
-				resume(result)
-			}
-
-			timeoutWatcher = Task {
-				let result = await timeoutTask.result
-				fetchTask.cancel()
-				resume(result)
-			}
 		}
 	}
 }
