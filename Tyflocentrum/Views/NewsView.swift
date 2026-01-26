@@ -176,7 +176,7 @@ final class NewsFeedViewModel: ObservableObject {
 	init(
 		requestTimeoutSeconds: TimeInterval = 20,
 		sourcePerPage: Int = 20,
-		initialBatchSize: Int = 20,
+		initialBatchSize: Int = 40,
 		loadMoreBatchSize: Int = 20
 	) {
 		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
