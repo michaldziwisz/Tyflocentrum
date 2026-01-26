@@ -10,7 +10,7 @@ import SwiftUI
 
 struct PodcastCategoriesView: View {
 	@EnvironmentObject var api: TyfloAPI
-	@StateObject private var viewModel = AsyncListViewModel<Category>()
+	@StateObject private var viewModel = PagedFeedViewModel<Category>(perPage: 100)
 	var body: some View {
 		NavigationView {
 			List {
@@ -29,7 +29,7 @@ struct PodcastCategoriesView: View {
 					hasLoaded: viewModel.hasLoaded,
 					isEmpty: viewModel.items.isEmpty,
 					emptyMessage: "Brak kategorii podcastów.",
-					retryAction: { await viewModel.refresh(api.fetchCategories) },
+					retryAction: { await viewModel.refresh(fetchPage: fetchPage) },
 					retryIdentifier: "podcastCategories.retry",
 					isRetryDisabled: viewModel.isLoading
 				)
@@ -41,17 +41,44 @@ struct PodcastCategoriesView: View {
 						ShortCategoryView(category: item)
 					}
 					.accessibilityRemoveTraits(.isButton)
+					.onAppear {
+						guard item.id == viewModel.items.last?.id else { return }
+						Task { await viewModel.loadMore(fetchPage: fetchPage) }
+					}
+				}
+
+				if viewModel.errorMessage == nil, viewModel.hasLoaded {
+					if let loadMoreError = viewModel.loadMoreErrorMessage {
+						Section {
+							Text(loadMoreError)
+								.foregroundColor(.secondary)
+
+							Button("Spróbuj ponownie") {
+								Task { await viewModel.loadMore(fetchPage: fetchPage) }
+							}
+							.disabled(viewModel.isLoadingMore)
+						}
+					}
+					else if viewModel.isLoadingMore {
+						Section {
+							ProgressView("Ładowanie kolejnych kategorii…")
+						}
+					}
 				}
 			}
 			.accessibilityIdentifier("podcastCategories.list")
 			.refreshable {
-				await viewModel.refresh(api.fetchCategories)
+				await viewModel.refresh(fetchPage: fetchPage)
 			}
 			.task {
-				await viewModel.loadIfNeeded(api.fetchCategories)
+				await viewModel.loadIfNeeded(fetchPage: fetchPage)
 			}
 			.navigationTitle("Podcasty")
 		}
+	}
+
+	private func fetchPage(page: Int, perPage: Int) async throws -> TyfloAPI.WPPage<Category> {
+		try await api.fetchPodcastCategoriesPage(page: page, perPage: perPage)
 	}
 }
 

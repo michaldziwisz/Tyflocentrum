@@ -11,9 +11,10 @@ import Foundation
 		private let session: URLSession
 		private let tyfloPodcastBaseURL = URL(string: "https://tyflopodcast.net/wp-json")!
 		private let tyfloWorldBaseURL = URL(string: "https://tyfloswiat.pl/wp-json")!
-		private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
-		private let wpPostFields = "id,date,title,excerpt,content,guid"
-		private let wpEmbedPostFields = "id,date,link,title,excerpt"
+	private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
+	private let wpPostFields = "id,date,title,excerpt,content,guid"
+	private let wpEmbedPostFields = "id,date,link,title,excerpt"
+	private let wpCategoryFields = "id,name,count"
 
 	private static let requestTimeoutSeconds: TimeInterval = 30
 	private static let retryableErrorCodes: Set<URLError.Code> = [
@@ -256,7 +257,12 @@ import Foundation
 			guard let url = makeWPURL(
 				baseURL: tyfloPodcastBaseURL,
 				path: "wp/v2/categories",
-				queryItems: [URLQueryItem(name: "per_page", value: "100")]
+				queryItems: [
+					URLQueryItem(name: "per_page", value: "100"),
+					URLQueryItem(name: "orderby", value: "name"),
+					URLQueryItem(name: "order", value: "asc"),
+					URLQueryItem(name: "_fields", value: wpCategoryFields),
+				]
 			) else {
 				throw URLError(.badURL)
 			}
@@ -301,11 +307,58 @@ import Foundation
 			guard let url = makeWPURL(
 				baseURL: tyfloWorldBaseURL,
 				path: "wp/v2/categories",
-				queryItems: [URLQueryItem(name: "per_page", value: "100")]
+				queryItems: [
+					URLQueryItem(name: "per_page", value: "100"),
+					URLQueryItem(name: "orderby", value: "name"),
+					URLQueryItem(name: "order", value: "asc"),
+					URLQueryItem(name: "_fields", value: wpCategoryFields),
+				]
 			) else {
 				throw URLError(.badURL)
 			}
 			return try await fetch(url)
+		}
+
+		func fetchPodcastCategoriesPage(page: Int, perPage: Int) async throws -> WPPage<Category> {
+			guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+			guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+
+			guard let url = makeWPURL(
+				baseURL: tyfloPodcastBaseURL,
+				path: "wp/v2/categories",
+				queryItems: [
+					URLQueryItem(name: "per_page", value: "\(perPage)"),
+					URLQueryItem(name: "page", value: "\(page)"),
+					URLQueryItem(name: "orderby", value: "name"),
+					URLQueryItem(name: "order", value: "asc"),
+					URLQueryItem(name: "_fields", value: wpCategoryFields),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
+
+			return try await fetchWPPage(url)
+		}
+
+		func fetchArticleCategoriesPage(page: Int, perPage: Int) async throws -> WPPage<Category> {
+			guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+			guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+
+			guard let url = makeWPURL(
+				baseURL: tyfloWorldBaseURL,
+				path: "wp/v2/categories",
+				queryItems: [
+					URLQueryItem(name: "per_page", value: "\(perPage)"),
+					URLQueryItem(name: "page", value: "\(page)"),
+					URLQueryItem(name: "orderby", value: "name"),
+					URLQueryItem(name: "order", value: "asc"),
+					URLQueryItem(name: "_fields", value: wpCategoryFields),
+				]
+			) else {
+				throw URLError(.badURL)
+			}
+
+			return try await fetchWPPage(url)
 		}
 
 		func getArticleCategories() async -> [Category] {

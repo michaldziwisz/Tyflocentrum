@@ -379,8 +379,8 @@ final class NewsFeedViewModel: ObservableObject {
 }
 
 @MainActor
-final class PostSummariesFeedViewModel: ObservableObject {
-	@Published private(set) var items: [WPPostSummary] = []
+final class PagedFeedViewModel<Item: Identifiable>: ObservableObject where Item.ID: Hashable {
+	@Published private(set) var items: [Item] = []
 	@Published private(set) var hasLoaded = false
 	@Published private(set) var isLoading = false
 	@Published private(set) var isLoadingMore = false
@@ -391,18 +391,18 @@ final class PostSummariesFeedViewModel: ObservableObject {
 	private let perPage: Int
 	private var nextPage = 1
 	private var totalPages: Int?
-	private var seenIDs = Set<Int>()
+	private var seenIDs = Set<Item.ID>()
 
 	init(perPage: Int = 50) {
 		self.perPage = perPage
 	}
 
-	func loadIfNeeded(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async {
+	func loadIfNeeded(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
 		guard !hasLoaded else { return }
 		await refresh(fetchPage: fetchPage)
 	}
 
-	func refresh(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async {
+	func refresh(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
 		guard !isLoading else { return }
 		reset()
 
@@ -427,7 +427,7 @@ final class PostSummariesFeedViewModel: ObservableObject {
 		}
 	}
 
-	func loadMore(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async {
+	func loadMore(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
 		guard hasLoaded else {
 			await loadIfNeeded(fetchPage: fetchPage)
 			return
@@ -464,7 +464,7 @@ final class PostSummariesFeedViewModel: ObservableObject {
 		loadMoreErrorMessage = nil
 	}
 
-	private func appendNextPage(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<WPPostSummary>) async throws -> Int {
+	private func appendNextPage(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async throws -> Int {
 		guard nextPage > 0 else {
 			canLoadMore = false
 			return 0
@@ -480,7 +480,7 @@ final class PostSummariesFeedViewModel: ObservableObject {
 
 		var insertedCount = 0
 		if !page.items.isEmpty {
-			var newItems: [WPPostSummary] = []
+			var newItems: [Item] = []
 			newItems.reserveCapacity(page.items.count)
 			for item in page.items {
 				if seenIDs.insert(item.id).inserted {
@@ -502,6 +502,8 @@ final class PostSummariesFeedViewModel: ObservableObject {
 		return insertedCount
 	}
 }
+
+typealias PostSummariesFeedViewModel = PagedFeedViewModel<WPPostSummary>
 
 struct AsyncListStatusSection: View {
 	let errorMessage: String?

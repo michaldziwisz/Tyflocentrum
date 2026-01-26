@@ -280,6 +280,9 @@ final class TyfloAPITests: XCTestCase {
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []
 			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+			XCTAssertEqual(items.first(where: { $0.name == "orderby" })?.value, "name")
+			XCTAssertEqual(items.first(where: { $0.name == "order" })?.value, "asc")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,name,count")
 
 			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
 			return (response, self.categoriesResponseData())
@@ -290,6 +293,42 @@ final class TyfloAPITests: XCTestCase {
 
 		XCTAssertEqual(categories.count, 1)
 		XCTAssertEqual(categories.first?.id, 10)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testFetchPodcastCategoriesPageUsesPageAndEmbedFields() async throws {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyflopodcast.net")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/categories"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "50")
+			XCTAssertEqual(items.first(where: { $0.name == "page" })?.value, "2")
+			XCTAssertEqual(items.first(where: { $0.name == "orderby" })?.value, "name")
+			XCTAssertEqual(items.first(where: { $0.name == "order" })?.value, "asc")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,name,count")
+
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: ["X-WP-TotalPages": "3"]
+			)!
+			return (response, self.categoriesResponseData())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let page = try await api.fetchPodcastCategoriesPage(page: 2, perPage: 50)
+		XCTAssertEqual(page.items.count, 1)
+		XCTAssertEqual(page.items.first?.id, 10)
+		XCTAssertEqual(page.totalPages, 3)
 
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
@@ -367,6 +406,9 @@ final class TyfloAPITests: XCTestCase {
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []
 			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
+			XCTAssertEqual(items.first(where: { $0.name == "orderby" })?.value, "name")
+			XCTAssertEqual(items.first(where: { $0.name == "order" })?.value, "asc")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,name,count")
 
 			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
 			return (response, self.categoriesResponseData())
@@ -377,6 +419,42 @@ final class TyfloAPITests: XCTestCase {
 
 		XCTAssertEqual(categories.count, 1)
 		XCTAssertEqual(categories.first?.id, 10)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testFetchArticleCategoriesPageUsesPageAndEmbedFields() async throws {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyfloswiat.pl")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/categories"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "20")
+			XCTAssertEqual(items.first(where: { $0.name == "page" })?.value, "4")
+			XCTAssertEqual(items.first(where: { $0.name == "orderby" })?.value, "name")
+			XCTAssertEqual(items.first(where: { $0.name == "order" })?.value, "asc")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,name,count")
+
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: ["X-WP-TotalPages": "10"]
+			)!
+			return (response, self.categoriesResponseData())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let page = try await api.fetchArticleCategoriesPage(page: 4, perPage: 20)
+		XCTAssertEqual(page.items.count, 1)
+		XCTAssertEqual(page.items.first?.id, 10)
+		XCTAssertEqual(page.totalPages, 10)
 
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
