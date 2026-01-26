@@ -102,7 +102,7 @@ import Foundation
 		request.timeoutInterval = Self.requestTimeoutSeconds
 		request.setValue("application/json", forHTTPHeaderField: "Accept")
 		return try await withRetry {
-			let (data, response) = try await session.data(for: request)
+			let (data, response) = try await self.session.data(for: request)
 			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 				throw URLError(.badServerResponse)
 			}
@@ -116,7 +116,7 @@ import Foundation
 			request.timeoutInterval = Self.requestTimeoutSeconds
 			request.setValue("application/json", forHTTPHeaderField: "Accept")
 			return try await withRetry {
-				let (data, response) = try await session.data(for: request)
+				let (data, response) = try await self.session.data(for: request)
 				guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
 					throw URLError(.badServerResponse)
 				}
