@@ -379,7 +379,7 @@ final class NewsFeedViewModel: ObservableObject {
 }
 
 @MainActor
-final class PagedFeedViewModel<Item: Identifiable>: ObservableObject where Item.ID: Hashable {
+final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject where Item.ID: Hashable {
 	@Published private(set) var items: [Item] = []
 	@Published private(set) var hasLoaded = false
 	@Published private(set) var isLoading = false
