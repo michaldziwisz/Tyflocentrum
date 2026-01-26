@@ -295,120 +295,47 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertEqual(refreshedCategoryArticle.label, "Test artykuł 2")
 	}
 
-	func testListsShowErrorAndRecoverViaRetryAndPullToRefresh() {
-		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
-		app.launch()
-
-		let errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
-
-		let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
-		XCTAssertTrue(newsList.waitForExistence(timeout: 5))
-
-		XCTAssertTrue(app.staticTexts[errorMessage].firstMatch.waitForExistence(timeout: 5))
-
-		let newsRetry = app.descendants(matching: .any).matching(identifier: "news.retry").firstMatch
-		XCTAssertTrue(newsRetry.waitForExistence(timeout: 5))
-		newsRetry.tap()
-
-		let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-		XCTAssertTrue(initialNewsRow.waitForExistence(timeout: 5))
-		XCTAssertEqual(initialNewsRow.label, "Podcast. Test podcast")
-
-		let initialArticleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
-		XCTAssertTrue(initialArticleRow.waitForExistence(timeout: 5))
-		XCTAssertEqual(initialArticleRow.label, "Artykuł. Test artykuł")
-
-		app.tabBars.buttons["Podcasty"].tap()
-		let podcastCategoriesList = app.descendants(matching: .any).matching(identifier: "podcastCategories.list").firstMatch
-		XCTAssertTrue(podcastCategoriesList.waitForExistence(timeout: 5))
-		XCTAssertTrue(podcastCategoriesList.staticTexts[errorMessage].waitForExistence(timeout: 5))
-		let categoriesRetry = podcastCategoriesList.buttons["Spróbuj ponownie"].firstMatch
-		XCTAssertTrue(categoriesRetry.exists)
-		categoriesRetry.tap()
-
-		let initialPodcastCategory = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
-		XCTAssertTrue(initialPodcastCategory.waitForExistence(timeout: 5))
-		let refreshedPodcastCategory = app.descendants(matching: .any).matching(identifier: "category.row.11").firstMatch
-		pullToRefresh(podcastCategoriesList, untilExists: refreshedPodcastCategory)
-		XCTAssertEqual(refreshedPodcastCategory.label, "Test podcasty 2")
-
-		initialPodcastCategory.tap()
-		let categoryPodcastsList = app.descendants(matching: .any).matching(identifier: "categoryPodcasts.list").firstMatch
-		XCTAssertTrue(categoryPodcastsList.waitForExistence(timeout: 5))
-		XCTAssertTrue(categoryPodcastsList.staticTexts[errorMessage].waitForExistence(timeout: 5))
-		let categoryPodcastsRetry = categoryPodcastsList.buttons["Spróbuj ponownie"].firstMatch
-		XCTAssertTrue(categoryPodcastsRetry.exists)
-		categoryPodcastsRetry.tap()
-
-		let initialCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-		XCTAssertTrue(initialCategoryPodcast.waitForExistence(timeout: 5))
-		let refreshedCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.4").firstMatch
-		pullToRefresh(categoryPodcastsList, untilExists: refreshedCategoryPodcast)
-		XCTAssertEqual(refreshedCategoryPodcast.label, "Test podcast w kategorii 2")
-
-		app.tabBars.buttons["Artykuły"].tap()
-		let articleCategoriesList = app.descendants(matching: .any).matching(identifier: "articleCategories.list").firstMatch
-		XCTAssertTrue(articleCategoriesList.waitForExistence(timeout: 5))
-		XCTAssertTrue(articleCategoriesList.staticTexts[errorMessage].waitForExistence(timeout: 5))
-		let articleCategoriesRetry = articleCategoriesList.buttons["Spróbuj ponownie"].firstMatch
-		XCTAssertTrue(articleCategoriesRetry.exists)
-		articleCategoriesRetry.tap()
-
-		let initialArticleCategory = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
-		XCTAssertTrue(initialArticleCategory.waitForExistence(timeout: 5))
-		let refreshedArticleCategory = app.descendants(matching: .any).matching(identifier: "category.row.21").firstMatch
-		pullToRefresh(articleCategoriesList, untilExists: refreshedArticleCategory)
-		XCTAssertEqual(refreshedArticleCategory.label, "Test artykuły 2")
-
-		initialArticleCategory.tap()
-		let categoryArticlesList = app.descendants(matching: .any).matching(identifier: "categoryArticles.list").firstMatch
-		XCTAssertTrue(categoryArticlesList.waitForExistence(timeout: 5))
-		XCTAssertTrue(categoryArticlesList.staticTexts[errorMessage].waitForExistence(timeout: 5))
-		let categoryArticlesRetry = categoryArticlesList.buttons["Spróbuj ponownie"].firstMatch
-		XCTAssertTrue(categoryArticlesRetry.exists)
-		categoryArticlesRetry.tap()
-
-		let initialArticle = app.descendants(matching: .any).matching(identifier: "podcast.row.2").firstMatch
-		XCTAssertTrue(initialArticle.waitForExistence(timeout: 5))
-		let refreshedArticle = app.descendants(matching: .any).matching(identifier: "podcast.row.5").firstMatch
-		pullToRefresh(categoryArticlesList, untilExists: refreshedArticle)
-		XCTAssertEqual(refreshedArticle.label, "Test artykuł 2")
-	}
-
-		func testSearchShowsErrorAndRecoversViaRetryAndPullToRefresh() {
+		func testListsRecoverAutomaticallyWhenFirstRequestFails() {
 			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
 			app.launch()
 
-		app.tabBars.buttons["Szukaj"].tap()
+			let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
+			XCTAssertTrue(newsList.waitForExistence(timeout: 5))
+			let firstNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(firstNewsRow.waitForExistence(timeout: 10))
 
-		let searchList = app.descendants(matching: .any).matching(identifier: "search.list").firstMatch
-		XCTAssertTrue(searchList.waitForExistence(timeout: 5))
+			app.tabBars.buttons["Podcasty"].tap()
+			let categoryRow = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+			XCTAssertTrue(categoryRow.waitForExistence(timeout: 10))
+			categoryRow.tap()
+			let firstCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(firstCategoryPodcast.waitForExistence(timeout: 10))
 
-		let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
-		XCTAssertTrue(searchField.waitForExistence(timeout: 5))
-		searchField.tap()
-		searchField.typeText("test")
+			app.tabBars.buttons["Artykuły"].tap()
+			let articleCategory = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+			XCTAssertTrue(articleCategory.waitForExistence(timeout: 10))
+		}
 
-		let searchButton = app.descendants(matching: .any).matching(identifier: "search.button").firstMatch
-		XCTAssertTrue(searchButton.exists)
-		searchButton.tap()
+		func testSearchRecoversAutomaticallyWhenFirstRequestFails() {
+			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
+			app.launch()
 
-		let errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
-		XCTAssertTrue(searchList.staticTexts[errorMessage].waitForExistence(timeout: 5))
+			app.tabBars.buttons["Szukaj"].tap()
 
-			let retryButton = app.descendants(matching: .any).matching(identifier: "search.retry").firstMatch
-			XCTAssertTrue(retryButton.waitForExistence(timeout: 5))
-			retryButton.tap()
+			let searchList = app.descendants(matching: .any).matching(identifier: "search.list").firstMatch
+			XCTAssertTrue(searchList.waitForExistence(timeout: 5))
+
+			let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
+			XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+			searchField.tap()
+			searchField.typeText("test")
+
+			let searchButton = app.descendants(matching: .any).matching(identifier: "search.button").firstMatch
+			XCTAssertTrue(searchButton.exists)
+			searchButton.tap()
+
 			let firstResult = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(firstResult.waitForExistence(timeout: 5))
-
-			let refreshButton = app.descendants(matching: .any).matching(identifier: "search.refresh").firstMatch
-			XCTAssertTrue(refreshButton.waitForExistence(timeout: 5))
-			refreshButton.tap()
-
-			let refreshedFirstResult = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(refreshedFirstResult.waitForExistence(timeout: 5))
-			XCTAssertEqual(refreshedFirstResult.label, "Podcast. Test podcast")
+			XCTAssertTrue(firstResult.waitForExistence(timeout: 10))
 		}
 
 	func testCanBrowsePodcastCategoriesAndOpenPodcast() {
