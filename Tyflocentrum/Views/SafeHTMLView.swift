@@ -48,11 +48,34 @@ struct SafeHTMLView: UIViewRepresentable {
 		uiView.accessibilityIdentifier = accessibilityIdentifier
 		context.coordinator.allowedHost = baseURL?.host
 
-		let document = Self.makeDocument(body: htmlBody, fontSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
+		let optimizedBody = Self.optimizeHTMLBody(htmlBody)
+		let document = Self.makeDocument(body: optimizedBody, fontSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
 		guard context.coordinator.lastLoadedHTML != document else { return }
 
 		context.coordinator.lastLoadedHTML = document
 		uiView.loadHTMLString(document, baseURL: baseURL)
+	}
+
+	static func optimizeHTMLBody(_ body: String) -> String {
+		// Reduce memory/CPU spikes for large articles by hinting the engine to defer image loading/decoding.
+		// (No JavaScript needed; SafeHTMLView disables JS.)
+		var result = body
+		result = result.replacingOccurrences(
+			of: "(?i)<img(?![^>]*\\bloading=)",
+			with: "<img loading=\"lazy\"",
+			options: .regularExpression
+		)
+		result = result.replacingOccurrences(
+			of: "(?i)<img(?![^>]*\\bdecoding=)",
+			with: "<img decoding=\"async\"",
+			options: .regularExpression
+		)
+		result = result.replacingOccurrences(
+			of: "(?i)<img(?![^>]*\\bfetchpriority=)",
+			with: "<img fetchpriority=\"low\"",
+			options: .regularExpression
+		)
+		return result
 	}
 
 	static func makeDocument(body: String, fontSize: CGFloat, languageCode: String = "pl") -> String {

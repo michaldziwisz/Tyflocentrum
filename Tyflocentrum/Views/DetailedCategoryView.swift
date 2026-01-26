@@ -10,7 +10,7 @@ import SwiftUI
 struct DetailedCategoryView: View {
 	let category: Category
 	@EnvironmentObject var api: TyfloAPI
-	@StateObject private var viewModel = AsyncListViewModel<Podcast>()
+	@StateObject private var viewModel = PostSummariesFeedViewModel(perPage: 20)
 	@State private var playerPodcast: Podcast?
 	var body: some View {
 		List {
@@ -20,31 +20,55 @@ struct DetailedCategoryView: View {
 				hasLoaded: viewModel.hasLoaded,
 				isEmpty: viewModel.items.isEmpty,
 				emptyMessage: "Brak audycji w tej kategorii.",
-				retryAction: { await viewModel.refresh { try await api.fetchPodcasts(for: category) } },
+				retryAction: { await viewModel.refresh(fetchPage: fetchPage) },
 				retryIdentifier: "categoryPodcasts.retry",
 				isRetryDisabled: viewModel.isLoading
 			)
 
-			ForEach(viewModel.items) { item in
+			ForEach(viewModel.items) { summary in
+				let stubPodcast = summary.asPodcastStub()
 				NavigationLink {
-					DetailedPodcastView(podcast: item)
+					LazyDetailedPodcastView(summary: summary)
 				} label: {
 					ShortPodcastView(
-						podcast: item,
+						podcast: stubPodcast,
 						onListen: {
-							playerPodcast = item
+							playerPodcast = stubPodcast
 						}
 					)
 				}
 				.accessibilityRemoveTraits(.isButton)
+				.onAppear {
+					guard summary.id == viewModel.items.last?.id else { return }
+					Task { await viewModel.loadMore(fetchPage: fetchPage) }
+				}
+			}
+
+			if viewModel.errorMessage == nil, viewModel.hasLoaded {
+				if let loadMoreError = viewModel.loadMoreErrorMessage {
+					Section {
+						Text(loadMoreError)
+							.foregroundColor(.secondary)
+
+						Button("Spróbuj ponownie") {
+							Task { await viewModel.loadMore(fetchPage: fetchPage) }
+						}
+						.disabled(viewModel.isLoadingMore)
+					}
+				}
+				else if viewModel.isLoadingMore {
+					Section {
+						ProgressView("Ładowanie starszych treści…")
+					}
+				}
 			}
 		}
 		.accessibilityIdentifier("categoryPodcasts.list")
 		.refreshable {
-			await viewModel.refresh { try await api.fetchPodcasts(for: category) }
+			await viewModel.refresh(fetchPage: fetchPage)
 		}
 		.task {
-			await viewModel.loadIfNeeded { try await api.fetchPodcasts(for: category) }
+			await viewModel.loadIfNeeded(fetchPage: fetchPage)
 		}
 		.navigationTitle(category.name)
 		.navigationBarTitleDisplayMode(.inline)
@@ -71,5 +95,9 @@ struct DetailedCategoryView: View {
 			}
 			.hidden()
 		)
+	}
+
+	private func fetchPage(page: Int, perPage: Int) async throws -> TyfloAPI.WPPage<WPPostSummary> {
+		try await api.fetchPodcastSummariesPage(page: page, perPage: perPage, categoryID: category.id)
 	}
 }

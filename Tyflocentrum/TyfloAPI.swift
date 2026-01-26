@@ -161,21 +161,26 @@ import Foundation
 			return try await fetch(url)
 		}
 
-		func fetchPodcastSummariesPage(page: Int, perPage: Int) async throws -> WPPage<WPPostSummary> {
+		func fetchPodcastSummariesPage(page: Int, perPage: Int, categoryID: Int? = nil) async throws -> WPPage<WPPostSummary> {
 			guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 			guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+
+			var queryItems: [URLQueryItem] = [
+				URLQueryItem(name: "context", value: "embed"),
+				URLQueryItem(name: "per_page", value: "\(perPage)"),
+				URLQueryItem(name: "page", value: "\(page)"),
+				URLQueryItem(name: "orderby", value: "date"),
+				URLQueryItem(name: "order", value: "desc"),
+				URLQueryItem(name: "_fields", value: wpEmbedPostFields),
+			]
+			if let categoryID {
+				queryItems.append(URLQueryItem(name: "categories", value: "\(categoryID)"))
+			}
 
 			guard let url = makeWPURL(
 				baseURL: tyfloPodcastBaseURL,
 				path: "wp/v2/posts",
-				queryItems: [
-					URLQueryItem(name: "context", value: "embed"),
-					URLQueryItem(name: "per_page", value: "\(perPage)"),
-					URLQueryItem(name: "page", value: "\(page)"),
-					URLQueryItem(name: "orderby", value: "date"),
-					URLQueryItem(name: "order", value: "desc"),
-					URLQueryItem(name: "_fields", value: wpEmbedPostFields),
-				]
+				queryItems: queryItems
 			) else {
 				throw URLError(.badURL)
 			}
@@ -183,21 +188,26 @@ import Foundation
 			return try await fetchWPPage(url)
 		}
 
-		func fetchArticleSummariesPage(page: Int, perPage: Int) async throws -> WPPage<WPPostSummary> {
+		func fetchArticleSummariesPage(page: Int, perPage: Int, categoryID: Int? = nil) async throws -> WPPage<WPPostSummary> {
 			guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 			guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+
+			var queryItems: [URLQueryItem] = [
+				URLQueryItem(name: "context", value: "embed"),
+				URLQueryItem(name: "per_page", value: "\(perPage)"),
+				URLQueryItem(name: "page", value: "\(page)"),
+				URLQueryItem(name: "orderby", value: "date"),
+				URLQueryItem(name: "order", value: "desc"),
+				URLQueryItem(name: "_fields", value: wpEmbedPostFields),
+			]
+			if let categoryID {
+				queryItems.append(URLQueryItem(name: "categories", value: "\(categoryID)"))
+			}
 
 			guard let url = makeWPURL(
 				baseURL: tyfloWorldBaseURL,
 				path: "wp/v2/posts",
-				queryItems: [
-					URLQueryItem(name: "context", value: "embed"),
-					URLQueryItem(name: "per_page", value: "\(perPage)"),
-					URLQueryItem(name: "page", value: "\(page)"),
-					URLQueryItem(name: "orderby", value: "date"),
-					URLQueryItem(name: "order", value: "desc"),
-					URLQueryItem(name: "_fields", value: wpEmbedPostFields),
-				]
+				queryItems: queryItems
 			) else {
 				throw URLError(.badURL)
 			}
