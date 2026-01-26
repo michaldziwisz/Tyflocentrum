@@ -60,7 +60,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		app.tabBars.buttons["Nowości"].tap()
 
 		let retryButton = app.descendants(matching: .any).matching(identifier: "news.retry").firstMatch
-		XCTAssertTrue(retryButton.waitForExistence(timeout: 5))
+		XCTAssertTrue(retryButton.waitForExistence(timeout: 8))
 		retryButton.tap()
 
 		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch

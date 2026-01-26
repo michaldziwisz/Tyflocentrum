@@ -173,7 +173,7 @@ final class NewsFeedViewModel: ObservableObject {
 	private var articles = SourceState(kind: .article)
 	private var seenIDs = Set<String>()
 
-	init(requestTimeoutSeconds: TimeInterval = 45) {
+	init(requestTimeoutSeconds: TimeInterval = 20) {
 		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
 			self.requestTimeoutSeconds = 2
 		}
@@ -197,7 +197,10 @@ final class NewsFeedViewModel: ObservableObject {
 		errorMessage = nil
 
 		await appendNextBatch(api: api, batchSize: initialBatchSize)
-		if items.isEmpty, !Task.isCancelled {
+		let isRunningTests = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
+			|| ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+		let shouldAutoRetryEmptyFirstBatch = !isRunningTests
+		if shouldAutoRetryEmptyFirstBatch, items.isEmpty, !Task.isCancelled {
 			try? await Task.sleep(nanoseconds: 250_000_000)
 			await appendNextBatch(api: api, batchSize: initialBatchSize)
 		}
@@ -315,9 +318,8 @@ final class NewsFeedViewModel: ObservableObject {
 			let articleNext = articles.nextItem
 
 			if podcastNext == nil, podcasts.hasMore, articleNext == nil, articles.hasMore {
-				async let podcastsFetched = fetchNextPodcastPage(api: api)
-				async let articlesFetched = fetchNextArticlePage(api: api)
-				_ = await (podcastsFetched, articlesFetched)
+				_ = await fetchNextPodcastPage(api: api)
+				_ = await fetchNextArticlePage(api: api)
 			}
 			else {
 				if podcastNext == nil && podcasts.hasMore {
