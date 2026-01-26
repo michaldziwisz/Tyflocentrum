@@ -77,6 +77,8 @@ private final class UITestURLProtocol: URLProtocol {
 	private static var tyfloswiatCategoriesRequestCount = 0
 	private static var tyfloswiatCategoryPostsRequestCount = 0
 	private static var tyfloswiatSearchPostsRequestCount = 0
+	private static var stalledNewsRequestsCount = 0
+	private static var stalledDetailRequestsCount = 0
 
 	private static var didFailTyflopodcastLatestPosts = false
 	private static var didFailTyflopodcastCategoryPosts = false
@@ -86,6 +88,11 @@ private final class UITestURLProtocol: URLProtocol {
 	private static var didFailTyfloswiatCategoryPosts = false
 	private static var didFailTyfloswiatSearchPosts = false
 	private static var didFailTyfloswiatLatestPosts = false
+	private static var didFailTyflopodcastPostDetails = false
+	private static var didFailTyfloswiatPostDetails = false
+	private static var didFailTyfloswiatPageDetails = false
+
+	private var didCompleteLoading = false
 
 	override class func canInit(with request: URLRequest) -> Bool {
 		true
@@ -101,14 +108,58 @@ private final class UITestURLProtocol: URLProtocol {
 			return
 		}
 
+		if Self.shouldStallNewsRequests(for: request) {
+			return
+		}
+		if Self.shouldStallDetailRequests(for: request) {
+			return
+		}
+
 		let (statusCode, data) = Self.response(for: request)
 		let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
 		client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
 		client?.urlProtocol(self, didLoad: data)
 		client?.urlProtocolDidFinishLoading(self)
+		didCompleteLoading = true
 	}
 
-	override func stopLoading() {}
+	override func stopLoading() {
+		guard !didCompleteLoading else { return }
+		client?.urlProtocol(self, didFailWithError: URLError(.cancelled))
+	}
+
+	private static func shouldStallNewsRequests(for request: URLRequest) -> Bool {
+		guard isFlagEnabled("UI_TESTING_STALL_NEWS_REQUESTS") else { return false }
+		guard let url = request.url else { return false }
+
+		guard url.path.contains("/wp-json/wp/v2/posts") else { return false }
+		guard let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return false }
+		guard let queryItems = components.queryItems else { return false }
+		guard queryItems.contains(where: { $0.name == "context" && $0.value == "embed" }) else { return false }
+
+		stateLock.lock()
+		defer { stateLock.unlock() }
+
+		guard stalledNewsRequestsCount < 2 else { return false }
+		stalledNewsRequestsCount += 1
+		return true
+	}
+
+	private static func shouldStallDetailRequests(for request: URLRequest) -> Bool {
+		guard isFlagEnabled("UI_TESTING_STALL_DETAIL_REQUESTS") else { return false }
+		guard let url = request.url else { return false }
+
+		let isPostDetailRequest = url.path.contains("/wp-json/wp/v2/posts/") && Int(url.lastPathComponent) != nil
+		let isPageDetailRequest = url.path.contains("/wp-json/wp/v2/pages/") && Int(url.lastPathComponent) != nil
+		guard isPostDetailRequest || isPageDetailRequest else { return false }
+
+		stateLock.lock()
+		defer { stateLock.unlock() }
+
+		guard stalledDetailRequestsCount < 1 else { return false }
+		stalledDetailRequestsCount += 1
+		return true
+	}
 
 	private static func response(for request: URLRequest) -> (Int, Data) {
 		guard let url = request.url else { return (400, Data()) }
@@ -143,6 +194,13 @@ private final class UITestURLProtocol: URLProtocol {
 
 			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/pages") {
 				if let pageID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/pages/") {
+					let shouldFail = shouldFailOnce(&didFailTyfloswiatPageDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+						print("UITestURLProtocol: tyfloswiat page detail id=\(pageID) shouldFail=\(shouldFail)")
+					}
+					if shouldFail {
+						return (500, Data("{}".utf8))
+					}
 					if pageID == 7772 {
 						return (
 							200,
@@ -198,6 +256,13 @@ private final class UITestURLProtocol: URLProtocol {
 
 			if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
 				if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+					let shouldFail = shouldFailOnce(&didFailTyflopodcastPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+						print("UITestURLProtocol: tyflopodcast post detail id=\(postID) shouldFail=\(shouldFail)")
+					}
+					if shouldFail {
+						return (500, Data("{}".utf8))
+					}
 					return (
 						200,
 					#"""
@@ -255,11 +320,18 @@ private final class UITestURLProtocol: URLProtocol {
 			)
 		}
 
-		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
-			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-				return (
-					200,
-					#"""
+			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
+				if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+					let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+						print("UITestURLProtocol: tyfloswiat post detail id=\(postID) shouldFail=\(shouldFail)")
+					}
+					if shouldFail {
+						return (500, Data("{}".utf8))
+					}
+					return (
+						200,
+						#"""
 					{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=\#(postID)"},"link":"https://tyfloswiat.pl/?p=\#(postID)"}
 					"""#.data(using: .utf8) ?? Data()
 				)
@@ -338,8 +410,8 @@ private final class UITestURLProtocol: URLProtocol {
 		ProcessInfo.processInfo.arguments.contains(flag)
 	}
 
-	private static func shouldFailOnce(_ didFail: inout Bool) -> Bool {
-		guard isFlagEnabled("UI_TESTING_FAIL_FIRST_REQUEST") else { return false }
+	private static func shouldFailOnce(_ didFail: inout Bool, whenFlagEnabled flag: String) -> Bool {
+		guard isFlagEnabled(flag) else { return false }
 
 		stateLock.lock()
 		defer { stateLock.unlock() }
@@ -349,6 +421,10 @@ private final class UITestURLProtocol: URLProtocol {
 		}
 		didFail = true
 		return true
+	}
+
+	private static func shouldFailOnce(_ didFail: inout Bool) -> Bool {
+		shouldFailOnce(&didFail, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_REQUEST")
 	}
 
 	private static func nextRequestIndex(for counter: inout Int) -> Int {

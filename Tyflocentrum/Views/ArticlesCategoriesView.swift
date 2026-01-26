@@ -380,6 +380,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 
 	private func loadIfNeeded() async {
 		guard issue == nil else { return }
+		guard errorMessage == nil else { return }
 		await load()
 	}
 
@@ -451,6 +452,7 @@ private struct LazyDetailedTyfloswiatPageView: View {
 
 	private func loadIfNeeded() async {
 		guard page == nil else { return }
+		guard errorMessage == nil else { return }
 		await load()
 	}
 

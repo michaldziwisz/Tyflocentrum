@@ -62,8 +62,6 @@ struct NewsItem: Identifiable {
 
 @MainActor
 final class AsyncListViewModel<Item>: ObservableObject {
-	private struct TimeoutError: Error {}
-
 	@Published private(set) var items: [Item] = []
 	@Published private(set) var hasLoaded = false
 	@Published private(set) var isLoading = false
@@ -89,36 +87,21 @@ final class AsyncListViewModel<Item>: ObservableObject {
 	func load(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 20) async {
 		guard !isLoading else { return }
 		isLoading = true
-		defer { isLoading = false }
 
 		let fallbackErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 		let timeoutErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
 
 		errorMessage = nil
+		var pendingErrorMessage: String?
+		defer {
+			isLoading = false
+			if let pendingErrorMessage {
+				errorMessage = pendingErrorMessage
+			}
+		}
 
 		do {
-			let loadedItems: [Item]
-			if timeoutSeconds > 0 {
-				loadedItems = try await withThrowingTaskGroup(of: [Item].self) { group in
-					group.addTask {
-						try await fetch()
-					}
-					group.addTask {
-						try await Task.sleep(nanoseconds: UInt64(timeoutSeconds * 1_000_000_000))
-						throw TimeoutError()
-					}
-
-					guard let first = try await group.next() else {
-						throw CancellationError()
-					}
-
-					group.cancelAll()
-					return first
-				}
-			}
-			else {
-				loadedItems = try await fetch()
-			}
+			let loadedItems = try await withTimeout(timeoutSeconds) { try await fetch() }
 
 			guard !Task.isCancelled else { return }
 			items = loadedItems
@@ -126,11 +109,11 @@ final class AsyncListViewModel<Item>: ObservableObject {
 		} catch {
 			guard !Task.isCancelled else { return }
 
-			if error is TimeoutError {
-				errorMessage = timeoutErrorMessage
+			if error is AsyncTimeoutError {
+				pendingErrorMessage = timeoutErrorMessage
 			}
 			else {
-				errorMessage = fallbackErrorMessage
+				pendingErrorMessage = fallbackErrorMessage
 			}
 			hasLoaded = true
 		}
@@ -181,6 +164,7 @@ final class NewsFeedViewModel: ObservableObject {
 	@Published private(set) var loadMoreErrorMessage: String?
 	@Published private(set) var canLoadMore = false
 
+	private let requestTimeoutSeconds: TimeInterval
 	private let sourcePerPage = 50
 	private let initialBatchSize = 50
 	private let loadMoreBatchSize = 20
@@ -188,6 +172,15 @@ final class NewsFeedViewModel: ObservableObject {
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
 	private var seenIDs = Set<String>()
+
+	init(requestTimeoutSeconds: TimeInterval = 15) {
+		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
+			self.requestTimeoutSeconds = 2
+		}
+		else {
+			self.requestTimeoutSeconds = requestTimeoutSeconds
+		}
+	}
 
 	func loadIfNeeded(api: TyfloAPI) async {
 		guard !hasLoaded else { return }
@@ -248,12 +241,19 @@ final class NewsFeedViewModel: ObservableObject {
 		guard !source.didFailLastFetch else { return false }
 
 		do {
+			let nextPage = source.nextPage
+			let perPage = self.sourcePerPage
+
 			let page: TyfloAPI.WPPage<WPPostSummary>
 			switch source.kind {
 			case .podcast:
-				page = try await api.fetchPodcastSummariesPage(page: source.nextPage, perPage: sourcePerPage)
+				page = try await withTimeout(requestTimeoutSeconds) {
+					try await api.fetchPodcastSummariesPage(page: nextPage, perPage: perPage)
+				}
 			case .article:
-				page = try await api.fetchArticleSummariesPage(page: source.nextPage, perPage: sourcePerPage)
+				page = try await withTimeout(requestTimeoutSeconds) {
+					try await api.fetchArticleSummariesPage(page: nextPage, perPage: perPage)
+				}
 			}
 
 			if let totalPages = page.totalPages {

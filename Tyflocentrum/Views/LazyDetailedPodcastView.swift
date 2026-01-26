@@ -3,6 +3,7 @@
 //  Tyflocentrum
 //
 
+import Foundation
 import SwiftUI
 
 struct LazyDetailedPodcastView: View {
@@ -12,58 +13,89 @@ struct LazyDetailedPodcastView: View {
 	@State private var podcast: Podcast?
 	@State private var isLoading = false
 	@State private var errorMessage: String?
+	@State private var loadToken = UUID()
+
+	private var requestTimeoutSeconds: TimeInterval {
+		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
+			return 2
+		}
+		return 15
+	}
+
+	private var debugStatusText: String {
+		"id=\(summary.id) isLoading=\(isLoading) hasPodcast=\(podcast != nil) hasError=\(errorMessage != nil)"
+	}
 
 	var body: some View {
-		Group {
+		ZStack {
 			if let podcast {
 				DetailedPodcastView(podcast: podcast)
 			}
-			else if let errorMessage {
-				AsyncListStatusSection(
-					errorMessage: errorMessage,
-					isLoading: isLoading,
-					hasLoaded: true,
-					isEmpty: true,
-					emptyMessage: "",
-					retryAction: { await load() }
-				)
+			else if let message = errorMessage {
+				VStack(alignment: .leading, spacing: 12) {
+					Text(message)
+						.foregroundColor(.secondary)
+
+					Button("Spróbuj ponownie") {
+						errorMessage = nil
+						loadToken = UUID()
+					}
+					.accessibilityHint("Ponawia pobieranie danych.")
+					.accessibilityIdentifier("postDetail.retry")
+					.disabled(isLoading)
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding()
 			}
 			else {
-				AsyncListStatusSection(
-					errorMessage: nil,
-					isLoading: true,
-					hasLoaded: false,
-					isEmpty: true,
-					emptyMessage: ""
-				)
+				ProgressView("Ładowanie…")
+					.frame(maxWidth: .infinity, maxHeight: .infinity)
+			}
+		}
+		.overlay(alignment: .topLeading) {
+			if ProcessInfo.processInfo.arguments.contains("UI_TESTING") {
+				Text(debugStatusText)
+					.font(.caption2)
+					.foregroundColor(.clear)
+					.accessibilityIdentifier("postDetail.debug")
 			}
 		}
 		.navigationTitle(summary.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.task {
-			await loadIfNeeded()
-		}
+		.task(id: loadToken) { await loadIfNeeded() }
 	}
 
+	@MainActor
 	private func loadIfNeeded() async {
 		guard podcast == nil else { return }
 		await load()
 	}
 
+	@MainActor
 	private func load() async {
 		guard !isLoading else { return }
 		isLoading = true
-		defer { isLoading = false }
-
 		errorMessage = nil
+		var pendingErrorMessage: String?
+		defer {
+			isLoading = false
+			if let pendingErrorMessage {
+				errorMessage = pendingErrorMessage
+			}
+		}
+
 		do {
-			let loaded = try await api.fetchPodcast(id: summary.id)
-			guard !Task.isCancelled else { return }
+			let loaded = try await withTimeout(requestTimeoutSeconds) {
+				try await api.fetchPodcast(id: summary.id)
+			}
 			podcast = loaded
 		} catch {
-			guard !Task.isCancelled else { return }
-			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			if error is AsyncTimeoutError {
+				pendingErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
+			}
+			else {
+				pendingErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			}
 		}
 	}
 }
-

@@ -53,6 +53,20 @@ final class TyflocentrumSmokeTests: XCTestCase {
 			XCTAssertTrue(app.tabBars.buttons["Tyfloradio"].exists)
 		}
 
+	func testNewsShowsRetryWhenRequestsStall() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_STALL_NEWS_REQUESTS", "UI_TESTING_FAST_TIMEOUTS"])
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let retryButton = app.descendants(matching: .any).matching(identifier: "news.retry").firstMatch
+		XCTAssertTrue(retryButton.waitForExistence(timeout: 5))
+		retryButton.tap()
+
+		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+	}
+
 	func testCanOpenRadioPlayerFromMoreTab() {
 		let app = makeApp()
 		app.launch()
