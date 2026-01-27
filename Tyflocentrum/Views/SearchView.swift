@@ -92,6 +92,7 @@ struct SearchItem: Identifiable {
 
 struct SearchView: View {
 	@EnvironmentObject var api: TyfloAPI
+	@EnvironmentObject private var settings: SettingsStore
 	@State private var searchText = ""
 	@State private var lastSearchQuery = ""
 	@State private var searchScope: SearchScope = .all
@@ -224,6 +225,7 @@ struct SearchView: View {
 				guard !query.isEmpty else { return }
 				await search(query: query)
 			}
+			.id(settings.contentKindLabelPosition)
 			.withAppMenu()
 			.navigationTitle("Szukaj")
 			.toolbar {

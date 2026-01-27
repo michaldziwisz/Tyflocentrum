@@ -66,6 +66,30 @@ import XCTest
 		XCTAssertTrue(favoritesList.waitForExistence(timeout: 5))
 	}
 
+		private func openSettingsFromMenu(in app: XCUIApplication) {
+			let menuQuery = app.descendants(matching: .any).matching(identifier: "app.menu")
+			var menuButton = menuQuery.firstMatch
+
+			// The app menu is available on tab root screens; on pushed detail screens we should go back first.
+			if !menuButton.waitForExistence(timeout: 2) {
+				let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
+				if backButton.waitForExistence(timeout: 2) {
+					backButton.tap()
+				}
+			}
+
+			menuButton = menuQuery.firstMatch
+			XCTAssertTrue(menuButton.waitForExistence(timeout: 5))
+			menuButton.tap()
+
+			let settingsButton = app.descendants(matching: .any).matching(identifier: "app.menu.settings").firstMatch
+			XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+			settingsButton.tap()
+
+			let settingsView = app.descendants(matching: .any).matching(identifier: "settings.view").firstMatch
+			XCTAssertTrue(settingsView.waitForExistence(timeout: 5))
+		}
+
 	func testAppLaunchesAndShowsTabs() {
 		let app = makeApp()
 		app.launch()
@@ -262,7 +286,40 @@ import XCTest
 			XCTAssertTrue(content.waitForExistence(timeout: 5))
 		}
 
-		func testCanSearchArticlesWhenScopeIsArticles() {
+		func testContentKindLabelPositionUpdatesImmediately() {
+			let app = makeApp()
+			app.launch()
+
+			app.tabBars.buttons["Nowości"].tap()
+
+			let initialRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(initialRow.waitForExistence(timeout: 5))
+			XCTAssertEqual(initialRow.label, "Podcast. Test podcast")
+
+			openSettingsFromMenu(in: app)
+
+			let picker = app.segmentedControls["settings.contentKindLabelPosition"]
+			XCTAssertTrue(picker.waitForExistence(timeout: 5))
+			picker.buttons["Po"].tap()
+			let pickerAfterTap = app.segmentedControls["settings.contentKindLabelPosition"]
+			XCTAssertTrue(pickerAfterTap.waitForExistence(timeout: 5))
+			XCTAssertEqual(pickerAfterTap.value as? String, "Po")
+
+			tapBackButton(in: app)
+
+			let updatedRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(updatedRow.waitForExistence(timeout: 5))
+
+			let expectedLabel = "Test podcast. Podcast"
+			let predicate = NSPredicate(format: "label == %@", expectedLabel)
+			let waitExpectation = expectation(for: predicate, evaluatedWith: updatedRow)
+			let result = XCTWaiter().wait(for: [waitExpectation], timeout: 2)
+			if result != .completed {
+				XCTFail("Expected label '\(expectedLabel)', got '\(updatedRow.label)'.")
+			}
+		}
+
+	func testCanSearchArticlesWhenScopeIsArticles() {
 			let app = makeApp()
 			app.launch()
 

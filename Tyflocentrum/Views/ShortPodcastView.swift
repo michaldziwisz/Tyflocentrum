@@ -19,6 +19,7 @@ struct ShortPodcastView: View {
 	var favoriteItem: FavoriteItem? = nil
 
 	@EnvironmentObject private var favorites: FavoritesStore
+	@EnvironmentObject private var settings: SettingsStore
 
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
@@ -41,10 +42,17 @@ struct ShortPodcastView: View {
 	var body: some View {
 		let excerpt = podcast.excerpt.plainText
 		let title = podcast.title.plainText
+		let refreshID = "\(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)").\(settings.contentKindLabelPosition.rawValue)"
 		let accessibilityTitle = {
-			let prefix = accessibilityKindLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-			guard !prefix.isEmpty else { return title }
-			return "\(prefix). \(title)"
+			let kind = accessibilityKindLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+			guard !kind.isEmpty else { return title }
+
+			switch settings.contentKindLabelPosition {
+			case .before:
+				return "\(kind). \(title)"
+			case .after:
+				return "\(title). \(kind)"
+			}
 		}()
 		let hint = showsListenAction
 			? "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcje: Słuchaj, Skopiuj link."
@@ -82,6 +90,7 @@ struct ShortPodcastView: View {
 		.accessibilityValue(podcast.formattedDate)
 		.accessibilityHint(hint)
 		.accessibilityIdentifier(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)")
+		.id(refreshID)
 
 		let favoriteActions = { (content: AnyView) -> AnyView in
 			guard let favoriteItem else { return content }

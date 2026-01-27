@@ -583,6 +583,7 @@ struct AsyncListStatusSection: View {
 
 struct NewsView: View {
 	@EnvironmentObject var api: TyfloAPI
+	@EnvironmentObject private var settings: SettingsStore
 	@StateObject private var viewModel = NewsFeedViewModel()
 	@State private var playerPodcast: Podcast?
 
@@ -660,6 +661,7 @@ struct NewsView: View {
 			.task {
 				await viewModel.loadIfNeeded(api: api)
 			}
+			.id(settings.contentKindLabelPosition)
 			.withAppMenu()
 			.navigationTitle("Nowości")
 			.navigationBarTitleDisplayMode(.inline)
