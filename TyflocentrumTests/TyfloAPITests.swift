@@ -1097,6 +1097,41 @@ final class TyfloAPITests: XCTestCase {
 		XCTAssertEqual(page.totalPages, 1)
 	}
 
+	func testContactRadioVoiceUsesAddvoiceAndMultipartContentType() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+
+			XCTAssertEqual(url.host, "kontakt.tyflopodcast.net")
+			XCTAssertEqual(components.path, "/json.php")
+			XCTAssertEqual(items.first(where: { $0.name == "ac" })?.value, "addvoice")
+			XCTAssertEqual(request.httpMethod, "POST")
+
+			let contentType = request.value(forHTTPHeaderField: "Content-Type")
+			XCTAssertNotNil(contentType)
+			XCTAssertTrue(contentType?.hasPrefix("multipart/form-data; boundary=") == true)
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data(#"{"author":"Jan","duration_ms":123}"#.utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let sampleFileURL = FileManager.default.temporaryDirectory
+			.appendingPathComponent("voice-\(UUID().uuidString)")
+			.appendingPathExtension("m4a")
+		try? Data([0x0]).write(to: sampleFileURL)
+		defer { try? FileManager.default.removeItem(at: sampleFileURL) }
+
+		let (success, _) = await api.contactRadioVoice(as: "Jan", audioFileURL: sampleFileURL, durationMs: 123)
+		XCTAssertTrue(success)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
 	private func makeSession() -> URLSession {
 		let config = URLSessionConfiguration.ephemeral
 		config.protocolClasses = [StubURLProtocol.self]

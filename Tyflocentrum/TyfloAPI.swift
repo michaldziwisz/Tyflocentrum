@@ -590,4 +590,67 @@ import Foundation
 			return (false, nil)
 		}
 	}
+
+	private struct VoiceContactResponse: Decodable {
+		let author: String?
+		let durationMs: Int?
+		let error: String?
+	}
+
+	func contactRadioVoice(as name: String, audioFileURL: URL, durationMs: Int) async -> (Bool, String?) {
+		guard var components = URLComponents(url: tyfloPodcastAPIURL, resolvingAgainstBaseURL: false) else {
+			return (false, nil)
+		}
+		components.queryItems = [URLQueryItem(name: "ac", value: "addvoice")]
+		guard let url = components.url else {
+			return (false, nil)
+		}
+
+		let boundary = "Boundary-\(UUID().uuidString)"
+		var request = URLRequest(url: url)
+		request.httpMethod = "POST"
+		request.cachePolicy = .reloadIgnoringLocalCacheData
+		request.timeoutInterval = Self.requestTimeoutSeconds
+		request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+		request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+		let fileName = audioFileURL.lastPathComponent.isEmpty ? "voice.m4a" : audioFileURL.lastPathComponent
+		let bodyFileURL: URL
+		do {
+			bodyFileURL = try MultipartFormDataBuilder.buildBodyFile(
+				boundary: boundary,
+				fields: [
+					"author": name,
+					"duration_ms": "\(durationMs)",
+				],
+				file: MultipartFormDataBuilder.FilePart(
+					fieldName: "audio",
+					fileURL: audioFileURL,
+					fileName: fileName,
+					mimeType: "audio/mp4"
+				)
+			)
+		} catch {
+			return (false, "Nie udało się przygotować pliku do wysyłki.")
+		}
+		defer { try? FileManager.default.removeItem(at: bodyFileURL) }
+
+		do {
+			let (data, response) = try await session.upload(for: request, fromFile: bodyFileURL)
+			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+				return (false, nil)
+			}
+			let decoder = JSONDecoder()
+			decoder.keyDecodingStrategy = .convertFromSnakeCase
+			let decodedResponse = try decoder.decode(VoiceContactResponse.self, from: data)
+			if let error = decodedResponse.error {
+				return (false, error)
+			}
+			return (true, nil)
+		}
+		catch {
+			print("\(error.localizedDescription)\n\(url.absoluteString)")
+			return (false, nil)
+		}
+	}
 }
