@@ -3,8 +3,8 @@
 Tyflocentrum to aplikacja iOS napisana w **SwiftUI**, która agreguje i udostępnia treści z serwisów Tyflo:
 
 - **Podcasty** z Tyflopodcast (lista, wyszukiwarka, komentarze, odtwarzacz),
-- **Artykuły** z Tyfloświat (czytnik treści HTML),
-- **Tyfloradio** (stream na żywo) + opcja **kontaktu z radiem** podczas audycji interaktywnej.
+- **Artykuły** z Tyfloświat (czytnik treści HTML + czasopismo TyfloŚwiat),
+- **Tyfloradio** (stream na żywo) + opcja **kontaktu z radiem** podczas audycji interaktywnej (tekstowo + głosówka).
 
 Projekt jest w pełni natywny (bez zewnętrznych zależności), z naciskiem na **dostępność (VoiceOver)** oraz wygodę odsłuchu (pilot systemowy, szybkość, wznawianie).
 
@@ -13,14 +13,20 @@ Projekt jest w pełni natywny (bez zewnętrznych zależności), z naciskiem na *
 - **Nowości**: wspólny feed podcastów i artykułów, z doładowywaniem starszych treści.
 - **Podcasty**: lista kategorii → lista audycji → szczegóły + komentarze.
 - **Artykuły**: lista kategorii → lista artykułów → bezpieczne renderowanie HTML.
-- **Szukaj**: wyszukiwanie audycji po frazie.
+- **Czasopismo TyfloŚwiat**: rok → numery → spis treści + szybkie otwieranie artykułów + pobieranie PDF.
+- **Szukaj**: wyszukiwanie w podcastach, artykułach lub obu serwisach (wyniki sortowane po trafności).
+- **Ulubione**: podcasty, artykuły (w tym z czasopisma), tematy (znaczniki czasu) i linki.
+- **Ustawienia**:
+  - pozycja etykiety typu treści („Podcast/Artykuł”) w komunikatach VoiceOver (przed/po),
+  - zapamiętywanie prędkości odtwarzania (globalnie / per odcinek).
 - **Odtwarzacz**:
   - play/pause, przewijanie ±30s, suwak pozycji,
-  - zmiana prędkości odtwarzania,
+  - zmiana prędkości odtwarzania (do 3.0x),
   - wznawianie odsłuchu (zapamiętana pozycja per URL),
   - integracja z ekranem blokady / pilotem (`MPRemoteCommandCenter`),
   - obsługa **Magic Tap** (VoiceOver) do przełączania odtwarzania.
 - **Dodatki do audycji** (jeśli dostępne): znaczniki czasu i odnośniki (parsowane z komentarzy Tyflopodcast).
+- **Menu aplikacji** (lewy górny róg na ekranach z paskiem nawigacji): skrót do Ulubionych i Ustawień.
 
 ## Wymagania
 
@@ -77,6 +83,8 @@ Punkt startowy aplikacji to `Tyflocentrum/TyflocentrumApp.swift`, który wstrzyk
 - `DataController` (`managedObjectContext`)
 - `TyfloAPI`
 - `AudioPlayer`
+- `FavoritesStore`
+- `SettingsStore`
 
 ### Nawigacja i główne ekrany
 
@@ -98,6 +106,7 @@ Punkt startowy aplikacji to `Tyflocentrum/TyflocentrumApp.swift`, który wstrzyk
 - Kontakt z radiem:
   - `https://kontakt.tyflopodcast.net/json.php?ac=current` (sprawdzenie dostępności audycji)
   - `https://kontakt.tyflopodcast.net/json.php?ac=add` (wysyłka wiadomości, JSON `ContactResponse`)
+  - `https://kontakt.tyflopodcast.net/json.php?ac=addvoice` (wysyłka głosówki, `multipart/form-data` – wymaga wdrożonego panelu kontaktowego)
 - Link do odsłuchu audycji:
   - `https://tyflopodcast.net/pobierz.php?id=<postID>&plik=0` (`getListenableURL(for:)`)
 
@@ -120,6 +129,20 @@ Do pobierania stron wykorzystywane są:
   - wspiera live stream (`isLiveStream`) i pliki VOD (seek/prędkość),
   - zapisuje pozycję odsłuchu w `UserDefaults` (klucz: `resume.<url>`).
 - UI odtwarzacza: `Tyflocentrum/Views/MediaPlayerView.swift`.
+
+### Ulubione i ustawienia
+
+- Menu aplikacji: `Tyflocentrum/Views/AppMenu.swift` (`withAppMenu()`), dostępne z ekranów opartych o `NavigationView`.
+- Ulubione: `Tyflocentrum/Views/FavoritesView.swift` + `Tyflocentrum/FavoritesStore.swift`.
+- Ustawienia: `Tyflocentrum/Views/SettingsView.swift` + `Tyflocentrum/SettingsStore.swift`.
+
+### Wiadomości głosowe (Kontakt)
+
+- UI nagrywania i wysyłki: `Tyflocentrum/Views/ContactView.swift`.
+- Recorder + odsłuch: `Tyflocentrum/VoiceMessageRecorder.swift`.
+- Upload `multipart/form-data`: `Tyflocentrum/MultipartFormDataBuilder.swift`.
+- Wymagane uprawnienie: `NSMicrophoneUsageDescription` w `Tyflocentrum/Info.plist`.
+- Wdrożenie po stronie panelu kontaktowego jest opisane w `docs/voice-messages.md`.
 
 ### Bezpieczne renderowanie HTML (`SafeHTMLView`)
 
@@ -201,6 +224,8 @@ Na PR-ach do `master` działa workflow `Docs (README) guard` (`.github/workflows
 
 Logika jest w `scripts/require-readme-update.sh`.
 
+> Dlaczego czasem „nie wymusza”? Guard działa na **pull requestach**. Jeśli robisz bezpośredni push do `master`, workflow z guardem nie uruchomi się (i nie zablokuje push). Dodatkowo, guard akceptuje aktualizację `docs/` zamiast `README.md`.
+
 ## Struktura repo
 
 - `Tyflocentrum/` – kod aplikacji (Swift/SwiftUI).
@@ -223,4 +248,3 @@ Logika jest w `scripts/require-readme-update.sh`.
 - `CODE_REVIEW.md` – notatki z przeglądu kodu i propozycje usprawnień.
 - `Tyflocentrum/readme.md` – krótka historia projektu (kontekst).
 - `Tyflocentrum/Changelog.rtf` – changelog w formacie RTF (historycznie).
-
