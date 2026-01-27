@@ -267,6 +267,35 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
+	func testFetchPodcastSummariesPageIncludesCategoryIDWhenProvided() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyflopodcast.net")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "categories" })?.value, "7")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("[]".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			let page = try await api.fetchPodcastSummariesPage(page: 1, perPage: 10, categoryID: 7)
+			XCTAssertTrue(page.items.isEmpty)
+		} catch {
+			XCTFail("Expected success but got error: \(error)")
+		}
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
 	func testGetCategoriesUsesPerPage100() async {
 		let requestMade = expectation(description: "request made")
 
@@ -385,6 +414,35 @@ final class TyfloAPITests: XCTestCase {
 		let api = TyfloAPI(session: makeSession())
 		do {
 			let page = try await api.fetchArticleSummariesPage(page: 3, perPage: 10)
+			XCTAssertTrue(page.items.isEmpty)
+		} catch {
+			XCTFail("Expected success but got error: \(error)")
+		}
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testFetchArticleSummariesPageIncludesCategoryIDWhenProvided() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "tyfloswiat.pl")
+			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "categories" })?.value, "9")
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data("[]".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			let page = try await api.fetchArticleSummariesPage(page: 1, perPage: 10, categoryID: 9)
 			XCTAssertTrue(page.items.isEmpty)
 		} catch {
 			XCTFail("Expected success but got error: \(error)")

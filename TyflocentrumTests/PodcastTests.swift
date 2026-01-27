@@ -228,6 +228,30 @@ final class SafeHTMLViewTests: XCTestCase {
 		XCTAssertFalse(SafeHTMLView.isAllowedMainFrameURL(URL(string: "https://example.com/")!, allowedHost: host))
 		XCTAssertFalse(SafeHTMLView.isAllowedMainFrameURL(URL(string: "https://\(host)/")!, allowedHost: nil))
 	}
+
+	func testOptimizeHTMLBodyAddsLazyAttributesToImages() {
+		let body = #"""
+		<p>Test</p>
+		<img src="https://example.com/a.jpg">
+		<img src="https://example.com/b.jpg" loading="eager">
+		"""#
+
+		let optimized = SafeHTMLView.optimizeHTMLBody(body)
+
+		XCTAssertTrue(optimized.contains("loading=\"lazy\""))
+		XCTAssertTrue(optimized.contains("decoding=\"async\""))
+		XCTAssertTrue(optimized.contains("fetchpriority=\"low\""))
+		XCTAssertTrue(optimized.contains("loading=\"eager\""))
+	}
+
+	func testOptimizeHTMLBodyDoesNotDuplicateExistingAttributes() {
+		let body = #"<img src="https://example.com/a.jpg" loading="lazy" decoding="async" fetchpriority="low">"#
+		let optimized = SafeHTMLView.optimizeHTMLBody(body)
+
+		XCTAssertEqual(optimized.components(separatedBy: "loading=").count - 1, 1)
+		XCTAssertEqual(optimized.components(separatedBy: "decoding=").count - 1, 1)
+		XCTAssertEqual(optimized.components(separatedBy: "fetchpriority=").count - 1, 1)
+	}
 }
 
 final class ShowNotesParserTests: XCTestCase {

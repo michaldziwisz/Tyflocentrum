@@ -121,6 +121,48 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertEqual(speedButton.label, "Zmień prędkość odtwarzania")
 	}
 
+	func testCanOpenPodcastCategoryAndSeeItems() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Podcasty"].tap()
+
+		let categoryRow = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+		XCTAssertTrue(categoryRow.waitForExistence(timeout: 5))
+		categoryRow.tap()
+
+		let categoryList = app.descendants(matching: .any).matching(identifier: "categoryPodcasts.list").firstMatch
+		XCTAssertTrue(categoryList.waitForExistence(timeout: 5))
+
+		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+		podcastRow.tap()
+
+		let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+	}
+
+	func testCanOpenArticleCategoryAndSeeItems() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Artykuły"].tap()
+
+		let categoryRow = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+		XCTAssertTrue(categoryRow.waitForExistence(timeout: 5))
+		categoryRow.tap()
+
+		let categoryList = app.descendants(matching: .any).matching(identifier: "categoryArticles.list").firstMatch
+		XCTAssertTrue(categoryList.waitForExistence(timeout: 5))
+
+		let articleRow = app.descendants(matching: .any).matching(identifier: "podcast.row.2").firstMatch
+		XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
+		articleRow.tap()
+
+		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+	}
+
 		func testCanSearchAndOpenPodcastFromResults() {
 			let app = makeApp()
 			app.launch()
