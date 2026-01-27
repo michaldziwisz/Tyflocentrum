@@ -10,7 +10,7 @@ import SwiftUI
 struct DetailedArticleCategoryView: View {
 	let category: Category
 	@EnvironmentObject var api: TyfloAPI
-	@StateObject private var viewModel = PostSummariesFeedViewModel(perPage: 20)
+	@StateObject private var viewModel = PostSummariesFeedViewModel(perPage: 40)
 	var body: some View {
 		List {
 			AsyncListStatusSection(
