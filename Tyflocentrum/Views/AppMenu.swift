@@ -16,15 +16,19 @@ struct AppMenuModifier: ViewModifier {
 						.accessibilityIdentifier("app.menu.favorites")
 					} label: {
 						Image(systemName: "line.3.horizontal")
+							.accessibilityHidden(true)
 					}
 					.accessibilityLabel("Menu")
 					.accessibilityHint("Otwiera menu aplikacji.")
 					.accessibilityIdentifier("app.menu")
 				}
 			}
-			.sheet(isPresented: $shouldShowFavorites) {
-				FavoritesSheet()
-			}
+			.background(
+				NavigationLink(destination: FavoritesView(), isActive: $shouldShowFavorites) {
+					EmptyView()
+				}
+				.hidden()
+			)
 	}
 }
 
@@ -33,22 +37,3 @@ extension View {
 		modifier(AppMenuModifier())
 	}
 }
-
-private struct FavoritesSheet: View {
-	@Environment(\.dismiss) private var dismiss
-
-	var body: some View {
-		NavigationStack {
-			FavoritesView()
-				.toolbar {
-					ToolbarItem(placement: .cancellationAction) {
-						Button("Zamknij") {
-							dismiss()
-						}
-						.accessibilityIdentifier("favorites.close")
-					}
-				}
-		}
-	}
-}
-

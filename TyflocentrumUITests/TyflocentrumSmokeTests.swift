@@ -145,9 +145,9 @@ import XCTest
 		XCTAssertEqual(speedButton.label, "Zmień prędkość odtwarzania")
 	}
 
-	func testCanAddPodcastToFavoritesAndSeeItInFavorites() {
-		let app = makeApp()
-		app.launch()
+		func testCanAddPodcastToFavoritesAndSeeItInFavorites() {
+			let app = makeApp()
+			app.launch()
 
 		app.tabBars.buttons["Nowości"].tap()
 
@@ -162,15 +162,12 @@ import XCTest
 		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
 		favoriteButton.tap()
 
-		openFavoritesFromMenu(in: app)
+			openFavoritesFromMenu(in: app)
 
-		let favoritesPodcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-		XCTAssertTrue(favoritesPodcastRow.waitForExistence(timeout: 5))
-
-		let closeButton = app.descendants(matching: .any).matching(identifier: "favorites.close").firstMatch
-		XCTAssertTrue(closeButton.exists)
-		closeButton.tap()
-	}
+			let favoritesPodcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+			XCTAssertTrue(favoritesPodcastRow.waitForExistence(timeout: 5))
+			tapBackButton(in: app)
+		}
 
 	func testCanAddArticleToFavoritesAndFilterIt() {
 		let app = makeApp()

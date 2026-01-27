@@ -294,34 +294,56 @@ struct MediaPlayerView: View {
 		.task(id: podcastPostID) {
 			await loadShowNotes()
 		}
-		.sheet(isPresented: $shouldShowChapterMarkers) {
-			if let podcastPostID {
-				ChapterMarkersSheet(
-					podcastID: podcastPostID,
-					podcastTitle: title,
-					podcastSubtitle: subtitle,
-					markers: chapterMarkers,
-					formatTime: formatTime
-				)
+		.background(
+			NavigationLink(
+				destination: Group {
+					if let podcastPostID {
+						ChapterMarkersView(
+							podcastID: podcastPostID,
+							podcastTitle: title,
+							podcastSubtitle: subtitle,
+							markers: chapterMarkers,
+							formatTime: formatTime
+						)
+					}
+					else {
+						EmptyView()
+					}
+				},
+				isActive: $shouldShowChapterMarkers
+			) {
+				EmptyView()
 			}
-		}
-		.sheet(isPresented: $shouldShowRelatedLinks) {
-			if let podcastPostID {
-				RelatedLinksSheet(
-					podcastID: podcastPostID,
-					podcastTitle: title,
-					podcastSubtitle: subtitle,
-					links: relatedLinks
-				)
+			.hidden()
+		)
+		.background(
+			NavigationLink(
+				destination: Group {
+					if let podcastPostID {
+						RelatedLinksView(
+							podcastID: podcastPostID,
+							podcastTitle: title,
+							podcastSubtitle: subtitle,
+							links: relatedLinks
+						)
+					}
+					else {
+						EmptyView()
+					}
+				},
+				isActive: $shouldShowRelatedLinks
+			) {
+				EmptyView()
 			}
-		}
+			.hidden()
+		)
 		.accessibilityAction(.magicTap) {
 			togglePlayback()
 		}
 	}
 }
 
-private struct ChapterMarkersSheet: View {
+private struct ChapterMarkersView: View {
 	let podcastID: Int
 	let podcastTitle: String
 	let podcastSubtitle: String?
@@ -356,51 +378,42 @@ private struct ChapterMarkersSheet: View {
 	}
 
 	var body: some View {
-			NavigationStack {
-				List(markers) { marker in
-					let item = favoriteItem(for: marker)
-					Button {
-						audioPlayer.seek(to: marker.seconds)
-						if !audioPlayer.isPlaying {
-							audioPlayer.resume()
-						}
-						announceIfVoiceOver("Przejdź do \(marker.title), \(formatTime(marker.seconds)).")
-						dismiss()
-					} label: {
-						HStack(alignment: .firstTextBaseline) {
-							Text(marker.title)
-						Spacer()
-						Text(formatTime(marker.seconds))
-							.monospacedDigit()
-							.foregroundColor(.secondary)
-					}
+		List(markers) { marker in
+			let item = favoriteItem(for: marker)
+			Button {
+				audioPlayer.seek(to: marker.seconds)
+				if !audioPlayer.isPlaying {
+					audioPlayer.resume()
 				}
-				.accessibilityLabel(marker.title)
-				.accessibilityValue(formatTime(marker.seconds))
-				.accessibilityHint("Dwukrotnie stuknij, aby przewinąć do tego momentu.")
-				.accessibilityAction(named: favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
-					toggleFavorite(item)
-				}
-				.contextMenu {
-					Button(favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
-						toggleFavorite(item)
-					}
+				announceIfVoiceOver("Przejdź do \(marker.title), \(formatTime(marker.seconds)).")
+				dismiss()
+			} label: {
+				HStack(alignment: .firstTextBaseline) {
+					Text(marker.title)
+					Spacer()
+					Text(formatTime(marker.seconds))
+						.monospacedDigit()
+						.foregroundColor(.secondary)
 				}
 			}
-			.navigationTitle("Znaczniki czasu")
-			.navigationBarTitleDisplayMode(.inline)
-			.toolbar {
-				ToolbarItem(placement: .cancellationAction) {
-					Button("Zamknij") {
-						dismiss()
-					}
+			.accessibilityLabel(marker.title)
+			.accessibilityValue(formatTime(marker.seconds))
+			.accessibilityHint("Dwukrotnie stuknij, aby przewinąć do tego momentu.")
+			.accessibilityAction(named: favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+				toggleFavorite(item)
+			}
+			.contextMenu {
+				Button(favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+					toggleFavorite(item)
 				}
 			}
 		}
+		.navigationTitle("Znaczniki czasu")
+		.navigationBarTitleDisplayMode(.inline)
 	}
 }
 
-private struct RelatedLinksSheet: View {
+private struct RelatedLinksView: View {
 	let podcastID: Int
 	let podcastTitle: String
 	let podcastSubtitle: String?
@@ -463,55 +476,53 @@ private struct RelatedLinksSheet: View {
 	}
 
 	var body: some View {
-		NavigationStack {
-			List(links) { link in
-				let item = favoriteItem(for: link)
-				Button {
-					openURL(link.url)
-				} label: {
-					VStack(alignment: .leading, spacing: 4) {
-						Text(link.title)
-							.foregroundColor(.primary)
+		List(links) { link in
+			let item = favoriteItem(for: link)
+			Button {
+				openURL(link.url)
+			} label: {
+				VStack(alignment: .leading, spacing: 4) {
+					Text(link.title)
+						.foregroundColor(.primary)
 
-						if let host = hostLabel(for: link.url) {
-							Text(host)
-								.font(.caption)
-								.foregroundColor(.secondary)
-						}
+					if let host = hostLabel(for: link.url) {
+						Text(host)
+							.font(.caption)
+							.foregroundColor(.secondary)
 					}
 				}
-				.buttonStyle(.plain)
-				.tint(.primary)
-				.contextMenu {
-					Button("Skopiuj link") {
-						copyLink(link)
-					}
-					Button("Udostępnij link") {
-						sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
-					}
-					Button(favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
-						toggleFavorite(item)
-					}
-				}
-				.accessibilityElement(children: .ignore)
-				.accessibilityLabel(link.title)
-				.accessibilityValue(hostLabel(for: link.url) ?? "")
-				.accessibilityAddTraits(.isLink)
-				.accessibilityRemoveTraits(.isButton)
-				.accessibilityHint("Otwiera odnośnik.")
-				.accessibilityAction(named: "Skopiuj link") {
+			}
+			.buttonStyle(.plain)
+			.tint(.primary)
+			.contextMenu {
+				Button("Skopiuj link") {
 					copyLink(link)
 				}
-				.accessibilityAction(named: "Udostępnij link") {
+				Button("Udostępnij link") {
 					sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
 				}
-				.accessibilityAction(named: favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+				Button(favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
 					toggleFavorite(item)
 				}
 			}
-			.navigationTitle("Odnośniki")
-			.navigationBarTitleDisplayMode(.inline)
+			.accessibilityElement(children: .ignore)
+			.accessibilityLabel(link.title)
+			.accessibilityValue(hostLabel(for: link.url) ?? "")
+			.accessibilityAddTraits(.isLink)
+			.accessibilityRemoveTraits(.isButton)
+			.accessibilityHint("Otwiera odnośnik.")
+			.accessibilityAction(named: "Skopiuj link") {
+				copyLink(link)
+			}
+			.accessibilityAction(named: "Udostępnij link") {
+				sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
+			}
+			.accessibilityAction(named: favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+				toggleFavorite(item)
+			}
 		}
+		.navigationTitle("Odnośniki")
+		.navigationBarTitleDisplayMode(.inline)
 		.sheet(item: $sharePayload) { payload in
 			ActivityView(activityItems: payload.activityItems)
 		}
