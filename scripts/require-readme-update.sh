@@ -109,8 +109,8 @@ done <<< "$changed_files"
 
 if [[ "$requires_docs" == "true" && "$docs_touched" != "true" ]]; then
   {
-    echo "::error::README.md is required for this change but was not updated."
-    echo "::error::Update README.md (or add docs under docs/) when changing app/build/workflow/scripts."
+    echo "::error::Documentation update is required for this change but neither README.md nor docs/ were updated."
+    echo "::error::Update README.md or add/update docs under docs/ when changing app/build/workflow/scripts."
     echo ""
     echo "Files triggering the requirement (first 50):"
     printf -- "- %s\n" "${trigger_files[@]:0:50}"
@@ -121,4 +121,4 @@ if [[ "$requires_docs" == "true" && "$docs_touched" != "true" ]]; then
   exit 1
 fi
 
-echo "README guard passed."
+echo "Docs guard passed."

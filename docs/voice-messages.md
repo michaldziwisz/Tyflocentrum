@@ -1,6 +1,8 @@
-# Wysyłanie wiadomości głosowych do TyfloRadia (plan)
+# Wiadomości głosowe do TyfloRadia
 
-## Goal
+Status: obsługa głosówek jest zaimplementowana w aplikacji iOS. Panel kontaktowy (serwer) wymaga wdrożenia zmian opisanych w tym dokumencie.
+
+## Cel
 - Dodać w Tyflocentrum możliwość nagrania **głosówki** i wysłania jej do panelu kontaktowego TyfloRadia.
 - Głosówka ma działać **tylko w trakcie audycji** (gdy panel jest „aktywny”), wymagać **podpisu** i umożliwiać **odsłuch przed wysyłką**.
 - Po stronie panelu kontaktowego:
@@ -9,7 +11,15 @@
   - mają mieć standardowy odtwarzacz HTML5 (play/pause, scrub, download).
 - Zmiany muszą być **additive** (brak regresji dla istniejących endpointów i innych aplikacji korzystających z panelu).
 
-## Assumptions / constraints
+## Kontrakt API (w skrócie)
+
+- Dostępność audycji: `GET .../json.php?ac=current`
+- Upload głosówki: `POST .../json.php?ac=addvoice` (`multipart/form-data`)
+  - pola: `author` (string), `duration_ms` (int), `audio` (plik m4a)
+- Odsłuch (admin): `GET .../json.php?ac=voice&id=<index>` (stream audio)
+  - fallback pobrania: `...&download=1`
+
+## Założenia / ograniczenia
 - Maks. długość nagrania: **20 minut**.
 - Brak rate-limitu (na razie).
 - Limit rozmiaru: przyjmujemy **50 MB** jako twardą granicę po stronie serwera (zgodnie z ograniczeniami/proxy po drodze).
@@ -61,8 +71,11 @@ C) Zaufać wartości z iOS – najprostsze, ale mniej wiarygodne.
 - Sposób liczenia serwer-side: **biblioteka PHP (getID3)**.
 - Wymóg kompatybilności odtwarzania w panelu: **Chrome + Firefox** (fallback pobrania pliku, jeśli dekoder nie jest dostępny).
 
-## Implementation plan
-### 1) Backend: `/mnt/d/projekty/kontakt`
+## Wdrożenie: panel kontaktowy (backend)
+
+Kod panelu jest w osobnym katalogu/repo: `/mnt/d/projekty/kontakt/`.
+
+### Zmiany po stronie serwera (high level)
 1) Dodać storage na audio (np. `TP_VOICE_DIR`) i funkcje pomocnicze:
    - zapisywanie uploadu (bez trzymania całego pliku w pamięci),
    - walidacja rozmiaru (<= 50 MB) i typu (np. m4a/aac),
@@ -93,7 +106,7 @@ C) Zaufać wartości z iOS – najprostsze, ale mniej wiarygodne.
    - pokaż podpis + czas + długość,
    - zachować istniejące „Usuń”.
 
-### 2) iOS: Tyflocentrum
+## Implementacja: iOS (Tyflocentrum)
 1) UI w `ContactView`:
    - sekcja „Wiadomość tekstowa” (bez zmian),
    - sekcja „Wiadomość głosowa”:
@@ -112,7 +125,7 @@ C) Zaufać wartości z iOS – najprostsze, ale mniej wiarygodne.
    - testy logiki stanu recorder/upload (z protokołem `VoiceRecorder` i fejkową implementacją dla testów),
    - testy UI: czy w trybie bez mikrofonu pokazujemy sensowny błąd (bez realnego nagrywania w CI).
 
-## Tests to run (po wdrożeniu)
+## Testy do wykonania (po wdrożeniu serwera)
 - iOS: `xcodebuild test` (unit + UI smoke).
 - Backend (manual smoke):
   - `curl` multipart do `ac=addvoice` (podczas aktywnej audycji),

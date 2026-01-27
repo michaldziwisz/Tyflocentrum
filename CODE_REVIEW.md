@@ -1,5 +1,7 @@
 # Tyflocentrum — code review (iOS)
 
+> Uwaga: to jest **historyczny** dokument (pierwotny przegląd). Repo było od tego czasu istotnie rozwijane i część uwag może być nieaktualna. Aktualny opis projektu: `docs/development.md`.
+
 Stan repozytorium: `55675e9` (2026-01-23)
 
 ## TL;DR / priorytety
