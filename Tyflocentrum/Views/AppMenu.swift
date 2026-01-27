@@ -15,10 +15,9 @@ struct AppMenuModifier: ViewModifier {
 						}
 						.accessibilityIdentifier("app.menu.favorites")
 					} label: {
-						Image(systemName: "line.3.horizontal")
-							.accessibilityHidden(true)
+						Label("Menu", systemImage: "line.3.horizontal")
+							.labelStyle(.iconOnly)
 					}
-					.accessibilityLabel("Menu")
 					.accessibilityHint("Otwiera menu aplikacji.")
 					.accessibilityIdentifier("app.menu")
 				}
