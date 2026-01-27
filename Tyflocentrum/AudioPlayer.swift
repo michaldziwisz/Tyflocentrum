@@ -220,6 +220,11 @@ enum PlaybackRatePolicy {
 		return bestIndex
 	}
 
+	static func normalized(_ rate: Float) -> Float {
+		guard rate.isFinite, rate > 0 else { return 1.0 }
+		return supportedRates[nearestIndex(to: rate)]
+	}
+
 	static func next(after rate: Float) -> Float {
 		guard !supportedRates.isEmpty else { return rate }
 		let currentIndex = nearestIndex(to: rate)
@@ -290,6 +295,47 @@ struct ResumePositionStore {
 	}
 }
 
+struct PlaybackRateStore {
+	private let userDefaults: UserDefaults
+	private let globalKey: String
+
+	init(
+		userDefaults: UserDefaults,
+		globalKey: String = "playbackRate.global"
+	) {
+		self.userDefaults = userDefaults
+		self.globalKey = globalKey
+	}
+
+	static func makeKey(for url: URL) -> String {
+		"playbackRate.\(url.absoluteString)"
+	}
+
+	func loadGlobal() -> Float? {
+		let saved = userDefaults.double(forKey: globalKey)
+		guard saved.isFinite, saved > 0 else { return nil }
+		return PlaybackRatePolicy.normalized(Float(saved))
+	}
+
+	func saveGlobal(_ rate: Float) {
+		let normalized = PlaybackRatePolicy.normalized(rate)
+		userDefaults.set(Double(normalized), forKey: globalKey)
+	}
+
+	func load(forKey key: String?) -> Float? {
+		guard let key else { return nil }
+		let saved = userDefaults.double(forKey: key)
+		guard saved.isFinite, saved > 0 else { return nil }
+		return PlaybackRatePolicy.normalized(Float(saved))
+	}
+
+	func save(_ rate: Float, forKey key: String?) {
+		guard let key else { return }
+		let normalized = PlaybackRatePolicy.normalized(rate)
+		userDefaults.set(Double(normalized), forKey: key)
+	}
+}
+
 enum SeekPolicy {
 	static func clampedTime(_ seconds: Double) -> Double? {
 		guard seconds.isFinite else { return nil }
@@ -315,6 +361,8 @@ final class AudioPlayer: ObservableObject {
 
 	private let player: AVPlayer
 	private var resumeStore: ResumePositionStore
+	private let playbackRateStore: PlaybackRateStore
+	private let playbackRateModeProvider: () -> PlaybackRateRememberMode
 	private var timeControlStatusObserver: NSKeyValueObservation?
 	private var periodicTimeObserver: Any?
 	private var endObserver: NSObjectProtocol?
@@ -322,10 +370,17 @@ final class AudioPlayer: ObservableObject {
 	private var currentItemStatusObserver: NSKeyValueObservation?
 
 	private var resumeKey: String?
+	private var playbackRateKey: String?
 
-	init(player: AVPlayer = AVPlayer(), userDefaults: UserDefaults = .standard) {
+	init(
+		player: AVPlayer = AVPlayer(),
+		userDefaults: UserDefaults = .standard,
+		playbackRateModeProvider: @escaping () -> PlaybackRateRememberMode = { .global }
+	) {
 		self.player = player
 		self.resumeStore = ResumePositionStore(userDefaults: userDefaults)
+		self.playbackRateStore = PlaybackRateStore(userDefaults: userDefaults)
+		self.playbackRateModeProvider = playbackRateModeProvider
 		player.automaticallyWaitsToMinimizeStalling = true
 
 		timeControlStatusObserver = player.observe(\.timeControlStatus, options: [.initial, .new]) { [weak self] player, _ in
@@ -376,6 +431,18 @@ final class AudioPlayer: ObservableObject {
 			currentSubtitle = subtitle
 			self.isLiveStream = isLiveStream
 			resumeKey = isLiveStream ? nil : ResumePositionStore.makeKey(for: url)
+			playbackRateKey = isLiveStream ? nil : PlaybackRateStore.makeKey(for: url)
+
+			if !isLiveStream {
+				let preferredRate: Float
+				switch playbackRateModeProvider() {
+				case .global:
+					preferredRate = playbackRateStore.loadGlobal() ?? 1.0
+				case .perEpisode:
+					preferredRate = playbackRateStore.load(forKey: playbackRateKey) ?? 1.0
+				}
+				playbackRate = preferredRate
+			}
 
 			player.replaceCurrentItem(with: AVPlayerItem(url: url))
 			if let seconds, !isLiveStream, seconds.isFinite {
@@ -393,7 +460,6 @@ final class AudioPlayer: ObservableObject {
 		}
 
 		if isLiveStream {
-			playbackRate = 1.0
 			player.play()
 		} else {
 			player.playImmediately(atRate: playbackRate)
@@ -428,6 +494,7 @@ final class AudioPlayer: ObservableObject {
 		elapsedTime = 0
 		duration = nil
 		resumeKey = nil
+		playbackRateKey = nil
 
 		MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
 		MPNowPlayingInfoCenter.default().playbackState = .stopped
@@ -480,11 +547,22 @@ final class AudioPlayer: ObservableObject {
 
 	func setPlaybackRate(_ rate: Float) {
 		guard !isLiveStream else { return }
-		playbackRate = rate
+		let normalized = PlaybackRatePolicy.normalized(rate)
+		playbackRate = normalized
+		persistPlaybackRateIfNeeded(normalized)
 		if isPlaying {
-			player.rate = rate
+			player.rate = normalized
 		}
 		updateNowPlayingPlaybackInfo()
+	}
+
+	private func persistPlaybackRateIfNeeded(_ rate: Float) {
+		switch playbackRateModeProvider() {
+		case .global:
+			playbackRateStore.saveGlobal(rate)
+		case .perEpisode:
+			playbackRateStore.save(rate, forKey: playbackRateKey)
+		}
 	}
 
 	private func configureAudioSessionForPlayback() {

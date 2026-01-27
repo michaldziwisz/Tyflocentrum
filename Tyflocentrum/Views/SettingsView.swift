@@ -18,10 +18,23 @@ struct SettingsView: View {
 				.accessibilityHint("Określa, czy typ treści będzie czytany przed czy po tytule na listach.")
 				.accessibilityIdentifier("settings.contentKindLabelPosition")
 			}
+
+			Section("Zapamiętaj prędkość przyspieszania") {
+				Picker("Tryb", selection: $settings.playbackRateRememberMode) {
+					ForEach(PlaybackRateRememberMode.allCases) { mode in
+						Text(mode.title)
+							.tag(mode)
+					}
+				}
+				.pickerStyle(.segmented)
+				.accessibilityLabel("Zapamiętaj prędkość przyspieszania")
+				.accessibilityValue(settings.playbackRateRememberMode.title)
+				.accessibilityHint("Określa, czy prędkość odtwarzania ma być wspólna, czy zapamiętywana osobno dla każdego odcinka.")
+				.accessibilityIdentifier("settings.playbackRateRememberMode")
+			}
 		}
 		.navigationTitle("Ustawienia")
 		.navigationBarTitleDisplayMode(.inline)
 		.accessibilityIdentifier("settings.view")
 	}
 }
-

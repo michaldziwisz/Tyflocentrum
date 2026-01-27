@@ -21,17 +21,25 @@ struct TyflocentrumApp: App {
 		let isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
 		_dataController = StateObject(wrappedValue: DataController(inMemory: isUITesting))
 		_api = StateObject(wrappedValue: isUITesting ? TyfloAPI(session: Self.makeUITestSession()) : TyfloAPI.shared)
-		_audioPlayer = StateObject(wrappedValue: AudioPlayer())
 		if isUITesting {
 			let suiteName = "TyflocentrumUITests"
 			let defaults = UserDefaults(suiteName: suiteName)!
 			defaults.removePersistentDomain(forName: suiteName)
+			let settings = SettingsStore(userDefaults: defaults)
+			_settingsStore = StateObject(wrappedValue: settings)
+			_audioPlayer = StateObject(
+				wrappedValue: AudioPlayer(
+					userDefaults: defaults,
+					playbackRateModeProvider: { settings.playbackRateRememberMode }
+				)
+			)
 			_favoritesStore = StateObject(wrappedValue: FavoritesStore(userDefaults: defaults))
-			_settingsStore = StateObject(wrappedValue: SettingsStore(userDefaults: defaults))
 		}
 		else {
+			let settings = SettingsStore()
+			_settingsStore = StateObject(wrappedValue: settings)
+			_audioPlayer = StateObject(wrappedValue: AudioPlayer(playbackRateModeProvider: { settings.playbackRateRememberMode }))
 			_favoritesStore = StateObject(wrappedValue: FavoritesStore())
-			_settingsStore = StateObject(wrappedValue: SettingsStore())
 		}
 	}
 
