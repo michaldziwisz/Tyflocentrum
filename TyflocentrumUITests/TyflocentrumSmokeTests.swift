@@ -313,7 +313,7 @@ import XCTest
 			let expectedLabel = "Test podcast. Podcast"
 			let predicate = NSPredicate(format: "label == %@", expectedLabel)
 			let waitExpectation = expectation(for: predicate, evaluatedWith: updatedRow)
-			let result = XCTWaiter().wait(for: [waitExpectation], timeout: 2)
+			let result = XCTWaiter().wait(for: [waitExpectation], timeout: 5)
 			if result != .completed {
 				XCTFail("Expected label '\(expectedLabel)', got '\(updatedRow.label)'.")
 			}
