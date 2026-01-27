@@ -60,6 +60,39 @@ final class PlaybackRatePersistenceTests: XCTestCase {
 		XCTAssertEqual(audioPlayer?.playbackRate, 2.2)
 	}
 
+	func testChangingRememberModeUpdatesCurrentPlaybackRateImmediately() throws {
+		let defaults = makeDefaults()
+
+		let globalRate = 2.5
+		defaults.set(Double(globalRate), forKey: "playbackRate.global")
+
+		let url = try makeTempAudioURL()
+		defaults.set(1.75, forKey: "playbackRate.\(url.absoluteString)")
+
+		var rememberMode: PlaybackRateRememberMode = .global
+		let modeProvider: () -> PlaybackRateRememberMode = { rememberMode }
+
+		var audioPlayer: AudioPlayer? = AudioPlayer(userDefaults: defaults, playbackRateModeProvider: modeProvider)
+		defer {
+			audioPlayer?.stop()
+			audioPlayer = nil
+		}
+
+		audioPlayer?.play(url: url, title: nil, subtitle: nil, isLiveStream: false)
+		XCTAssertEqual(audioPlayer?.playbackRate, Float(globalRate))
+
+		rememberMode = .perEpisode
+		audioPlayer?.applyPlaybackRateRememberModeChange()
+		XCTAssertEqual(audioPlayer?.playbackRate, 1.75)
+
+		rememberMode = .global
+		audioPlayer?.applyPlaybackRateRememberModeChange()
+		XCTAssertEqual(audioPlayer?.playbackRate, Float(globalRate))
+
+		XCTAssertEqual(defaults.double(forKey: "playbackRate.global"), Double(globalRate))
+		XCTAssertEqual(defaults.double(forKey: "playbackRate.\(url.absoluteString)"), 1.75)
+	}
+
 	private func makeDefaults() -> UserDefaults {
 		let suiteName = "TyflocentrumTests.PlaybackRatePersistence.\(UUID().uuidString)"
 		let defaults = UserDefaults(suiteName: suiteName)!

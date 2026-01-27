@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
 	@EnvironmentObject private var settings: SettingsStore
+	@EnvironmentObject private var audioPlayer: AudioPlayer
 
 	var body: some View {
 		List {
@@ -32,6 +33,9 @@ struct SettingsView: View {
 				.accessibilityHint("Określa, czy prędkość odtwarzania ma być wspólna, czy zapamiętywana osobno dla każdego odcinka.")
 				.accessibilityIdentifier("settings.playbackRateRememberMode")
 			}
+		}
+		.onChange(of: settings.playbackRateRememberMode) { _ in
+			audioPlayer.applyPlaybackRateRememberModeChange()
 		}
 		.navigationTitle("Ustawienia")
 		.navigationBarTitleDisplayMode(.inline)

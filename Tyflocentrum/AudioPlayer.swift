@@ -556,6 +556,25 @@ final class AudioPlayer: ObservableObject {
 		updateNowPlayingPlaybackInfo()
 	}
 
+	func applyPlaybackRateRememberModeChange() {
+		guard currentURL != nil else { return }
+		guard !isLiveStream else { return }
+
+		let preferredRate: Float
+		switch playbackRateModeProvider() {
+		case .global:
+			preferredRate = playbackRateStore.loadGlobal() ?? 1.0
+		case .perEpisode:
+			preferredRate = playbackRateStore.load(forKey: playbackRateKey) ?? 1.0
+		}
+
+		playbackRate = preferredRate
+		if isPlaying {
+			player.rate = preferredRate
+		}
+		updateNowPlayingPlaybackInfo()
+	}
+
 	private func persistPlaybackRateIfNeeded(_ rate: Float) {
 		switch playbackRateModeProvider() {
 		case .global:
