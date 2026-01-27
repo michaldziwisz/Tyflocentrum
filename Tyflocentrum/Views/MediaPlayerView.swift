@@ -36,6 +36,7 @@ struct MediaPlayerView: View {
 	@State private var shouldShowNoLiveAlert = false
 	@State private var isScrubbing = false
 	@State private var scrubPosition: Double = 0
+	@State private var didAutoStartPlayback = false
 
 	@State private var isShowNotesLoading = false
 	@State private var chapterMarkers: [ChapterMarker] = []
@@ -289,6 +290,8 @@ struct MediaPlayerView: View {
 		.navigationTitle("Odtwarzacz")
 		.onAppear {
 			guard !ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
+			guard !didAutoStartPlayback else { return }
+			didAutoStartPlayback = true
 			audioPlayer.play(url: podcast, title: title, subtitle: subtitle, isLiveStream: canBeLive)
 		}
 		.task(id: podcastPostID) {
