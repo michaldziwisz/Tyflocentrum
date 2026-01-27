@@ -73,6 +73,7 @@ struct PodcastCategoriesView: View {
 			.task {
 				await viewModel.loadIfNeeded(fetchPage: fetchPage)
 			}
+			.withAppMenu()
 			.navigationTitle("Podcasty")
 		}
 	}
@@ -110,7 +111,8 @@ struct AllPodcastsView: View {
 						podcast: stubPodcast,
 						onListen: {
 							playerPodcast = stubPodcast
-						}
+						},
+						favoriteItem: .podcast(summary)
 					)
 				}
 				.accessibilityRemoveTraits(.isButton)

@@ -25,7 +25,7 @@ struct LazyDetailedArticleView: View {
 	var body: some View {
 		ZStack {
 			if let article {
-				DetailedArticleView(article: article)
+				DetailedArticleView(article: article, favoriteOrigin: .post)
 			}
 			else if let message = errorMessage {
 				VStack(alignment: .leading, spacing: 12) {

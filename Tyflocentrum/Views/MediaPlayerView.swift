@@ -295,17 +295,25 @@ struct MediaPlayerView: View {
 			await loadShowNotes()
 		}
 		.sheet(isPresented: $shouldShowChapterMarkers) {
-			ChapterMarkersSheet(
-				title: title,
-				markers: chapterMarkers,
-				formatTime: formatTime
-			)
+			if let podcastPostID {
+				ChapterMarkersSheet(
+					podcastID: podcastPostID,
+					podcastTitle: title,
+					podcastSubtitle: subtitle,
+					markers: chapterMarkers,
+					formatTime: formatTime
+				)
+			}
 		}
 		.sheet(isPresented: $shouldShowRelatedLinks) {
-			RelatedLinksSheet(
-				title: title,
-				links: relatedLinks
-			)
+			if let podcastPostID {
+				RelatedLinksSheet(
+					podcastID: podcastPostID,
+					podcastTitle: title,
+					podcastSubtitle: subtitle,
+					links: relatedLinks
+				)
+			}
 		}
 		.accessibilityAction(.magicTap) {
 			togglePlayback()
@@ -314,11 +322,14 @@ struct MediaPlayerView: View {
 }
 
 private struct ChapterMarkersSheet: View {
-	let title: String
+	let podcastID: Int
+	let podcastTitle: String
+	let podcastSubtitle: String?
 	let markers: [ChapterMarker]
 	let formatTime: (TimeInterval) -> String
 
 	@EnvironmentObject private var audioPlayer: AudioPlayer
+	@EnvironmentObject private var favorites: FavoritesStore
 	@Environment(\.dismiss) private var dismiss
 
 	private func announceIfVoiceOver(_ message: String) {
@@ -326,9 +337,28 @@ private struct ChapterMarkersSheet: View {
 		UIAccessibility.post(notification: .announcement, argument: message)
 	}
 
+	private func favoriteItem(for marker: ChapterMarker) -> FavoriteItem {
+		.topic(
+			FavoriteTopic(
+				podcastID: podcastID,
+				podcastTitle: podcastTitle,
+				podcastSubtitle: podcastSubtitle,
+				title: marker.title,
+				seconds: marker.seconds
+			)
+		)
+	}
+
+	private func toggleFavorite(_ item: FavoriteItem) {
+		let willAdd = !favorites.isFavorite(item)
+		favorites.toggle(item)
+		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
+	}
+
 	var body: some View {
 			NavigationStack {
 				List(markers) { marker in
+					let item = favoriteItem(for: marker)
 					Button {
 						audioPlayer.seek(to: marker.seconds)
 						if !audioPlayer.isPlaying {
@@ -348,6 +378,14 @@ private struct ChapterMarkersSheet: View {
 				.accessibilityLabel(marker.title)
 				.accessibilityValue(formatTime(marker.seconds))
 				.accessibilityHint("Dwukrotnie stuknij, aby przewinąć do tego momentu.")
+				.accessibilityAction(named: favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+					toggleFavorite(item)
+				}
+				.contextMenu {
+					Button(favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+						toggleFavorite(item)
+					}
+				}
 			}
 			.navigationTitle("Znaczniki czasu")
 			.navigationBarTitleDisplayMode(.inline)
@@ -363,10 +401,13 @@ private struct ChapterMarkersSheet: View {
 }
 
 private struct RelatedLinksSheet: View {
-	let title: String
+	let podcastID: Int
+	let podcastTitle: String
+	let podcastSubtitle: String?
 	let links: [RelatedLink]
 
 	@Environment(\.openURL) private var openURL
+	@EnvironmentObject private var favorites: FavoritesStore
 	@State private var sharePayload: SharePayload?
 
 	private func hostLabel(for url: URL) -> String? {
@@ -403,9 +444,28 @@ private struct RelatedLinksSheet: View {
 		return url
 	}
 
+	private func favoriteItem(for link: RelatedLink) -> FavoriteItem {
+		.link(
+			FavoriteLink(
+				podcastID: podcastID,
+				podcastTitle: podcastTitle,
+				podcastSubtitle: podcastSubtitle,
+				title: link.title,
+				urlString: link.url.absoluteString
+			)
+		)
+	}
+
+	private func toggleFavorite(_ item: FavoriteItem) {
+		let willAdd = !favorites.isFavorite(item)
+		favorites.toggle(item)
+		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
+	}
+
 	var body: some View {
 		NavigationStack {
 			List(links) { link in
+				let item = favoriteItem(for: link)
 				Button {
 					openURL(link.url)
 				} label: {
@@ -429,6 +489,9 @@ private struct RelatedLinksSheet: View {
 					Button("Udostępnij link") {
 						sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
 					}
+					Button(favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+						toggleFavorite(item)
+					}
 				}
 				.accessibilityElement(children: .ignore)
 				.accessibilityLabel(link.title)
@@ -442,6 +505,9 @@ private struct RelatedLinksSheet: View {
 				.accessibilityAction(named: "Udostępnij link") {
 					sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
 				}
+				.accessibilityAction(named: favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+					toggleFavorite(item)
+				}
 			}
 			.navigationTitle("Odnośniki")
 			.navigationBarTitleDisplayMode(.inline)
@@ -452,12 +518,12 @@ private struct RelatedLinksSheet: View {
 	}
 }
 
-private struct SharePayload: Identifiable {
+struct SharePayload: Identifiable {
 	let id = UUID()
 	let activityItems: [Any]
 }
 
-private struct ActivityView: UIViewControllerRepresentable {
+struct ActivityView: UIViewControllerRepresentable {
 	let activityItems: [Any]
 
 	func makeUIViewController(context: Context) -> UIActivityViewController {

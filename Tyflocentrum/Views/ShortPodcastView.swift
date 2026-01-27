@@ -16,6 +16,9 @@ struct ShortPodcastView: View {
 	var leadingSystemImageName: String? = nil
 	var accessibilityKindLabel: String? = nil
 	var accessibilityIdentifierOverride: String? = nil
+	var favoriteItem: FavoriteItem? = nil
+
+	@EnvironmentObject private var favorites: FavoritesStore
 
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
@@ -27,6 +30,12 @@ struct ShortPodcastView: View {
 		guard !urlString.isEmpty else { return }
 		UIPasteboard.general.string = urlString
 		announceIfVoiceOver("Skopiowano link.")
+	}
+
+	private func toggleFavorite(_ item: FavoriteItem) {
+		let willAdd = !favorites.isFavorite(item)
+		favorites.toggle(item)
+		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	var body: some View {
@@ -74,9 +83,28 @@ struct ShortPodcastView: View {
 		.accessibilityHint(hint)
 		.accessibilityIdentifier(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)")
 
+		let favoriteActions = { (content: AnyView) -> AnyView in
+			guard let favoriteItem else { return content }
+
+			let isFavorite = favorites.isFavorite(favoriteItem)
+			let title = isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"
+
+			return AnyView(
+				content
+					.accessibilityAction(named: title) {
+						toggleFavorite(favoriteItem)
+					}
+					.contextMenu {
+						Button(title) {
+							toggleFavorite(favoriteItem)
+						}
+					}
+			)
+		}
+
 		Group {
 			if showsListenAction {
-				row
+				favoriteActions(AnyView(row))
 					.accessibilityAction(named: "Słuchaj") {
 						onListen?()
 					}
@@ -85,7 +113,7 @@ struct ShortPodcastView: View {
 					}
 			}
 			else {
-				row
+				favoriteActions(AnyView(row))
 					.accessibilityAction(named: "Skopiuj link") {
 						copyPodcastLink()
 					}

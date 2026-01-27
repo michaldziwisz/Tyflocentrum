@@ -207,7 +207,10 @@ struct SearchView: View {
 									accessibilityKindLabel: item.kind.label,
 									accessibilityIdentifierOverride: item.kind == .article
 										? "article.row.\(item.post.id)"
-										: nil
+										: nil,
+									favoriteItem: item.kind == .podcast
+										? .podcast(item.post)
+										: .article(summary: item.post, origin: .post)
 								)
 							}
 							.accessibilityRemoveTraits(.isButton)
@@ -221,6 +224,7 @@ struct SearchView: View {
 				guard !query.isEmpty else { return }
 				await search(query: query)
 			}
+			.withAppMenu()
 			.navigationTitle("Szukaj")
 			.toolbar {
 				ToolbarItem(placement: .navigationBarTrailing) {

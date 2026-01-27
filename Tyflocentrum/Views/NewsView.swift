@@ -621,7 +621,10 @@ struct NewsView: View {
 							accessibilityKindLabel: item.kind.label,
 							accessibilityIdentifierOverride: item.kind == .podcast
 								? nil
-								: "article.row.\(item.post.id)"
+								: "article.row.\(item.post.id)",
+							favoriteItem: item.kind == .podcast
+								? .podcast(item.post)
+								: .article(summary: item.post, origin: .post)
 						)
 					}
 					.accessibilityRemoveTraits(.isButton)
@@ -657,6 +660,7 @@ struct NewsView: View {
 			.task {
 				await viewModel.loadIfNeeded(api: api)
 			}
+			.withAppMenu()
 			.navigationTitle("Nowości")
 			.navigationBarTitleDisplayMode(.inline)
 			.background(

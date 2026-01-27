@@ -56,6 +56,7 @@ struct MoreView: View {
 				.accessibilityIdentifier("more.contactRadio")
 			}
 			.padding()
+			.withAppMenu()
 			.navigationTitle("Tyfloradio")
 			.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
 				Button("OK") {}

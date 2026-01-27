@@ -1,7 +1,7 @@
 import CoreGraphics
 import XCTest
 
-final class TyflocentrumSmokeTests: XCTestCase {
+	final class TyflocentrumSmokeTests: XCTestCase {
 	override func setUpWithError() throws {
 		continueAfterFailure = false
 	}
@@ -40,6 +40,30 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
 		XCTAssertTrue(backButton.waitForExistence(timeout: 5))
 		backButton.tap()
+	}
+
+		private func openFavoritesFromMenu(in app: XCUIApplication) {
+			let menuQuery = app.descendants(matching: .any).matching(identifier: "app.menu")
+			var menuButton = menuQuery.firstMatch
+
+			// The app menu is available on tab root screens; on pushed detail screens we should go back first.
+			if !menuButton.waitForExistence(timeout: 2) {
+				let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
+				if backButton.waitForExistence(timeout: 2) {
+					backButton.tap()
+				}
+			}
+
+			menuButton = menuQuery.firstMatch
+			XCTAssertTrue(menuButton.waitForExistence(timeout: 5))
+			menuButton.tap()
+
+			let favoritesButton = app.descendants(matching: .any).matching(identifier: "app.menu.favorites").firstMatch
+			XCTAssertTrue(favoritesButton.waitForExistence(timeout: 5))
+			favoritesButton.tap()
+
+		let favoritesList = app.descendants(matching: .any).matching(identifier: "favorites.list").firstMatch
+		XCTAssertTrue(favoritesList.waitForExistence(timeout: 5))
 	}
 
 	func testAppLaunchesAndShowsTabs() {
@@ -119,6 +143,60 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let speedButton = app.descendants(matching: .any).matching(identifier: "player.speed").firstMatch
 		XCTAssertTrue(speedButton.exists)
 		XCTAssertEqual(speedButton.label, "Zmień prędkość odtwarzania")
+	}
+
+	func testCanAddPodcastToFavoritesAndSeeItInFavorites() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+		podcastRow.tap()
+
+		let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+
+		let favoriteButton = app.descendants(matching: .any).matching(identifier: "podcastDetail.favorite").firstMatch
+		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
+		favoriteButton.tap()
+
+		openFavoritesFromMenu(in: app)
+
+		let favoritesPodcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(favoritesPodcastRow.waitForExistence(timeout: 5))
+
+		let closeButton = app.descendants(matching: .any).matching(identifier: "favorites.close").firstMatch
+		XCTAssertTrue(closeButton.exists)
+		closeButton.tap()
+	}
+
+	func testCanAddArticleToFavoritesAndFilterIt() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
+		XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
+		articleRow.tap()
+
+		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+
+		let favoriteButton = app.descendants(matching: .any).matching(identifier: "articleDetail.favorite").firstMatch
+		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
+		favoriteButton.tap()
+
+		openFavoritesFromMenu(in: app)
+
+		let filter = app.segmentedControls["favorites.filter"]
+		XCTAssertTrue(filter.waitForExistence(timeout: 5))
+		filter.buttons["Artykuły"].tap()
+
+		let favoritesArticleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
+		XCTAssertTrue(favoritesArticleRow.waitForExistence(timeout: 5))
 	}
 
 	func testCanOpenPodcastCategoryAndSeeItems() {

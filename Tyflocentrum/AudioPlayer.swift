@@ -334,7 +334,13 @@ final class AudioPlayer: ObservableObject {
 		currentItemStatusObserver = nil
 	}
 
-	func play(url: URL, title: String? = nil, subtitle: String? = nil, isLiveStream: Bool = false) {
+	func play(
+		url: URL,
+		title: String? = nil,
+		subtitle: String? = nil,
+		isLiveStream: Bool = false,
+		seekTo seconds: Double? = nil
+	) {
 		configureAudioSessionForPlayback()
 
 		if currentURL != url {
@@ -347,10 +353,18 @@ final class AudioPlayer: ObservableObject {
 			resumeKey = isLiveStream ? nil : ResumePositionStore.makeKey(for: url)
 
 			player.replaceCurrentItem(with: AVPlayerItem(url: url))
-			restoreResumePositionIfNeeded()
+			if let seconds, !isLiveStream, seconds.isFinite {
+				scheduleSeekWhenReady(seconds)
+			}
+			else {
+				restoreResumePositionIfNeeded()
+			}
 
 			updateRemoteCommandAvailability()
 			updateNowPlayingMetadata()
+		}
+		else if let seconds, !isLiveStream, seconds.isFinite {
+			seek(to: seconds)
 		}
 
 		if isLiveStream {
@@ -673,12 +687,16 @@ final class AudioPlayer: ObservableObject {
 	private func restoreResumePositionIfNeeded() {
 		guard let saved = resumeStore.load(forKey: resumeKey) else { return }
 
+		scheduleSeekWhenReady(saved)
+	}
+
+	private func scheduleSeekWhenReady(_ seconds: Double) {
 		currentItemStatusObserver = player.currentItem?.observe(\.status, options: [.initial, .new]) { [weak self] item, _ in
 			guard let self else { return }
 			guard item.status == .readyToPlay else { return }
 
 			Task { @MainActor in
-				self.seek(to: saved)
+				self.seek(to: seconds)
 				self.currentItemStatusObserver = nil
 			}
 		}

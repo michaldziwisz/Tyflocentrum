@@ -25,14 +25,18 @@ struct DetailedArticleCategoryView: View {
 			)
 
 			ForEach(viewModel.items) { summary in
-				NavigationLink {
-					LazyDetailedArticleView(summary: summary)
-				} label: {
-					ShortPodcastView(podcast: summary.asPodcastStub(), showsListenAction: false)
-				}
-				.accessibilityRemoveTraits(.isButton)
-				.onAppear {
-					guard summary.id == viewModel.items.last?.id else { return }
+					NavigationLink {
+						LazyDetailedArticleView(summary: summary)
+					} label: {
+						ShortPodcastView(
+							podcast: summary.asPodcastStub(),
+							showsListenAction: false,
+							favoriteItem: .article(summary: summary, origin: .post)
+						)
+					}
+					.accessibilityRemoveTraits(.isButton)
+					.onAppear {
+						guard summary.id == viewModel.items.last?.id else { return }
 					Task { await viewModel.loadMore(fetchPage: fetchPage) }
 				}
 			}

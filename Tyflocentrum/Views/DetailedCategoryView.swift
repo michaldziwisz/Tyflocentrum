@@ -29,14 +29,15 @@ struct DetailedCategoryView: View {
 				let stubPodcast = summary.asPodcastStub()
 				NavigationLink {
 					LazyDetailedPodcastView(summary: summary)
-				} label: {
-					ShortPodcastView(
-						podcast: stubPodcast,
-						onListen: {
-							playerPodcast = stubPodcast
-						}
-					)
-				}
+					} label: {
+						ShortPodcastView(
+							podcast: stubPodcast,
+							onListen: {
+								playerPodcast = stubPodcast
+							},
+							favoriteItem: .podcast(summary)
+						)
+					}
 				.accessibilityRemoveTraits(.isButton)
 				.onAppear {
 					guard summary.id == viewModel.items.last?.id else { return }

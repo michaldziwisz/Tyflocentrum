@@ -14,12 +14,22 @@ struct TyflocentrumApp: App {
 	@StateObject private var dataController: DataController
 	@StateObject private var api: TyfloAPI
 	@StateObject private var audioPlayer: AudioPlayer
+	@StateObject private var favoritesStore: FavoritesStore
 
 	init() {
 		let isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
 		_dataController = StateObject(wrappedValue: DataController(inMemory: isUITesting))
 		_api = StateObject(wrappedValue: isUITesting ? TyfloAPI(session: Self.makeUITestSession()) : TyfloAPI.shared)
 		_audioPlayer = StateObject(wrappedValue: AudioPlayer())
+		if isUITesting {
+			let suiteName = "TyflocentrumUITests"
+			let defaults = UserDefaults(suiteName: suiteName)!
+			defaults.removePersistentDomain(forName: suiteName)
+			_favoritesStore = StateObject(wrappedValue: FavoritesStore(userDefaults: defaults))
+		}
+		else {
+			_favoritesStore = StateObject(wrappedValue: FavoritesStore())
+		}
 	}
 
 	var body: some Scene {
@@ -28,7 +38,8 @@ struct TyflocentrumApp: App {
 				rootView: ContentView()
 					.environment(\.managedObjectContext, dataController.container.viewContext)
 					.environmentObject(api)
-					.environmentObject(audioPlayer),
+					.environmentObject(audioPlayer)
+					.environmentObject(favoritesStore),
 				onMagicTap: {
 					audioPlayer.toggleCurrentPlayback()
 				}

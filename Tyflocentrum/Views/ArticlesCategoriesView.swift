@@ -83,6 +83,7 @@ struct ArticlesCategoriesView: View {
 			.task {
 				await viewModel.loadIfNeeded(fetchPage: fetchPage)
 			}
+			.withAppMenu()
 			.navigationTitle("Artykuły")
 		}
 	}
@@ -131,7 +132,11 @@ struct AllArticlesView: View {
 				NavigationLink {
 					LazyDetailedArticleView(summary: summary)
 				} label: {
-					ShortPodcastView(podcast: summary.asPodcastStub(), showsListenAction: false)
+					ShortPodcastView(
+						podcast: summary.asPodcastStub(),
+						showsListenAction: false,
+						favoriteItem: .article(summary: summary, origin: .post)
+					)
 				}
 				.accessibilityRemoveTraits(.isButton)
 				.onAppear {
@@ -302,7 +307,8 @@ private struct TyfloSwiatMagazineYearView: View {
 						podcast: issue.asPodcastStub(),
 						showsListenAction: false,
 						accessibilityKindLabel: "Numer",
-						accessibilityIdentifierOverride: "magazine.issue.\(issue.id)"
+						accessibilityIdentifierOverride: "magazine.issue.\(issue.id)",
+						favoriteItem: .article(summary: issue, origin: .page)
 					)
 				}
 				.accessibilityRemoveTraits(.isButton)
@@ -330,7 +336,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 		Group {
 			if let issue {
 				if tocItems.isEmpty {
-					DetailedArticleView(article: issue)
+					DetailedArticleView(article: issue, favoriteOrigin: .page)
 				}
 				else {
 					List {
@@ -353,7 +359,8 @@ private struct TyfloSwiatMagazineIssueView: View {
 										podcast: item.asPodcastStub(),
 										showsListenAction: false,
 										accessibilityKindLabel: "Artykuł",
-										accessibilityIdentifierOverride: "magazine.article.\(item.id)"
+										accessibilityIdentifierOverride: "magazine.article.\(item.id)",
+										favoriteItem: .article(summary: item, origin: .page)
 									)
 								}
 								.accessibilityRemoveTraits(.isButton)
@@ -437,7 +444,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 	}
 }
 
-private struct LazyDetailedTyfloswiatPageView: View {
+struct LazyDetailedTyfloswiatPageView: View {
 	let summary: WPPostSummary
 
 	@EnvironmentObject private var api: TyfloAPI
@@ -448,7 +455,7 @@ private struct LazyDetailedTyfloswiatPageView: View {
 	var body: some View {
 		Group {
 			if let page {
-				DetailedArticleView(article: page)
+				DetailedArticleView(article: page, favoriteOrigin: .page)
 			}
 			else if let errorMessage {
 				AsyncListStatusSection(
