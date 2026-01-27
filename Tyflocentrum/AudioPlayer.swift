@@ -193,18 +193,43 @@ private final class SystemChangePlaybackRateRemoteCommand: ChangePlaybackRateRem
 }
 
 enum PlaybackRatePolicy {
-	static let supportedRates: [Float] = [1.0, 1.25, 1.5, 1.75, 2.0]
+	static let supportedRates: [Float] = [1.0, 1.25, 1.5, 1.75, 2.0, 2.2, 2.5, 2.8, 3.0]
+
+	private static let formatter: NumberFormatter = {
+		let formatter = NumberFormatter()
+		formatter.numberStyle = .decimal
+		formatter.minimumFractionDigits = 0
+		formatter.maximumFractionDigits = 2
+		return formatter
+	}()
+
+	static func formattedRate(_ rate: Float) -> String {
+		formatter.string(from: NSNumber(value: rate)) ?? "\(rate)"
+	}
+
+	private static func nearestIndex(to rate: Float) -> Int {
+		var bestIndex = 0
+		var bestDistance = Float.greatestFiniteMagnitude
+		for (index, candidate) in supportedRates.enumerated() {
+			let distance = abs(candidate - rate)
+			if distance < bestDistance {
+				bestDistance = distance
+				bestIndex = index
+			}
+		}
+		return bestIndex
+	}
 
 	static func next(after rate: Float) -> Float {
 		guard !supportedRates.isEmpty else { return rate }
-		let currentIndex = supportedRates.firstIndex(of: rate) ?? 0
+		let currentIndex = nearestIndex(to: rate)
 		let nextIndex = supportedRates.index(after: currentIndex)
 		return nextIndex < supportedRates.endIndex ? supportedRates[nextIndex] : supportedRates[0]
 	}
 
 	static func previous(before rate: Float) -> Float {
 		guard !supportedRates.isEmpty else { return rate }
-		let currentIndex = supportedRates.firstIndex(of: rate) ?? 0
+		let currentIndex = nearestIndex(to: rate)
 		let previousIndex = currentIndex - 1
 		guard previousIndex >= supportedRates.startIndex else {
 			return supportedRates[supportedRates.index(before: supportedRates.endIndex)]

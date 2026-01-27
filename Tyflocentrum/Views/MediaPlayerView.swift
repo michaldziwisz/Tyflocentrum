@@ -79,7 +79,7 @@ struct MediaPlayerView: View {
 	}
 
 	private func announcePlaybackRate() {
-		let newPlaybackRateText = String(format: "%.2g", audioPlayer.playbackRate)
+		let newPlaybackRateText = PlaybackRatePolicy.formattedRate(audioPlayer.playbackRate)
 		announceIfVoiceOver("Prędkość \(newPlaybackRateText)x")
 	}
 
@@ -112,7 +112,7 @@ struct MediaPlayerView: View {
 		let isLiveStream = canBeLive
 		let isPlayingCurrentItem = audioPlayer.isPlaying && audioPlayer.currentURL == podcast
 		let displayedTime = isScrubbing ? scrubPosition : audioPlayer.elapsedTime
-		let playbackRateText = String(format: "%.2g", audioPlayer.playbackRate)
+		let playbackRateText = PlaybackRatePolicy.formattedRate(audioPlayer.playbackRate)
 		VStack(spacing: 24) {
 			VStack(spacing: 6) {
 				Text(title)
@@ -214,17 +214,17 @@ struct MediaPlayerView: View {
 				}
 			}
 
-			if !isLiveStream {
-				Button {
-					audioPlayer.cyclePlaybackRate()
-					announcePlaybackRate()
-				} label: {
-					Text("Prędkość: \(audioPlayer.playbackRate, specifier: "%.2gx")")
-				}
-				.accessibilityLabel("Zmień prędkość odtwarzania")
-				.accessibilityValue("\(playbackRateText)x")
-				.accessibilityHint("Dwukrotnie stuknij, aby przełączyć prędkość. Przesuń w górę lub w dół, aby zwiększyć lub zmniejszyć.")
-				.accessibilityIdentifier("player.speed")
+				if !isLiveStream {
+					Button {
+						audioPlayer.cyclePlaybackRate()
+						announcePlaybackRate()
+					} label: {
+						Text("Prędkość: \(playbackRateText)x")
+					}
+					.accessibilityLabel("Zmień prędkość odtwarzania")
+					.accessibilityValue("\(playbackRateText)x")
+					.accessibilityHint("Dwukrotnie stuknij, aby przełączyć prędkość. Przesuń w górę lub w dół, aby zwiększyć lub zmniejszyć.")
+					.accessibilityIdentifier("player.speed")
 				.accessibilityAdjustableAction { direction in
 					switch direction {
 					case .increment:
