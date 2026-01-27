@@ -19,7 +19,7 @@ if ! git cat-file -e "$HEAD_SHA^{commit}" 2>/dev/null; then
   exit 2
 fi
 
-changed_files="$(git diff --name-only "$BASE_SHA...$HEAD_SHA")"
+changed_files="$(git diff --name-status "$BASE_SHA...$HEAD_SHA")"
 
 if [[ -z "${changed_files//[[:space:]]/}" ]]; then
   echo "No changed files detected between $BASE_SHA...$HEAD_SHA."
@@ -30,7 +30,32 @@ docs_touched=false
 requires_docs=false
 trigger_files=()
 
-while IFS= read -r file; do
+# Heuristic: require docs only for "public surface" changes (new features, API/architecture, build/CI).
+# This is intentionally NOT every code change.
+public_surface_paths=(
+  "Tyflocentrum/TyfloAPI.swift"
+  "Tyflocentrum/AudioPlayer.swift"
+  "Tyflocentrum/SettingsStore.swift"
+  "Tyflocentrum/Views/SettingsView.swift"
+  "Tyflocentrum/FavoritesStore.swift"
+  "Tyflocentrum/Views/FavoritesView.swift"
+  "Tyflocentrum/Views/ContentView.swift"
+  "Tyflocentrum/Views/AppMenu.swift"
+  "Tyflocentrum/Views/ContactView.swift"
+  "Tyflocentrum/Info.plist"
+)
+
+while IFS= read -r status path1 path2; do
+  [[ -z "$status" ]] && continue
+
+  file="$path1"
+  # For rename/copy, take destination path.
+  case "$status" in
+    R*|C*)
+      file="$path2"
+      ;;
+  esac
+
   [[ -z "$file" ]] && continue
 
   case "$file" in
@@ -52,18 +77,34 @@ while IFS= read -r file; do
   esac
 
   case "$file" in
-    Tyflocentrum/*)
-      if [[ "$file" == *.md || "$file" == *.rtf ]]; then
-        continue
-      fi
-      requires_docs=true
-      trigger_files+=("$file")
-      ;;
     Tyflocentrum.xcodeproj/*|Tyflocentrum.xcdatamodeld/*|.github/workflows/*|scripts/*|installers/*)
       requires_docs=true
       trigger_files+=("$file")
       ;;
   esac
+
+  # Public surface changes (API/architecture/user-facing mechanics)
+  for path in "${public_surface_paths[@]}"; do
+    if [[ "$file" == "$path" ]]; then
+      requires_docs=true
+      trigger_files+=("$file")
+      break
+    fi
+  done
+
+  # New user-facing files: adding Views/Models is almost always a new feature worth documenting.
+  if [[ "$requires_docs" != "true" ]]; then
+    case "$status" in
+      A*)
+        case "$file" in
+          Tyflocentrum/Views/*.swift|Tyflocentrum/Models/*.swift)
+            requires_docs=true
+            trigger_files+=("$file")
+            ;;
+        esac
+        ;;
+    esac
+  fi
 done <<< "$changed_files"
 
 if [[ "$requires_docs" == "true" && "$docs_touched" != "true" ]]; then

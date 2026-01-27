@@ -215,12 +215,11 @@ xcodebuild \
 
 ## Dokumentacja w CI (guardrail)
 
-Na PR-ach do `master` działa workflow `Docs (README) guard` (`.github/workflows/readme-guard.yml`), który wymaga aktualizacji `README.md` (lub dodania plików w `docs/`), jeśli zmieniasz m.in.:
+Na PR-ach do `master` działa workflow `Docs (README) guard` (`.github/workflows/readme-guard.yml`), który **heurystycznie** wymaga aktualizacji `README.md` (lub dodania plików w `docs/`) tylko przy zmianach typu:
 
-- kod aplikacji (`Tyflocentrum/`),
-- projekt Xcode / model danych (`Tyflocentrum.xcodeproj/`, `Tyflocentrum.xcdatamodeld/`),
-- workflow CI (`.github/workflows/`),
-- skrypty (`scripts/`).
+- nowe ekrany / modele (`Tyflocentrum/Views/*.swift`, `Tyflocentrum/Models/*.swift`),
+- API/architektura (np. `Tyflocentrum/TyfloAPI.swift`, `Tyflocentrum/AudioPlayer.swift`, `SettingsStore` / `FavoritesStore`),
+- build/CI/skrypty (`Tyflocentrum.xcodeproj/`, `.github/workflows/`, `scripts/`).
 
 Logika jest w `scripts/require-readme-update.sh`.
 
