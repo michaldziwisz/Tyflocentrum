@@ -92,21 +92,25 @@ struct ContactVoiceMessageView: View {
 						|| (voiceRecorder.state != .idle && recordingTrigger != .holdToTalk)
 				)
 
-				if isRecording {
-					HStack {
+				HStack {
+					if isRecording {
 						ProgressView()
-						Text("Nagrywanie… \(formatTime(voiceRecorder.elapsedTime))")
 					}
-					.accessibilityElement(children: .combine)
-					.accessibilityIdentifier("contact.voice.recordingStatus")
-
-					Button("Zatrzymaj") {
-						stopRecording()
-					}
-					.accessibilityIdentifier("contact.voice.stop")
-					.accessibilityHint("Zatrzymuje nagrywanie. Możesz też użyć Magic Tap lub oderwać telefon od ucha.")
-					.disabled(viewModel.isSending)
+					Text(isRecording ? "Nagrywanie… \(formatTime(voiceRecorder.elapsedTime))" : "Gotowe do nagrywania")
 				}
+				.accessibilityElement(children: .combine)
+				.accessibilityIdentifier("contact.voice.recordingStatus")
+
+				Button("Zatrzymaj") {
+					stopRecording()
+				}
+				.accessibilityIdentifier("contact.voice.stop")
+				.accessibilityHint(
+					isRecording
+						? "Zatrzymuje nagrywanie. Możesz też użyć Magic Tap lub oderwać telefon od ucha."
+						: "Dostępne podczas nagrywania."
+				)
+				.disabled(viewModel.isSending || !isRecording)
 			}
 
 			if voiceRecorder.state == .recorded || voiceRecorder.state == .playingPreview {
