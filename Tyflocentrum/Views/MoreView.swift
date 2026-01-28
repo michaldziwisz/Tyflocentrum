@@ -11,14 +11,13 @@ import SwiftUI
 struct MoreView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject var audioPlayer: AudioPlayer
-	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
-	@State private var shouldShowContactForm = false
+	@State private var shouldNavigateToContact = false
 	@State private var shouldShowNoLiveAlert = false
 
 	private func performLiveCheck() async {
 		let (available, _) = await api.isTPAvailable()
 		if available {
-			shouldShowContactForm = true
+			shouldNavigateToContact = true
 		}
 		else {
 			shouldShowNoLiveAlert = true
@@ -56,6 +55,11 @@ struct MoreView: View {
 				.buttonStyle(.bordered)
 				.accessibilityHint("Sprawdza, czy trwa audycja interaktywna i otwiera formularz kontaktu.")
 				.accessibilityIdentifier("more.contactRadio")
+
+				NavigationLink(destination: ContactView(), isActive: $shouldNavigateToContact) {
+					EmptyView()
+				}
+				.hidden()
 			}
 			.padding()
 			.withAppMenu()
@@ -65,19 +69,6 @@ struct MoreView: View {
 			} message: {
 				Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
 			}
-				.sheet(isPresented: $shouldShowContactForm) {
-					MagicTapHostingView(
-						rootView: ContactView()
-							.environmentObject(api)
-							.environmentObject(audioPlayer)
-							.environmentObject(magicTapCoordinator),
-						onMagicTap: {
-							magicTapCoordinator.perform {
-								audioPlayer.toggleCurrentPlayback()
-							}
-						}
-					)
-				}
 			}
 		}
 	}

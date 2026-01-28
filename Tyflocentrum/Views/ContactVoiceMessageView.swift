@@ -10,6 +10,7 @@ struct ContactVoiceMessageView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject var audioPlayer: AudioPlayer
 	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
+	@Environment(\.dismiss) private var dismiss
 
 	@StateObject private var viewModel = ContactViewModel()
 	@StateObject private var voiceRecorder = VoiceMessageRecorder()
@@ -21,12 +22,6 @@ struct ContactVoiceMessageView: View {
 	@State private var isHoldingToTalk = false
 
 	@AccessibilityFocusState private var focusedField: Field?
-
-	private let onClose: () -> Void
-
-	init(onClose: @escaping () -> Void = {}) {
-		self.onClose = onClose
-	}
 
 	private enum Field: Hashable {
 		case name
@@ -142,7 +137,7 @@ struct ContactVoiceMessageView: View {
 
 							resetRecording()
 							UIAccessibility.post(notification: .announcement, argument: "Głosówka wysłana pomyślnie")
-							onClose()
+							dismiss()
 						}
 					} label: {
 						if viewModel.isSending {
@@ -247,29 +242,32 @@ struct ContactVoiceMessageView: View {
 		startRecordingTask?.cancel()
 
 		audioPlayer.pause()
-		if trigger == .magicTap {
-			playHaptic(times: 2)
-		} else {
-			playHaptic(times: 1)
-		}
 
 		startRecordingTask = Task { @MainActor in
-			if trigger == .magicTap, announceBeforeStart, UIAccessibility.isVoiceOverRunning {
-				UIAccessibility.post(notification: .announcement, argument: "Nagrywaj wiadomość po sygnale.")
-			}
-
 			if trigger == .magicTap {
-				AudioCuePlayer.shared.playStartCue()
+				let announcement = "Nagrywaj wiadomość po sygnale."
+				if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
+					UIAccessibility.post(notification: .announcement, argument: announcement)
+					await waitForVoiceOverAnnouncementToFinish(announcement)
+					guard !Task.isCancelled else { return }
+				}
 
-				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds
-				let extraDelay: TimeInterval = announceBeforeStart ? 1.0 : 0.2
-				let totalDelay = cueDelay + extraDelay
-				try? await Task.sleep(nanoseconds: UInt64(totalDelay * 1_000_000_000))
+				AudioCuePlayer.shared.playStartCue()
+				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds + 0.1
+				try? await Task.sleep(nanoseconds: UInt64(cueDelay * 1_000_000_000))
 				guard !Task.isCancelled else { return }
 			}
 
 			await voiceRecorder.startRecording(pausing: audioPlayer)
-			if voiceRecorder.state != .recording {
+
+			if voiceRecorder.state == .recording {
+				switch trigger {
+				case .magicTap, .proximity:
+					playHaptic(times: 2)
+				case .holdToTalk:
+					playHaptic(times: 1)
+				}
+			} else {
 				recordingTrigger = nil
 			}
 		}
@@ -325,6 +323,22 @@ struct ContactVoiceMessageView: View {
 		let m = total / 60
 		let s = total % 60
 		return String(format: "%02d:%02d", m, s)
+	}
+
+	private func waitForVoiceOverAnnouncementToFinish(_ announcement: String) async {
+		guard UIAccessibility.isVoiceOverRunning else { return }
+		do {
+			try await withTimeout(5) {
+				for await notification in NotificationCenter.default.notifications(named: UIAccessibility.announcementDidFinishNotification) {
+					guard !Task.isCancelled else { return }
+					let finishedAnnouncement = notification.userInfo?[UIAccessibility.announcementKeyStringValue] as? String
+					guard finishedAnnouncement == announcement else { continue }
+					return
+				}
+			}
+		} catch {
+			// Best-effort: if we can't observe completion, continue after timeout.
+		}
 	}
 
 	private func playHaptic(times: Int) {

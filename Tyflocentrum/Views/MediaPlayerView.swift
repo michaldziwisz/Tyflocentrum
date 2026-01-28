@@ -27,13 +27,12 @@ struct MediaPlayerView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject var audioPlayer: AudioPlayer
-	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
 	let podcast: URL
 	let title: String
 	let subtitle: String?
 	let canBeLive: Bool
 	let podcastPostID: Int?
-	@State private var shouldShowContactForm = false
+	@State private var shouldNavigateToContact = false
 	@State private var shouldShowNoLiveAlert = false
 	@State private var isScrubbing = false
 	@State private var scrubPosition: Double = 0
@@ -69,7 +68,7 @@ struct MediaPlayerView: View {
 	func performLiveCheck() async -> Void {
 		let (available, _) = await api.isTPAvailable()
 		if available {
-			shouldShowContactForm = true
+			shouldNavigateToContact = true
 		}
 		else {
 			shouldShowNoLiveAlert = true
@@ -280,19 +279,6 @@ struct MediaPlayerView: View {
 				} message: {
 					Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
 				}
-					.sheet(isPresented: $shouldShowContactForm) {
-						MagicTapHostingView(
-							rootView: ContactView()
-								.environmentObject(api)
-								.environmentObject(audioPlayer)
-								.environmentObject(magicTapCoordinator),
-							onMagicTap: {
-								magicTapCoordinator.perform {
-									audioPlayer.toggleCurrentPlayback()
-								}
-							}
-						)
-					}
 				}
 
 			Spacer()
@@ -347,6 +333,12 @@ struct MediaPlayerView: View {
 				},
 				isActive: $shouldShowRelatedLinks
 			) {
+				EmptyView()
+			}
+			.hidden()
+		)
+		.background(
+			NavigationLink(destination: ContactView(), isActive: $shouldNavigateToContact) {
 				EmptyView()
 			}
 			.hidden()

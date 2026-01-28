@@ -91,33 +91,24 @@ final class ContactViewModel: ObservableObject {
 }
 
 struct ContactView: View {
-	@Environment(\.dismiss) var dismiss
-
 	var body: some View {
-		NavigationView {
-			List {
-				NavigationLink {
-					ContactTextMessageView(onClose: { dismiss() })
-				} label: {
-					Label("Napisz wiadomość tekstową", systemImage: "square.and.pencil")
-				}
-				.accessibilityIdentifier("contact.menu.text")
-				.accessibilityHint("Otwiera formularz wiadomości tekstowej.")
+		List {
+			NavigationLink {
+				ContactTextMessageView()
+			} label: {
+				Label("Napisz wiadomość tekstową", systemImage: "square.and.pencil")
+			}
+			.accessibilityIdentifier("contact.menu.text")
+			.accessibilityHint("Otwiera formularz wiadomości tekstowej.")
 
-				NavigationLink {
-					ContactVoiceMessageView(onClose: { dismiss() })
-				} label: {
-					Label("Nagraj wiadomość głosową", systemImage: "mic")
-				}
-				.accessibilityIdentifier("contact.menu.voice")
-				.accessibilityHint("Otwiera ekran nagrywania głosówki.")
+			NavigationLink {
+				ContactVoiceMessageView()
+			} label: {
+				Label("Nagraj wiadomość głosową", systemImage: "mic")
 			}
-			.navigationTitle("Kontakt")
-			.toolbar {
-				Button("Anuluj") { dismiss() }
-					.accessibilityIdentifier("contact.cancel")
-					.accessibilityHint("Zamyka okno kontaktu.")
-			}
+			.accessibilityIdentifier("contact.menu.voice")
+			.accessibilityHint("Otwiera ekran nagrywania głosówki.")
 		}
+		.navigationTitle("Kontakt")
 	}
 }
