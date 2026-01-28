@@ -232,6 +232,7 @@ struct ContactView: View {
 					}
 				}
 			}
+			.accessibilityIdentifier("contact.form")
 			.navigationTitle("Kontakt")
 			.toolbar {
 				Button("Anuluj") {

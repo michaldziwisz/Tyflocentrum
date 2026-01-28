@@ -154,9 +154,11 @@ import XCTest
 			XCTAssertTrue(voiceSendButton.isEnabled)
 
 			let textSendButton = app.descendants(matching: .any).matching(identifier: "contact.send").firstMatch
+			let form = app.descendants(matching: .any).matching(identifier: "contact.form").firstMatch
+			XCTAssertTrue(form.waitForExistence(timeout: 5))
 			for _ in 0..<8 {
 				if textSendButton.exists { break }
-				app.swipeUp()
+				form.swipeUp()
 			}
 			XCTAssertTrue(textSendButton.waitForExistence(timeout: 5))
 			XCTAssertFalse(textSendButton.isEnabled)
