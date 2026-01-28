@@ -8,6 +8,7 @@ import XCTest
 
 	private func makeApp(additionalLaunchArguments: [String] = []) -> XCUIApplication {
 		let app = XCUIApplication()
+		app.terminate()
 		app.launchArguments = ["UI_TESTING"] + additionalLaunchArguments
 		return app
 	}
