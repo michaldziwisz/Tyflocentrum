@@ -96,7 +96,7 @@ struct ContactView: View {
 	var body: some View {
 		List {
 			NavigationLink {
-				ContactTextMessageView(onSent: { isActive = false })
+				ContactTextMessageView(onSent: { $isActive.wrappedValue = false })
 			} label: {
 				Label("Napisz wiadomość tekstową", systemImage: "square.and.pencil")
 			}
@@ -104,7 +104,7 @@ struct ContactView: View {
 			.accessibilityHint("Otwiera formularz wiadomości tekstowej.")
 
 			NavigationLink {
-				ContactVoiceMessageView(onSent: { isActive = false })
+				ContactVoiceMessageView(onSent: { $isActive.wrappedValue = false })
 			} label: {
 				Label("Nagraj wiadomość głosową", systemImage: "mic")
 			}
