@@ -19,6 +19,7 @@ struct ContactVoiceMessageView: View {
 	@State private var startRecordingTask: Task<Void, Never>?
 	@State private var recordingTrigger: RecordingTrigger?
 	@State private var isEarModeEnabled = false
+	@State private var isProximityNear = false
 	@State private var isHoldingToTalk = false
 
 	@AccessibilityFocusState private var focusedField: Field?
@@ -160,6 +161,14 @@ struct ContactVoiceMessageView: View {
 		.accessibilityIdentifier("contactVoice.form")
 		.navigationTitle("Głosówka")
 		.navigationBarTitleDisplayMode(.inline)
+		.navigationBarBackButtonHidden(isProximityNear)
+		.allowsHitTesting(!isProximityNear)
+		.background(
+			NavigationPopGestureController(isEnabled: !isEarModeEnabled)
+		)
+		.accessibilityAction(.escape) {
+			handleEscape()
+		}
 		.alert("Błąd", isPresented: $viewModel.shouldShowError) {
 			Button("OK") {}
 		} message: {
@@ -171,7 +180,9 @@ struct ContactVoiceMessageView: View {
 			Text(voiceRecorder.errorMessage)
 		}
 		.task {
-			focusedField = .name
+			if viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+				focusedField = .name
+			}
 			#if DEBUG
 			if ProcessInfo.processInfo.arguments.contains("UI_TESTING_SEED_VOICE_RECORDED") {
 				voiceRecorder.seedRecordedForUITesting()
@@ -244,6 +255,10 @@ struct ContactVoiceMessageView: View {
 		audioPlayer.pause()
 
 		startRecordingTask = Task { @MainActor in
+			if trigger == .proximity {
+				isProximityNear = true
+			}
+
 			if trigger == .magicTap {
 				let announcement = "Nagrywaj wiadomość po sygnale."
 				if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
@@ -251,8 +266,12 @@ struct ContactVoiceMessageView: View {
 					await waitForVoiceOverAnnouncementToFinish(announcement)
 					guard !Task.isCancelled else { return }
 				}
+			}
 
-				AudioCuePlayer.shared.playStartCue()
+			if trigger == .magicTap || trigger == .proximity {
+				let routeToSpeaker = trigger == .magicTap
+				AudioCuePlayer.shared.playStartCue(routeToSpeaker: routeToSpeaker)
+				playHaptic(times: 2)
 				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds + 0.1
 				try? await Task.sleep(nanoseconds: UInt64(cueDelay * 1_000_000_000))
 				guard !Task.isCancelled else { return }
@@ -261,10 +280,7 @@ struct ContactVoiceMessageView: View {
 			await voiceRecorder.startRecording(pausing: audioPlayer)
 
 			if voiceRecorder.state == .recording {
-				switch trigger {
-				case .magicTap, .proximity:
-					playHaptic(times: 2)
-				case .holdToTalk:
+				if trigger == .holdToTalk {
 					playHaptic(times: 1)
 				}
 			} else {
@@ -283,8 +299,9 @@ struct ContactVoiceMessageView: View {
 		}
 		recordingTrigger = nil
 		playHaptic(times: 1)
-		if trigger == .magicTap {
-			AudioCuePlayer.shared.playStopCue()
+		if trigger == .magicTap || trigger == .proximity {
+			let routeToSpeaker = trigger == .magicTap
+			AudioCuePlayer.shared.playStopCue(routeToSpeaker: routeToSpeaker)
 		}
 	}
 
@@ -302,10 +319,12 @@ struct ContactVoiceMessageView: View {
 
 	private func disableProximityMonitoring() {
 		UIDevice.current.isProximityMonitoringEnabled = false
+		isProximityNear = false
 	}
 
 	private func handleProximityChange() {
 		let isNear = UIDevice.current.proximityState
+		isProximityNear = isNear
 
 		if isNear {
 			guard voiceRecorder.state == .idle else { return }
@@ -351,6 +370,55 @@ struct ContactVoiceMessageView: View {
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
 			generator.prepare()
 			generator.impactOccurred()
+		}
+	}
+
+	private func handleEscape() {
+		switch voiceRecorder.state {
+		case .recording:
+			stopRecording()
+		case .idle:
+			dismiss()
+		case .recorded, .playingPreview:
+			break
+		}
+	}
+}
+
+private struct NavigationPopGestureController: UIViewControllerRepresentable {
+	let isEnabled: Bool
+
+	final class Coordinator {
+		var originalValue: Bool?
+	}
+
+	func makeCoordinator() -> Coordinator {
+		Coordinator()
+	}
+
+	func makeUIViewController(context: Context) -> UIViewController {
+		UIViewController()
+	}
+
+	func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
+		DispatchQueue.main.async {
+			guard let navigationController = uiViewController.navigationController else { return }
+			guard let popGestureRecognizer = navigationController.interactivePopGestureRecognizer else { return }
+
+			if context.coordinator.originalValue == nil {
+				context.coordinator.originalValue = popGestureRecognizer.isEnabled
+			}
+			popGestureRecognizer.isEnabled = isEnabled
+		}
+	}
+
+	static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: Coordinator) {
+		DispatchQueue.main.async {
+			guard let navigationController = uiViewController.navigationController else { return }
+			guard let popGestureRecognizer = navigationController.interactivePopGestureRecognizer else { return }
+			if let original = coordinator.originalValue {
+				popGestureRecognizer.isEnabled = original
+			}
 		}
 	}
 }

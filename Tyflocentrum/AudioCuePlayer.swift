@@ -31,21 +31,29 @@ final class AudioCuePlayer {
 
 	private var player: AVAudioPlayer?
 
-	func playStartCue() {
-		play(data: startCueData)
+	static func sessionOptions(routeToSpeaker: Bool) -> AVAudioSession.CategoryOptions {
+		var options: AVAudioSession.CategoryOptions = [.allowBluetooth]
+		if routeToSpeaker {
+			options.insert(.defaultToSpeaker)
+		}
+		return options
 	}
 
-	func playStopCue() {
-		play(data: stopCueData)
+	func playStartCue(routeToSpeaker: Bool = true) {
+		play(data: startCueData, routeToSpeaker: routeToSpeaker)
+	}
+
+	func playStopCue(routeToSpeaker: Bool = true) {
+		play(data: stopCueData, routeToSpeaker: routeToSpeaker)
 	}
 
 	var startCueDurationSeconds: TimeInterval { 0.20 }
 	var stopCueDurationSeconds: TimeInterval { 0.10 }
 
-	private func play(data: Data) {
+	private func play(data: Data, routeToSpeaker: Bool) {
 		do {
 			let session = AVAudioSession.sharedInstance()
-			try? session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetooth])
+			try? session.setCategory(.playAndRecord, mode: .spokenAudio, options: Self.sessionOptions(routeToSpeaker: routeToSpeaker))
 			try? session.setActive(true, options: [])
 
 			let player = try AVAudioPlayer(data: data)
