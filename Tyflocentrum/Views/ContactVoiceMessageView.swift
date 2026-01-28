@@ -109,7 +109,7 @@ struct ContactVoiceMessageView: View {
 						: "Dostępne podczas nagrywania."
 				)
 				.disabled(viewModel.isSending || !isRecording)
-				.accessibilityHidden(viewModel.isSending)
+				.accessibilityHidden(viewModel.isSending || !isRecording)
 			}
 
 			if voiceRecorder.state == .recorded || voiceRecorder.state == .playingPreview {
@@ -253,10 +253,10 @@ struct ContactVoiceMessageView: View {
 			audioPlayer.pause()
 		}
 
-		startRecordingTask = Task { @MainActor in
-			if trigger == .magicTap {
-				let announcement = "Nagrywaj wiadomość po sygnale."
-					if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
+			startRecordingTask = Task { @MainActor in
+				if trigger == .magicTap {
+					let announcement = "Nagrywaj wiadomość po sygnale."
+						if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
 						UIAccessibility.post(notification: .announcement, argument: announcement)
 						await waitForVoiceOverAnnouncementToFinish(announcement)
 						guard !Task.isCancelled else { return }
@@ -265,16 +265,10 @@ struct ContactVoiceMessageView: View {
 					}
 
 					AudioCuePlayer.shared.playStartCue()
-					playHaptic(times: 2, style: .rigid)
+					playHaptic(times: 2, style: .heavy, intensity: 1.0)
 				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds + 0.1
 				try? await Task.sleep(nanoseconds: UInt64(cueDelay * 1_000_000_000))
 				guard !Task.isCancelled else { return }
-			}
-
-			if trigger == .holdToTalk {
-				guard !Task.isCancelled else { recordingTrigger = nil; return }
-				guard isHoldingToTalk || isHoldToTalkLocked else { recordingTrigger = nil; return }
-				playHaptic(times: 1, style: .rigid)
 			}
 
 			guard !Task.isCancelled else { recordingTrigger = nil; return }
@@ -289,6 +283,12 @@ struct ContactVoiceMessageView: View {
 			}
 
 			if voiceRecorder.state == .recording {
+				if trigger == .proximity {
+					playHaptic(times: 2, style: .heavy, intensity: 1.0)
+				}
+				if trigger == .holdToTalk {
+					playHaptic(times: 2, style: .heavy, intensity: 1.0)
+				}
 				if trigger == .holdToTalk, !isHoldingToTalk, !isHoldToTalkLocked {
 					voiceRecorder.stopRecording()
 					recordingTrigger = nil
@@ -312,7 +312,7 @@ struct ContactVoiceMessageView: View {
 		}
 		recordingTrigger = nil
 		isHoldToTalkLocked = false
-		playHaptic(times: 1, style: .medium)
+		playHaptic(times: 1, style: .heavy, intensity: 1.0)
 		if trigger == .magicTap {
 			AudioCuePlayer.shared.playStopCue()
 		}
@@ -343,7 +343,6 @@ struct ContactVoiceMessageView: View {
 		if isNear {
 			guard voiceRecorder.state == .idle else { return }
 			guard recordingTrigger == nil else { return }
-			playHaptic(times: 2, style: .rigid)
 			startRecording(trigger: .proximity, announceBeforeStart: false)
 		} else {
 			guard recordingTrigger == .proximity else { return }
@@ -358,6 +357,7 @@ struct ContactVoiceMessageView: View {
 
 				if !isHoldingToTalk {
 					isHoldingToTalk = true
+					playHaptic(times: 1, style: .heavy, intensity: 1.0)
 				}
 
 				if voiceRecorder.state == .idle, holdToTalkStartTask == nil, !isHoldToTalkLocked {
@@ -375,7 +375,7 @@ struct ContactVoiceMessageView: View {
 				guard voiceRecorder.state == .recording, recordingTrigger == .holdToTalk else { return }
 				if value.translation.height <= -120 {
 					isHoldToTalkLocked = true
-					playHaptic(times: 1, style: .rigid)
+					playHaptic(times: 1, style: .heavy, intensity: 1.0)
 					if UIAccessibility.isVoiceOverRunning {
 						UIAccessibility.post(notification: .announcement, argument: "Nagrywanie zablokowane")
 					}
@@ -402,21 +402,12 @@ struct ContactVoiceMessageView: View {
 		if isHoldToTalkLocked, recordingTrigger == .holdToTalk, isRecording {
 			return "Nagrywanie zablokowane"
 		}
-		if isHoldingToTalk, recordingTrigger == .holdToTalk, isRecording {
-			return "Mów… (puść, aby zakończyć)"
-		}
-		if isHoldingToTalk, voiceRecorder.state == .idle {
-			return "Trzymaj…"
-		}
 		return "Przytrzymaj i mów"
 	}
 
 	private func holdToTalkAccessibilityLabel(isRecording: Bool) -> String {
 		if isHoldToTalkLocked, recordingTrigger == .holdToTalk, isRecording {
 			return "Nagrywanie zablokowane"
-		}
-		if recordingTrigger == .holdToTalk, isRecording {
-			return "Mów. Puść, aby zakończyć."
 		}
 		return "Przytrzymaj i mów"
 	}
@@ -452,7 +443,7 @@ struct ContactVoiceMessageView: View {
 		generator.impactOccurred(intensity: intensity)
 
 		guard times > 1 else { return }
-		DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
 			generator.prepare()
 			generator.impactOccurred(intensity: intensity)
 		}
