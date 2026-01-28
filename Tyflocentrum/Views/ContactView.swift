@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 @MainActor
 final class ContactViewModel: ObservableObject {
@@ -93,10 +94,12 @@ final class ContactViewModel: ObservableObject {
 struct ContactView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject var audioPlayer: AudioPlayer
+	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
 	@Environment(\.dismiss) var dismiss
 	@StateObject private var viewModel = ContactViewModel()
 	@StateObject private var voiceRecorder = VoiceMessageRecorder()
 	@AccessibilityFocusState private var focusedField: Field?
+	@State private var magicTapToken: UUID?
 
 	private enum Field: Hashable {
 		case name
@@ -156,7 +159,11 @@ struct ContactView: View {
 						Button {
 							Task {
 								guard let url = voiceRecorder.recordedFileURL else { return }
-								let didSend = await viewModel.sendVoice(using: api, audioFileURL: url, durationMs: voiceRecorder.recordedDurationMs)
+								let didSend = await viewModel.sendVoice(
+									using: api,
+									audioFileURL: url,
+									durationMs: voiceRecorder.recordedDurationMs
+								)
 								guard didSend else { return }
 
 								voiceRecorder.reset()
@@ -170,14 +177,15 @@ struct ContactView: View {
 									Text("Wysyłanie…")
 								}
 								.accessibilityElement(children: .combine)
-							}
-							else {
+							} else {
 								Text("Wyślij głosówkę")
 							}
 						}
 						.disabled(!canSendVoice || viewModel.isSending)
 						.accessibilityIdentifier("contact.voice.send")
-						.accessibilityHint(canSendVoice ? "Wysyła głosówkę do redakcji." : "Wpisz imię i nagraj głosówkę, aby wysłać.")
+						.accessibilityHint(
+							canSendVoice ? "Wysyła głosówkę do redakcji." : "Wpisz imię i nagraj głosówkę, aby wysłać."
+						)
 					}
 					else {
 						Button("Nagraj") {
@@ -203,28 +211,27 @@ struct ContactView: View {
 							UIAccessibility.post(notification: .announcement, argument: "Wiadomość wysłana pomyślnie")
 							dismiss()
 						}
-						} label: {
-							if viewModel.isSending {
-								HStack {
-									ProgressView()
-									Text("Wysyłanie…")
-								}
-								.accessibilityElement(children: .combine)
+					} label: {
+						if viewModel.isSending {
+							HStack {
+								ProgressView()
+								Text("Wysyłanie…")
 							}
-							else {
-								Text("Wyślij wiadomość")
-							}
-						}
-						.disabled(!canSend || viewModel.isSending)
-						.accessibilityIdentifier("contact.send")
-						.accessibilityHint(canSend ? "Wysyła wiadomość." : "Uzupełnij imię i wiadomość, aby wysłać.")
-						.alert("Błąd", isPresented: $viewModel.shouldShowError) {
-							Button("OK") {}
-						} message: {
-							Text(viewModel.errorMessage)
+							.accessibilityElement(children: .combine)
+						} else {
+							Text("Wyślij wiadomość")
 						}
 					}
+					.disabled(!canSend || viewModel.isSending)
+					.accessibilityIdentifier("contact.send")
+					.accessibilityHint(canSend ? "Wysyła wiadomość." : "Uzupełnij imię i wiadomość, aby wysłać.")
+					.alert("Błąd", isPresented: $viewModel.shouldShowError) {
+						Button("OK") {}
+					} message: {
+						Text(viewModel.errorMessage)
+					}
 				}
+			}
 			.navigationTitle("Kontakt")
 			.toolbar {
 				Button("Anuluj") {
@@ -252,7 +259,30 @@ struct ContactView: View {
 			guard !shouldShowError else { return }
 			focusedField = .message
 		}
+		.onAppear {
+			guard magicTapToken == nil else { return }
+			magicTapToken = magicTapCoordinator.push {
+				guard !viewModel.isSending else { return true }
+
+				if voiceRecorder.state == .recording {
+					voiceRecorder.stopRecording()
+					playHaptic(times: 1)
+					return true
+				}
+
+				Task {
+					await voiceRecorder.startRecording(pausing: audioPlayer)
+					guard voiceRecorder.state == .recording else { return }
+					playHaptic(times: 2)
+				}
+				return true
+			}
+		}
 		.onDisappear {
+			if let magicTapToken {
+				magicTapCoordinator.remove(magicTapToken)
+				self.magicTapToken = nil
+			}
 			voiceRecorder.reset()
 		}
 	}
@@ -263,5 +293,18 @@ struct ContactView: View {
 		let m = total / 60
 		let s = total % 60
 		return String(format: "%02d:%02d", m, s)
+	}
+
+	private func playHaptic(times: Int) {
+		guard times > 0 else { return }
+		let generator = UIImpactFeedbackGenerator(style: .light)
+		generator.prepare()
+		generator.impactOccurred()
+
+		guard times > 1 else { return }
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+			generator.prepare()
+			generator.impactOccurred()
+		}
 	}
 }

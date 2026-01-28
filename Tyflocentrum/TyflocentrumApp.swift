@@ -16,6 +16,7 @@ struct TyflocentrumApp: App {
 	@StateObject private var audioPlayer: AudioPlayer
 	@StateObject private var favoritesStore: FavoritesStore
 	@StateObject private var settingsStore: SettingsStore
+	@StateObject private var magicTapCoordinator = MagicTapCoordinator()
 
 	init() {
 		let isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
@@ -51,9 +52,12 @@ struct TyflocentrumApp: App {
 					.environmentObject(api)
 					.environmentObject(audioPlayer)
 					.environmentObject(favoritesStore)
-					.environmentObject(settingsStore),
+					.environmentObject(settingsStore)
+					.environmentObject(magicTapCoordinator),
 				onMagicTap: {
-					audioPlayer.toggleCurrentPlayback()
+					magicTapCoordinator.perform {
+						audioPlayer.toggleCurrentPlayback()
+					}
 				}
 			)
 		}
@@ -63,6 +67,31 @@ struct TyflocentrumApp: App {
 		let config = URLSessionConfiguration.ephemeral
 		config.protocolClasses = [UITestURLProtocol.self]
 		return URLSession(configuration: config)
+	}
+}
+
+@MainActor
+final class MagicTapCoordinator: ObservableObject {
+	private var handlers: [(id: UUID, handler: () -> Bool)] = []
+
+	func push(_ handler: @escaping () -> Bool) -> UUID {
+		let id = UUID()
+		handlers.append((id: id, handler: handler))
+		return id
+	}
+
+	func remove(_ id: UUID) {
+		handlers.removeAll { $0.id == id }
+	}
+
+	func perform(_ defaultHandler: () -> Bool) -> Bool {
+		if let top = handlers.last {
+			let didHandle = top.handler()
+			if didHandle {
+				return true
+			}
+		}
+		return defaultHandler()
 	}
 }
 

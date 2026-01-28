@@ -55,6 +55,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetooth])
 			try session.setActive(true, options: [])
 
+			let previousFileURL = recordedFileURL
 			let fileURL = FileManager.default.temporaryDirectory
 				.appendingPathComponent("voice-\(UUID().uuidString)")
 				.appendingPathExtension("m4a")
@@ -77,6 +78,9 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			self.recordedDurationMs = 0
 			self.elapsedTime = 0
 			self.state = .recording
+			if let previousFileURL, previousFileURL != fileURL {
+				try? FileManager.default.removeItem(at: previousFileURL)
+			}
 
 			recorder.record(forDuration: maxDurationSeconds)
 			startTimer { [weak self] in
@@ -177,12 +181,17 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		guard let url = recordedFileURL else { return }
 		do {
 			let session = AVAudioSession.sharedInstance()
-			try session.setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
+			try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetooth])
 			try session.setActive(true, options: [])
 
 			let player = try AVAudioPlayer(contentsOf: url)
+			player.delegate = self
 			player.prepareToPlay()
-			player.play()
+			let didStart = player.play()
+			guard didStart else {
+				showError("Nie udało się rozpocząć odsłuchu nagrania.")
+				return
+			}
 			previewPlayer = player
 			state = .playingPreview
 
@@ -190,10 +199,6 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 				guard let self else { return }
 				guard let player = self.previewPlayer else { return }
 				self.elapsedTime = player.currentTime
-				if !player.isPlaying {
-					self.stopPreviewIfNeeded()
-					self.state = .recorded
-				}
 			}
 		} catch {
 			showError("Nie udało się odtworzyć nagrania.")
@@ -250,6 +255,32 @@ extension VoiceMessageRecorder: AVAudioRecorderDelegate {
 				self.state = .idle
 				self.showError("Nagrywanie nie powiodło się.")
 			}
+		}
+	}
+}
+
+extension VoiceMessageRecorder: AVAudioPlayerDelegate {
+	nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+		Task { @MainActor in
+			guard self.previewPlayer === player else { return }
+			self.timer?.invalidate()
+			self.timer = nil
+			self.previewPlayer = nil
+			self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
+			self.state = self.recordedFileIsUsable() ? .recorded : .idle
+			if !flag {
+				self.showError("Nie udało się odtworzyć nagrania.")
+			}
+		}
+	}
+
+	nonisolated func audioPlayerDecodeErrorDidOccur(_ player: AVAudioPlayer, error: Error?) {
+		Task { @MainActor in
+			guard self.previewPlayer === player else { return }
+			self.stopPreviewIfNeeded()
+			self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
+			self.state = self.recordedFileIsUsable() ? .recorded : .idle
+			self.showError(error?.localizedDescription ?? "Nie udało się odtworzyć nagrania.")
 		}
 	}
 }
