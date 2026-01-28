@@ -10,15 +10,10 @@ struct ContactVoiceMessageView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject var audioPlayer: AudioPlayer
 	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
+	@Environment(\.dismiss) private var dismiss
 
 	@StateObject private var viewModel = ContactViewModel()
 	@StateObject private var voiceRecorder = VoiceMessageRecorder()
-
-	private let onSent: () -> Void
-
-	init(onSent: @escaping () -> Void = {}) {
-		self.onSent = onSent
-	}
 
 	@State private var magicTapToken: UUID?
 	@State private var startRecordingTask: Task<Void, Never>?
@@ -142,7 +137,7 @@ struct ContactVoiceMessageView: View {
 
 							resetRecording()
 							UIAccessibility.post(notification: .announcement, argument: "Głosówka wysłana pomyślnie")
-							onSent()
+							dismiss()
 						}
 					} label: {
 						if viewModel.isSending {

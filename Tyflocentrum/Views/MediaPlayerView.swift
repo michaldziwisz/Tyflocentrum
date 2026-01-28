@@ -338,7 +338,7 @@ struct MediaPlayerView: View {
 			.hidden()
 		)
 		.background(
-			NavigationLink(destination: ContactView(isActive: $shouldNavigateToContact), isActive: $shouldNavigateToContact) {
+			NavigationLink(destination: ContactView(), isActive: $shouldNavigateToContact) {
 				EmptyView()
 			}
 			.hidden()

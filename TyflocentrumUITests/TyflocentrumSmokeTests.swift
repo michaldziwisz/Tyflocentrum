@@ -456,6 +456,12 @@ import XCTest
 		sendButton.tap()
 
 		let playPauseButton = app.descendants(matching: .any).matching(identifier: "player.playPause").firstMatch
+		if !playPauseButton.waitForExistence(timeout: 1) {
+			tapBackButton(in: app)
+		}
+		if !playPauseButton.waitForExistence(timeout: 1) {
+			tapBackButton(in: app)
+		}
 		XCTAssertTrue(playPauseButton.waitForExistence(timeout: 5))
 	}
 
