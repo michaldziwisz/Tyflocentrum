@@ -37,6 +37,12 @@ final class ContactViewModel: ObservableObject {
 		if message.isEmpty {
 			message = Self.defaultMessage
 		}
+
+		#if DEBUG
+		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_CONTACT_MESSAGE_WHITESPACE") {
+			message = " "
+		}
+		#endif
 	}
 
 	var canSend: Bool {
@@ -63,7 +69,11 @@ final class ContactViewModel: ObservableObject {
 	}
 
 	func sendVoice(using api: TyfloAPI, audioFileURL: URL, durationMs: Int) async -> Bool {
-		guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return false }
+		guard !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+			errorMessage = "Uzupełnij imię, aby wysłać głosówkę."
+			shouldShowError = true
+			return false
+		}
 		guard !isSending else { return false }
 
 		isSending = true
@@ -193,28 +203,28 @@ struct ContactView: View {
 							UIAccessibility.post(notification: .announcement, argument: "Wiadomość wysłana pomyślnie")
 							dismiss()
 						}
-					} label: {
-						if viewModel.isSending {
-							HStack {
-								ProgressView()
-								Text("Wysyłanie…")
+						} label: {
+							if viewModel.isSending {
+								HStack {
+									ProgressView()
+									Text("Wysyłanie…")
+								}
+								.accessibilityElement(children: .combine)
 							}
-							.accessibilityElement(children: .combine)
+							else {
+								Text("Wyślij")
+							}
 						}
-						else {
-							Text("Wyślij")
+						.disabled(!canSend || viewModel.isSending)
+						.accessibilityIdentifier("contact.send")
+						.accessibilityHint(canSend ? "Wysyła wiadomość." : "Uzupełnij imię i wiadomość, aby wysłać.")
+						.alert("Błąd", isPresented: $viewModel.shouldShowError) {
+							Button("OK") {}
+						} message: {
+							Text(viewModel.errorMessage)
 						}
-					}
-					.accessibilityIdentifier("contact.send")
-					.accessibilityHint(canSend ? "Wysyła wiadomość." : "Uzupełnij imię i wiadomość, aby wysłać.")
-					.alert("Błąd", isPresented: $viewModel.shouldShowError) {
-						Button("OK") {}
-					} message: {
-						Text(viewModel.errorMessage)
 					}
 				}
-				.disabled(!canSend || viewModel.isSending)
-			}
 			.navigationTitle("Kontakt")
 			.toolbar {
 				Button("Anuluj") {
@@ -232,6 +242,11 @@ struct ContactView: View {
 		}
 		.task {
 			focusedField = .name
+			#if DEBUG
+			if ProcessInfo.processInfo.arguments.contains("UI_TESTING_SEED_VOICE_RECORDED") {
+				voiceRecorder.seedRecordedForUITesting()
+			}
+			#endif
 		}
 		.onChange(of: viewModel.shouldShowError) { shouldShowError in
 			guard !shouldShowError else { return }

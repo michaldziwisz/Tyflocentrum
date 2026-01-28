@@ -135,6 +135,31 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		state = .idle
 	}
 
+	#if DEBUG
+	func seedRecordedForUITesting(durationMs: Int = 5_000) {
+		guard ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
+
+		stopPreviewIfNeeded()
+		timer?.invalidate()
+		timer = nil
+
+		recorder?.stop()
+		recorder = nil
+
+		cleanupRecordingFile()
+
+		let fileURL = FileManager.default.temporaryDirectory
+			.appendingPathComponent("ui-test-voice-\(UUID().uuidString)")
+			.appendingPathExtension("m4a")
+		try? Data("UI_TEST_VOICE".utf8).write(to: fileURL, options: .atomic)
+
+		recordedFileURL = fileURL
+		recordedDurationMs = max(1, durationMs)
+		elapsedTime = TimeInterval(recordedDurationMs) / 1000.0
+		state = .recorded
+	}
+	#endif
+
 	private func startPreview() {
 		guard let url = recordedFileURL else { return }
 		do {

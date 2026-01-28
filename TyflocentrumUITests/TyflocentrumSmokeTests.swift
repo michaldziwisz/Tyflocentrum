@@ -134,6 +134,30 @@ import XCTest
 			XCTAssertEqual(contactButton.label, "Skontaktuj się z Tyfloradiem")
 		}
 
+	func testCanSendVoiceMessageWhenTextMessageIsEmpty() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE", "UI_TESTING_SEED_VOICE_RECORDED", "UI_TESTING_CONTACT_MESSAGE_WHITESPACE"])
+		app.launch()
+
+		app.tabBars.buttons["Tyfloradio"].tap()
+
+		let contactButton = app.descendants(matching: .any).matching(identifier: "more.contactRadio").firstMatch
+		XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
+		contactButton.tap()
+
+		let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
+		XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+		nameField.tap()
+		nameField.typeText("UI")
+
+		let textSendButton = app.descendants(matching: .any).matching(identifier: "contact.send").firstMatch
+		XCTAssertTrue(textSendButton.waitForExistence(timeout: 5))
+		XCTAssertFalse(textSendButton.isEnabled)
+
+		let voiceSendButton = app.descendants(matching: .any).matching(identifier: "contact.voice.send").firstMatch
+		XCTAssertTrue(voiceSendButton.waitForExistence(timeout: 5))
+		XCTAssertTrue(voiceSendButton.isEnabled)
+	}
+
 	func testCanOpenPodcastPlayerAndSeeSeekControls() {
 		let app = makeApp()
 		app.launch()
