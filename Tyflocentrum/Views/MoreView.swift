@@ -56,7 +56,7 @@ struct MoreView: View {
 				.accessibilityHint("Sprawdza, czy trwa audycja interaktywna i otwiera formularz kontaktu.")
 				.accessibilityIdentifier("more.contactRadio")
 
-				NavigationLink(destination: ContactView(), isActive: $shouldNavigateToContact) {
+				NavigationLink(destination: ContactView(isActive: $shouldNavigateToContact), isActive: $shouldNavigateToContact) {
 					EmptyView()
 				}
 				.hidden()

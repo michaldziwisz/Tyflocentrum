@@ -8,10 +8,15 @@ import UIKit
 
 struct ContactTextMessageView: View {
 	@EnvironmentObject var api: TyfloAPI
-	@Environment(\.dismiss) private var dismiss
 
 	@StateObject private var viewModel = ContactViewModel()
 	@AccessibilityFocusState private var focusedField: Field?
+
+	private let onSent: () -> Void
+
+	init(onSent: @escaping () -> Void = {}) {
+		self.onSent = onSent
+	}
 
 	private enum Field: Hashable {
 		case name
@@ -38,12 +43,12 @@ struct ContactTextMessageView: View {
 
 			Section {
 				Button {
-					Task {
+					Task { @MainActor in
 						let didSend = await viewModel.send(using: api)
 						guard didSend else { return }
 
 						UIAccessibility.post(notification: .announcement, argument: "Wiadomość wysłana pomyślnie")
-						dismiss()
+						onSent()
 					}
 				} label: {
 					if viewModel.isSending {

@@ -91,10 +91,12 @@ final class ContactViewModel: ObservableObject {
 }
 
 struct ContactView: View {
+	@Binding var isActive: Bool
+
 	var body: some View {
 		List {
 			NavigationLink {
-				ContactTextMessageView()
+				ContactTextMessageView(onSent: { isActive = false })
 			} label: {
 				Label("Napisz wiadomość tekstową", systemImage: "square.and.pencil")
 			}
@@ -102,7 +104,7 @@ struct ContactView: View {
 			.accessibilityHint("Otwiera formularz wiadomości tekstowej.")
 
 			NavigationLink {
-				ContactVoiceMessageView()
+				ContactVoiceMessageView(onSent: { isActive = false })
 			} label: {
 				Label("Nagraj wiadomość głosową", systemImage: "mic")
 			}
