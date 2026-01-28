@@ -151,12 +151,18 @@ import XCTest
 
 			let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
 			XCTAssertTrue(nameField.waitForExistence(timeout: 5))
-			nameField.tap()
-			nameField.typeText("UI")
+				nameField.tap()
+				nameField.typeText("UI")
 
-			let voiceSendButton = app.descendants(matching: .any).matching(identifier: "contact.voice.send").firstMatch
-			XCTAssertTrue(voiceSendButton.waitForExistence(timeout: 5))
-			XCTAssertTrue(voiceSendButton.isEnabled)
+				let voiceSendButton = app.descendants(matching: .any).matching(identifier: "contact.voice.send").firstMatch
+				let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
+				XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
+				for _ in 0..<8 {
+					if voiceSendButton.exists { break }
+					voiceForm.swipeUp()
+				}
+				XCTAssertTrue(voiceSendButton.waitForExistence(timeout: 5))
+				XCTAssertTrue(voiceSendButton.isEnabled)
 
 			let backButton = app.navigationBars.buttons["Kontakt"].firstMatch
 			XCTAssertTrue(backButton.waitForExistence(timeout: 5))
