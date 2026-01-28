@@ -331,7 +331,7 @@ struct ContactVoiceMessageView: View {
 			try await withTimeout(5) {
 				for await notification in NotificationCenter.default.notifications(named: UIAccessibility.announcementDidFinishNotification) {
 					guard !Task.isCancelled else { return }
-					let finishedAnnouncement = notification.userInfo?[UIAccessibility.announcementKeyStringValue] as? String
+					let finishedAnnouncement = notification.userInfo?[UIAccessibility.announcementStringValueUserInfoKey] as? String
 					guard finishedAnnouncement == announcement else { continue }
 					return
 				}
