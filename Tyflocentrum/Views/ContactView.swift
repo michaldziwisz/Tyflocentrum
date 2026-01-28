@@ -212,7 +212,7 @@ struct ContactView: View {
 								.accessibilityElement(children: .combine)
 							}
 							else {
-								Text("Wyślij")
+								Text("Wyślij wiadomość")
 							}
 						}
 						.disabled(!canSend || viewModel.isSending)

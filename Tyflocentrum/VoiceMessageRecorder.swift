@@ -29,7 +29,9 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	private(set) var recordedFileURL: URL?
 
 	var canSend: Bool {
-		state == .recorded && recordedFileURL != nil && recordedDurationMs > 0
+		guard state == .recorded, let url = recordedFileURL else { return false }
+		let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+		return fileSize > 0
 	}
 
 	override init() {
@@ -91,6 +93,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 
 	func stopRecording() {
 		guard state == .recording else { return }
+		let elapsedTimeSnapshot = elapsedTime
 		timer?.invalidate()
 		timer = nil
 
@@ -100,14 +103,23 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			return
 		}
 
+		let durationSecondsSnapshot = recorder.currentTime
 		recorder.stop()
 		self.recorder = nil
 
-		let durationSeconds = recorder.currentTime
+		var durationSeconds = max(durationSecondsSnapshot, elapsedTimeSnapshot)
+		if durationSeconds <= 0, let url = recordedFileURL {
+			let asset = AVURLAsset(url: url)
+			let assetSeconds = asset.duration.seconds
+			if assetSeconds.isFinite, assetSeconds > 0 {
+				durationSeconds = assetSeconds
+			}
+		}
+
 		let durationMs = Int((durationSeconds * 1000.0).rounded())
-		self.recordedDurationMs = max(0, durationMs)
-		self.elapsedTime = durationSeconds
-		self.state = (recordedDurationMs > 0) ? .recorded : .idle
+		recordedDurationMs = max(0, durationMs)
+		elapsedTime = durationSeconds
+		state = canSend ? .recorded : .idle
 	}
 
 	func togglePreview() {
