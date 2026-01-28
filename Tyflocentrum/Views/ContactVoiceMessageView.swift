@@ -257,7 +257,6 @@ struct ContactVoiceMessageView: View {
 					UIAccessibility.post(notification: .announcement, argument: announcement)
 					await waitForVoiceOverAnnouncementToFinish(announcement)
 					guard !Task.isCancelled else { return }
-					}
 				}
 
 				AudioCuePlayer.shared.playStartCue()
