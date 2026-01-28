@@ -218,25 +218,41 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 
 	private func startPreview() {
 		guard let url = recordedFileURL else { return }
-		do {
-			let session = AVAudioSession.sharedInstance()
-			if session.category != .playback || session.mode != .spokenAudio {
-				try session.setCategory(.playback, mode: .spokenAudio)
-			}
-			try session.setActive(true, options: [])
+		DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+			do {
+				let player = try AVAudioPlayer(contentsOf: url)
+				player.prepareToPlay()
 
-			let player = try AVAudioPlayer(contentsOf: url)
-			player.delegate = self
-			player.prepareToPlay()
-			let didStart = player.play()
-			guard didStart else {
-				showError("Nie udało się rozpocząć odsłuchu nagrania.")
-				return
+				DispatchQueue.main.async { [weak self] in
+					guard let self else { return }
+					guard self.recordedFileURL == url else { return }
+					guard self.state == .recorded else { return }
+					do {
+						let session = AVAudioSession.sharedInstance()
+						if session.category != .playback || session.mode != .default {
+							try session.setCategory(.playback, mode: .default)
+						}
+						try session.setActive(true, options: [])
+					} catch {
+						self.showError("Nie udało się przygotować odsłuchu nagrania.")
+						return
+					}
+
+					player.delegate = self
+					let didStart = player.play()
+					guard didStart else {
+						self.showError("Nie udało się rozpocząć odsłuchu nagrania.")
+						return
+					}
+
+					self.previewPlayer = player
+					self.state = .playingPreview
+				}
+			} catch {
+				DispatchQueue.main.async { [weak self] in
+					self?.showError("Nie udało się odtworzyć nagrania.")
+				}
 			}
-			previewPlayer = player
-			state = .playingPreview
-		} catch {
-			showError("Nie udało się odtworzyć nagrania.")
 		}
 	}
 
