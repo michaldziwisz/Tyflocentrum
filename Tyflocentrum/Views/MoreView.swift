@@ -10,6 +10,8 @@ import SwiftUI
 
 struct MoreView: View {
 	@EnvironmentObject var api: TyfloAPI
+	@EnvironmentObject var audioPlayer: AudioPlayer
+	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
 	@State private var shouldShowContactForm = false
 	@State private var shouldShowNoLiveAlert = false
 
@@ -63,9 +65,19 @@ struct MoreView: View {
 			} message: {
 				Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
 			}
-			.sheet(isPresented: $shouldShowContactForm) {
-				ContactView()
+				.sheet(isPresented: $shouldShowContactForm) {
+					MagicTapHostingView(
+						rootView: ContactView()
+							.environmentObject(api)
+							.environmentObject(audioPlayer)
+							.environmentObject(magicTapCoordinator),
+						onMagicTap: {
+							magicTapCoordinator.perform {
+								audioPlayer.toggleCurrentPlayback()
+							}
+						}
+					)
+				}
 			}
 		}
 	}
-}

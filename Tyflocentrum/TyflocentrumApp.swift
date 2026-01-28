@@ -96,7 +96,7 @@ final class MagicTapCoordinator: ObservableObject {
 }
 
 @MainActor
-private final class MagicTapHostingController<Content: View>: UIHostingController<Content> {
+final class MagicTapHostingController<Content: View>: UIHostingController<Content> {
 	var onMagicTap: (() -> Bool)?
 
 	override func accessibilityPerformMagicTap() -> Bool {
@@ -104,7 +104,7 @@ private final class MagicTapHostingController<Content: View>: UIHostingControlle
 	}
 }
 
-private struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
+struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 	let rootView: Content
 	let onMagicTap: () -> Bool
 

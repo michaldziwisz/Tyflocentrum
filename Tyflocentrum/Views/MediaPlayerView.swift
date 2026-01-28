@@ -27,6 +27,7 @@ struct MediaPlayerView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject var audioPlayer: AudioPlayer
+	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
 	let podcast: URL
 	let title: String
 	let subtitle: String?
@@ -279,10 +280,20 @@ struct MediaPlayerView: View {
 				} message: {
 					Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
 				}
-				.sheet(isPresented: $shouldShowContactForm) {
-					ContactView()
+					.sheet(isPresented: $shouldShowContactForm) {
+						MagicTapHostingView(
+							rootView: ContactView()
+								.environmentObject(api)
+								.environmentObject(audioPlayer)
+								.environmentObject(magicTapCoordinator),
+							onMagicTap: {
+								magicTapCoordinator.perform {
+									audioPlayer.toggleCurrentPlayback()
+								}
+							}
+						)
+					}
 				}
-			}
 
 			Spacer()
 		}
