@@ -29,9 +29,8 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	private(set) var recordedFileURL: URL?
 
 	var canSend: Bool {
-		guard state == .recorded, let url = recordedFileURL else { return false }
-		let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-		return fileSize > 0
+		guard state == .recorded || state == .playingPreview else { return false }
+		return recordedFileIsUsable()
 	}
 
 	override init() {
@@ -119,18 +118,20 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		let durationMs = Int((durationSeconds * 1000.0).rounded())
 		recordedDurationMs = max(0, durationMs)
 		elapsedTime = durationSeconds
-		state = canSend ? .recorded : .idle
+		state = recordedFileIsUsable() ? .recorded : .idle
+	}
+
+	private func recordedFileIsUsable() -> Bool {
+		guard let url = recordedFileURL else { return false }
+		let fileSize = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+		return fileSize > 0
 	}
 
 	func togglePreview() {
 		switch state {
 		case .playingPreview:
 			stopPreviewIfNeeded()
-			if recordedDurationMs > 0 {
-				state = .recorded
-			} else {
-				state = .idle
-			}
+			state = recordedFileIsUsable() ? .recorded : .idle
 		case .recorded:
 			startPreview()
 		default:
