@@ -115,7 +115,6 @@ struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 	}
 
 	func updateUIViewController(_ uiViewController: MagicTapHostingController<Content>, context: Context) {
-		uiViewController.rootView = rootView
 		uiViewController.onMagicTap = onMagicTap
 	}
 }

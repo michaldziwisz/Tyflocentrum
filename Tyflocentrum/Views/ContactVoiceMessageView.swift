@@ -19,7 +19,6 @@ struct ContactVoiceMessageView: View {
 	@State private var startRecordingTask: Task<Void, Never>?
 	@State private var recordingTrigger: RecordingTrigger?
 	@State private var isEarModeEnabled = false
-	@State private var isProximityNear = false
 	@State private var isHoldingToTalk = false
 
 	@AccessibilityFocusState private var focusedField: Field?
@@ -161,11 +160,6 @@ struct ContactVoiceMessageView: View {
 		.accessibilityIdentifier("contactVoice.form")
 		.navigationTitle("Głosówka")
 		.navigationBarTitleDisplayMode(.inline)
-		.navigationBarBackButtonHidden(isProximityNear)
-		.allowsHitTesting(!isProximityNear)
-		.background(
-			NavigationPopGestureController(isEnabled: !isEarModeEnabled)
-		)
 		.accessibilityAction(.escape) {
 			handleEscape()
 		}
@@ -252,29 +246,28 @@ struct ContactVoiceMessageView: View {
 		recordingTrigger = trigger
 		startRecordingTask?.cancel()
 
-		audioPlayer.pause()
+		if audioPlayer.isPlaying {
+			audioPlayer.pause()
+		}
 
 		startRecordingTask = Task { @MainActor in
-			if trigger == .proximity {
-				isProximityNear = true
-			}
-
 			if trigger == .magicTap {
 				let announcement = "Nagrywaj wiadomość po sygnale."
 				if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
 					UIAccessibility.post(notification: .announcement, argument: announcement)
 					await waitForVoiceOverAnnouncementToFinish(announcement)
 					guard !Task.isCancelled else { return }
+					}
 				}
-			}
 
-			if trigger == .magicTap || trigger == .proximity {
-				let routeToSpeaker = trigger == .magicTap
-				AudioCuePlayer.shared.playStartCue(routeToSpeaker: routeToSpeaker)
+				AudioCuePlayer.shared.playStartCue()
 				playHaptic(times: 2)
 				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds + 0.1
 				try? await Task.sleep(nanoseconds: UInt64(cueDelay * 1_000_000_000))
 				guard !Task.isCancelled else { return }
+			}
+			else if trigger == .proximity {
+				playHaptic(times: 2)
 			}
 
 			await voiceRecorder.startRecording(pausing: audioPlayer)
@@ -299,9 +292,8 @@ struct ContactVoiceMessageView: View {
 		}
 		recordingTrigger = nil
 		playHaptic(times: 1)
-		if trigger == .magicTap || trigger == .proximity {
-			let routeToSpeaker = trigger == .magicTap
-			AudioCuePlayer.shared.playStopCue(routeToSpeaker: routeToSpeaker)
+		if trigger == .magicTap {
+			AudioCuePlayer.shared.playStopCue()
 		}
 	}
 
@@ -319,12 +311,10 @@ struct ContactVoiceMessageView: View {
 
 	private func disableProximityMonitoring() {
 		UIDevice.current.isProximityMonitoringEnabled = false
-		isProximityNear = false
 	}
 
 	private func handleProximityChange() {
 		let isNear = UIDevice.current.proximityState
-		isProximityNear = isNear
 
 		if isNear {
 			guard voiceRecorder.state == .idle else { return }
@@ -374,51 +364,11 @@ struct ContactVoiceMessageView: View {
 	}
 
 	private func handleEscape() {
-		switch voiceRecorder.state {
-		case .recording:
+		if voiceRecorder.state == .recording {
 			stopRecording()
-		case .idle:
-			dismiss()
-		case .recorded, .playingPreview:
-			break
+			return
 		}
-	}
-}
-
-private struct NavigationPopGestureController: UIViewControllerRepresentable {
-	let isEnabled: Bool
-
-	final class Coordinator {
-		var originalValue: Bool?
-	}
-
-	func makeCoordinator() -> Coordinator {
-		Coordinator()
-	}
-
-	func makeUIViewController(context: Context) -> UIViewController {
-		UIViewController()
-	}
-
-	func updateUIViewController(_ uiViewController: UIViewController, context: Context) {
-		DispatchQueue.main.async {
-			guard let navigationController = uiViewController.navigationController else { return }
-			guard let popGestureRecognizer = navigationController.interactivePopGestureRecognizer else { return }
-
-			if context.coordinator.originalValue == nil {
-				context.coordinator.originalValue = popGestureRecognizer.isEnabled
-			}
-			popGestureRecognizer.isEnabled = isEnabled
-		}
-	}
-
-	static func dismantleUIViewController(_ uiViewController: UIViewController, coordinator: Coordinator) {
-		DispatchQueue.main.async {
-			guard let navigationController = uiViewController.navigationController else { return }
-			guard let popGestureRecognizer = navigationController.interactivePopGestureRecognizer else { return }
-			if let original = coordinator.originalValue {
-				popGestureRecognizer.isEnabled = original
-			}
-		}
+		guard !isEarModeEnabled else { return }
+		dismiss()
 	}
 }

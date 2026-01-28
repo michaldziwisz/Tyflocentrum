@@ -48,7 +48,9 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			return
 		}
 
-		audioPlayer?.pause()
+		if audioPlayer?.isPlaying == true {
+			audioPlayer?.pause()
+		}
 
 		do {
 			let session = AVAudioSession.sharedInstance()
@@ -123,6 +125,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		recordedDurationMs = max(0, durationMs)
 		elapsedTime = durationSeconds
 		state = recordedFileIsUsable() ? .recorded : .idle
+		deactivateAudioSession()
 	}
 
 	private func recordedFileIsUsable() -> Bool {
@@ -150,6 +153,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		recordedDurationMs = 0
 		elapsedTime = 0
 		state = .idle
+		deactivateAudioSession()
 	}
 
 	#if DEBUG
@@ -181,7 +185,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		guard let url = recordedFileURL else { return }
 		do {
 			let session = AVAudioSession.sharedInstance()
-			try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetooth])
+			try session.setCategory(.playback, mode: .spokenAudio)
 			try session.setActive(true, options: [])
 
 			let player = try AVAudioPlayer(contentsOf: url)
@@ -211,6 +215,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 
 		previewPlayer?.stop()
 		previewPlayer = nil
+		deactivateAudioSession()
 	}
 
 	private func startTimer(tick: @escaping () -> Void) {
@@ -225,6 +230,12 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			try? FileManager.default.removeItem(at: url)
 		}
 		recordedFileURL = nil
+	}
+
+	private func deactivateAudioSession() {
+		let session = AVAudioSession.sharedInstance()
+		try? session.overrideOutputAudioPort(.none)
+		try? session.setActive(false, options: [.notifyOthersOnDeactivation])
 	}
 
 	private func requestMicrophonePermission() async -> Bool {
