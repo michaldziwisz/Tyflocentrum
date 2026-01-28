@@ -57,6 +57,7 @@ struct PodcastCategoriesView: View {
 								Task { await viewModel.loadMore(fetchPage: fetchPage) }
 							}
 							.disabled(viewModel.isLoadingMore)
+							.accessibilityHidden(viewModel.isLoadingMore)
 						}
 					}
 					else if viewModel.isLoadingMore {
@@ -128,14 +129,15 @@ struct AllPodcastsView: View {
 						Text(loadMoreError)
 							.foregroundColor(.secondary)
 
-						Button("Spróbuj ponownie") {
-							Task { await viewModel.loadMore(fetchPage: fetchPage) }
-						}
-						.disabled(viewModel.isLoadingMore)
+					Button("Spróbuj ponownie") {
+						Task { await viewModel.loadMore(fetchPage: fetchPage) }
 					}
+					.disabled(viewModel.isLoadingMore)
+					.accessibilityHidden(viewModel.isLoadingMore)
 				}
-				else if viewModel.isLoadingMore {
-					Section {
+			}
+			else if viewModel.isLoadingMore {
+				Section {
 						ProgressView("Ładowanie starszych treści…")
 					}
 				}

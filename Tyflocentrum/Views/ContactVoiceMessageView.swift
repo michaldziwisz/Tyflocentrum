@@ -46,6 +46,7 @@ struct ContactVoiceMessageView: View {
 					.accessibilityHint("Wpisz imię, które będzie widoczne przy wiadomości.")
 					.accessibilityFocused($focusedField, equals: .name)
 					.disabled(viewModel.isSending || isRecording)
+					.accessibilityHidden(viewModel.isSending || isRecording)
 			}
 
 			Section("Nagrywanie") {
@@ -53,6 +54,7 @@ struct ContactVoiceMessageView: View {
 					.accessibilityIdentifier("contact.voice.earMode")
 					.accessibilityHint(hasName ? "Gdy włączone, przyłożenie telefonu do ucha rozpoczyna nagrywanie, a oderwanie kończy." : "Najpierw uzupełnij imię, aby włączyć ten tryb.")
 					.disabled(viewModel.isSending || voiceRecorder.state == .playingPreview || isRecording || !hasName)
+					.accessibilityHidden(viewModel.isSending || voiceRecorder.state == .playingPreview || isRecording || !hasName)
 
 				Text("Magic Tap: rozpocznij/zatrzymaj nagrywanie. Przytrzymaj przycisk i mów, aby nagrywać bez gadania VoiceOvera.")
 					.font(.footnote)
@@ -91,6 +93,11 @@ struct ContactVoiceMessageView: View {
 						|| !hasName
 						|| (voiceRecorder.state != .idle && recordingTrigger != .holdToTalk)
 				)
+				.accessibilityHidden(
+					viewModel.isSending
+						|| !hasName
+						|| (voiceRecorder.state != .idle && recordingTrigger != .holdToTalk)
+				)
 
 				HStack {
 					if isRecording {
@@ -111,6 +118,7 @@ struct ContactVoiceMessageView: View {
 						: "Dostępne podczas nagrywania."
 				)
 				.disabled(viewModel.isSending || !isRecording)
+				.accessibilityHidden(viewModel.isSending || !isRecording)
 			}
 
 			if voiceRecorder.state == .recorded || voiceRecorder.state == .playingPreview {
@@ -257,14 +265,16 @@ struct ContactVoiceMessageView: View {
 		startRecordingTask = Task { @MainActor in
 			if trigger == .magicTap {
 				let announcement = "Nagrywaj wiadomość po sygnale."
-				if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
-					UIAccessibility.post(notification: .announcement, argument: announcement)
-					await waitForVoiceOverAnnouncementToFinish(announcement)
-					guard !Task.isCancelled else { return }
-				}
+					if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
+						UIAccessibility.post(notification: .announcement, argument: announcement)
+						await waitForVoiceOverAnnouncementToFinish(announcement)
+						guard !Task.isCancelled else { return }
+						try? await Task.sleep(nanoseconds: 200_000_000)
+						guard !Task.isCancelled else { return }
+					}
 
-				AudioCuePlayer.shared.playStartCue()
-				playHaptic(times: 2)
+					AudioCuePlayer.shared.playStartCue()
+					playHaptic(times: 2)
 				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds + 0.1
 				try? await Task.sleep(nanoseconds: UInt64(cueDelay * 1_000_000_000))
 				guard !Task.isCancelled else { return }

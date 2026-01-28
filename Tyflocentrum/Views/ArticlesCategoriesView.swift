@@ -67,6 +67,7 @@ struct ArticlesCategoriesView: View {
 								Task { await viewModel.loadMore(fetchPage: fetchPage) }
 							}
 							.disabled(viewModel.isLoadingMore)
+							.accessibilityHidden(viewModel.isLoadingMore)
 						}
 					}
 					else if viewModel.isLoadingMore {

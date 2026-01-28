@@ -39,6 +39,7 @@ struct LazyDetailedArticleView: View {
 					.accessibilityHint("Ponawia pobieranie danych.")
 					.accessibilityIdentifier("postDetail.retry")
 					.disabled(isLoading)
+					.accessibilityHidden(isLoading)
 				}
 				.frame(maxWidth: .infinity, alignment: .leading)
 				.padding()

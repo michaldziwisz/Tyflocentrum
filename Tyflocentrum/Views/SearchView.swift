@@ -167,6 +167,7 @@ struct SearchView: View {
 					.accessibilityIdentifier("search.button")
 						.accessibilityHint("Wyszukuje audycje po podanej frazie.")
 						.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+						.accessibilityHidden(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
 				}
 
 				AsyncListStatusSection(
@@ -245,6 +246,11 @@ struct SearchView: View {
 					.accessibilityHint("Ponawia wyszukiwanie dla ostatniej frazy.")
 					.accessibilityIdentifier("search.refresh")
 					.disabled(
+						viewModel.isLoading
+							|| (lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+								&& searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+					)
+					.accessibilityHidden(
 						viewModel.isLoading
 							|| (lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 								&& searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)

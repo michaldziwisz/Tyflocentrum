@@ -57,6 +57,7 @@ struct ContactTextMessageView: View {
 					}
 				}
 				.disabled(!canSend || viewModel.isSending)
+				.accessibilityHidden(!canSend && !viewModel.isSending)
 				.accessibilityIdentifier("contact.send")
 				.accessibilityHint(canSend ? "Wysyła wiadomość." : "Uzupełnij imię i wiadomość, aby wysłać.")
 			}

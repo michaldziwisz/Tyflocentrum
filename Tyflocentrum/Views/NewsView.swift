@@ -556,6 +556,7 @@ struct AsyncListStatusSection: View {
 						.accessibilityHint(retryHint)
 						.accessibilityIdentifier(retryIdentifier)
 						.disabled(isRetryDisabled)
+						.accessibilityHidden(isRetryDisabled)
 					}
 					else {
 						Button("Spróbuj ponownie") {
@@ -563,6 +564,7 @@ struct AsyncListStatusSection: View {
 						}
 						.accessibilityHint(retryHint)
 						.disabled(isRetryDisabled)
+						.accessibilityHidden(isRetryDisabled)
 					}
 				}
 			}
@@ -645,6 +647,7 @@ struct NewsView: View {
 								Task { await viewModel.loadMore(api: api) }
 							}
 							.disabled(viewModel.isLoadingMore)
+							.accessibilityHidden(viewModel.isLoadingMore)
 						}
 					}
 					else if viewModel.isLoadingMore {
