@@ -53,8 +53,8 @@ struct ContactVoiceMessageView: View {
 				Toggle("Nagrywaj po przyłożeniu telefonu do ucha", isOn: $isEarModeEnabled)
 					.accessibilityIdentifier("contact.voice.earMode")
 					.accessibilityHint(hasName ? "Gdy włączone, przyłożenie telefonu do ucha rozpoczyna nagrywanie, a oderwanie kończy." : "Najpierw uzupełnij imię, aby włączyć ten tryb.")
-					.disabled(viewModel.isSending || voiceRecorder.state == .playingPreview || isRecording || !hasName)
-					.accessibilityHidden(viewModel.isSending || voiceRecorder.state == .playingPreview || isRecording || !hasName)
+					.disabled(viewModel.isSending || isRecording || !hasName)
+					.accessibilityHidden(viewModel.isSending || isRecording || !hasName)
 
 				Text("Magic Tap: rozpocznij/zatrzymaj nagrywanie. Przytrzymaj przycisk i mów, aby nagrywać bez gadania VoiceOvera.")
 					.font(.footnote)

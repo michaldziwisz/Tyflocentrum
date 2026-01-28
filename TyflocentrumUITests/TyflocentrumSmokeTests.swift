@@ -177,6 +177,44 @@ import XCTest
 			XCTAssertFalse(textSendButton.isEnabled)
 		}
 
+		func testCanPreviewRecordedVoiceMessage() {
+			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE", "UI_TESTING_SEED_VOICE_RECORDED"])
+			app.launch()
+
+			app.tabBars.buttons["Tyfloradio"].tap()
+
+			let contactButton = app.descendants(matching: .any).matching(identifier: "more.contactRadio").firstMatch
+			XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
+			contactButton.tap()
+
+			let voiceMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.voice").firstMatch
+			XCTAssertTrue(voiceMenuItem.waitForExistence(timeout: 5))
+			voiceMenuItem.tap()
+
+			let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
+			XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+			nameField.tap()
+			nameField.typeText("UI")
+
+			let previewButton = app.descendants(matching: .any).matching(identifier: "contact.voice.preview").firstMatch
+			let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
+			XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
+			for _ in 0..<8 {
+				if previewButton.exists { break }
+				voiceForm.swipeUp()
+			}
+			XCTAssertTrue(previewButton.waitForExistence(timeout: 5))
+			XCTAssertEqual(previewButton.label, "Odsłuchaj")
+
+			previewButton.tap()
+			expectation(for: NSPredicate(format: "label == %@", "Zatrzymaj odsłuch"), evaluatedWith: previewButton)
+			waitForExpectations(timeout: 5)
+
+			previewButton.tap()
+			expectation(for: NSPredicate(format: "label == %@", "Odsłuchaj"), evaluatedWith: previewButton)
+			waitForExpectations(timeout: 5)
+		}
+
 	func testCanOpenPodcastPlayerAndSeeSeekControls() {
 		let app = makeApp()
 		app.launch()

@@ -169,15 +169,50 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 
 		cleanupRecordingFile()
 
+		let durationSeconds = max(0.05, TimeInterval(durationMs) / 1000.0)
+		let sampleRate = 44_100
 		let fileURL = FileManager.default.temporaryDirectory
 			.appendingPathComponent("ui-test-voice-\(UUID().uuidString)")
-			.appendingPathExtension("m4a")
-		try? Data("UI_TEST_VOICE".utf8).write(to: fileURL, options: .atomic)
+			.appendingPathExtension("wav")
+		let wavData = Self.makeSilentWAVData(sampleRate: sampleRate, durationSeconds: durationSeconds)
+		try? wavData.write(to: fileURL, options: .atomic)
 
 		recordedFileURL = fileURL
 		recordedDurationMs = max(1, durationMs)
 		elapsedTime = TimeInterval(recordedDurationMs) / 1000.0
 		state = .recorded
+	}
+
+	private static func makeSilentWAVData(sampleRate: Int, durationSeconds: TimeInterval) -> Data {
+		let channels: UInt16 = 1
+		let bitsPerSample: UInt16 = 16
+		let blockAlign = channels * (bitsPerSample / 8)
+		let byteRate = UInt32(sampleRate) * UInt32(blockAlign)
+		let sampleCount = max(1, Int((Double(sampleRate) * durationSeconds).rounded(.up)))
+		let dataSize = UInt32(sampleCount) * UInt32(blockAlign)
+		let riffSize = 36 + dataSize
+
+		var data = Data()
+		data.reserveCapacity(44 + Int(dataSize))
+
+		data.appendASCII("RIFF")
+		data.appendUInt32LE(riffSize)
+		data.appendASCII("WAVE")
+
+		data.appendASCII("fmt ")
+		data.appendUInt32LE(16) // PCM header size
+		data.appendUInt16LE(1) // PCM
+		data.appendUInt16LE(channels)
+		data.appendUInt32LE(UInt32(sampleRate))
+		data.appendUInt32LE(byteRate)
+		data.appendUInt16LE(blockAlign)
+		data.appendUInt16LE(bitsPerSample)
+
+		data.appendASCII("data")
+		data.appendUInt32LE(dataSize)
+
+		data.append(contentsOf: repeatElement(0, count: Int(dataSize)))
+		return data
 	}
 	#endif
 
@@ -185,7 +220,9 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		guard let url = recordedFileURL else { return }
 		do {
 			let session = AVAudioSession.sharedInstance()
-			try session.setCategory(.playback, mode: .spokenAudio)
+			if session.category != .playback || session.mode != .spokenAudio {
+				try session.setCategory(.playback, mode: .spokenAudio)
+			}
 			try session.setActive(true, options: [])
 
 			let player = try AVAudioPlayer(contentsOf: url)
@@ -198,12 +235,6 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			}
 			previewPlayer = player
 			state = .playingPreview
-
-			startTimer { [weak self] in
-				guard let self else { return }
-				guard let player = self.previewPlayer else { return }
-				self.elapsedTime = player.currentTime
-			}
 		} catch {
 			showError("Nie udało się odtworzyć nagrania.")
 		}
@@ -253,6 +284,26 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	}
 }
 
+#if DEBUG
+private extension Data {
+	mutating func appendASCII(_ string: String) {
+		if let data = string.data(using: .ascii) {
+			append(data)
+		}
+	}
+
+	mutating func appendUInt16LE(_ value: UInt16) {
+		var v = value.littleEndian
+		Swift.withUnsafeBytes(of: &v) { append(contentsOf: $0) }
+	}
+
+	mutating func appendUInt32LE(_ value: UInt32) {
+		var v = value.littleEndian
+		Swift.withUnsafeBytes(of: &v) { append(contentsOf: $0) }
+	}
+}
+#endif
+
 extension VoiceMessageRecorder: AVAudioRecorderDelegate {
 	nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
 		Task { @MainActor in
@@ -279,6 +330,7 @@ extension VoiceMessageRecorder: AVAudioPlayerDelegate {
 			self.previewPlayer = nil
 			self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
 			self.state = self.recordedFileIsUsable() ? .recorded : .idle
+			self.deactivateAudioSession()
 			if !flag {
 				self.showError("Nie udało się odtworzyć nagrania.")
 			}
