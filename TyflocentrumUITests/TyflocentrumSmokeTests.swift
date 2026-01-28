@@ -145,6 +145,10 @@ import XCTest
 			XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
 			contactButton.tap()
 
+			let voiceMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.voice").firstMatch
+			XCTAssertTrue(voiceMenuItem.waitForExistence(timeout: 5))
+			voiceMenuItem.tap()
+
 			let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
 			XCTAssertTrue(nameField.waitForExistence(timeout: 5))
 			nameField.tap()
@@ -154,13 +158,15 @@ import XCTest
 			XCTAssertTrue(voiceSendButton.waitForExistence(timeout: 5))
 			XCTAssertTrue(voiceSendButton.isEnabled)
 
+			let backButton = app.navigationBars.buttons["Kontakt"].firstMatch
+			XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+			backButton.tap()
+
+			let textMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.text").firstMatch
+			XCTAssertTrue(textMenuItem.waitForExistence(timeout: 5))
+			textMenuItem.tap()
+
 			let textSendButton = app.descendants(matching: .any).matching(identifier: "contact.send").firstMatch
-			let form = app.descendants(matching: .any).matching(identifier: "contact.form").firstMatch
-			XCTAssertTrue(form.waitForExistence(timeout: 5))
-			for _ in 0..<8 {
-				if textSendButton.exists { break }
-				form.swipeUp()
-			}
 			XCTAssertTrue(textSendButton.waitForExistence(timeout: 5))
 			XCTAssertFalse(textSendButton.isEnabled)
 		}
@@ -424,6 +430,10 @@ import XCTest
 		let contactButton = app.descendants(matching: .any).matching(identifier: "player.contactRadio").firstMatch
 		XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
 		contactButton.tap()
+
+		let textMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.text").firstMatch
+		XCTAssertTrue(textMenuItem.waitForExistence(timeout: 5))
+		textMenuItem.tap()
 
 		let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
 		XCTAssertTrue(nameField.waitForExistence(timeout: 5))

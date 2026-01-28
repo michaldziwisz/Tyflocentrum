@@ -59,6 +59,9 @@
 		BEEA97BD28E9D4BB0073E5AB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BEEA97BC28E9D4BB0073E5AB /* Assets.xcassets */; };
 		BEEA97C028E9D4BB0073E5AB /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = BEEA97BF28E9D4BB0073E5AB /* Preview Assets.xcassets */; };
 		BEEC27DB292E775700F0D869 /* ContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEC27DA292E775700F0D869 /* ContactView.swift */; };
+		F0C0A1B2C3D4E5F607182931 /* AudioCuePlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C0A1B2C3D4E5F607182930 /* AudioCuePlayer.swift */; };
+		F0C0A1B2C3D4E5F607182933 /* ContactTextMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C0A1B2C3D4E5F607182932 /* ContactTextMessageView.swift */; };
+		F0C0A1B2C3D4E5F607182935 /* ContactVoiceMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C0A1B2C3D4E5F607182934 /* ContactVoiceMessageView.swift */; };
 		BEF5F7EE292E8BE20065E572 /* ContactResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEF5F7ED292E8BE20065E572 /* ContactResponse.swift */; };
 		13B97F309E41DA3DB11FF9FB /* TyfloAPITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51AEB5EB9C8F4260E80FB3CA /* TyfloAPITests.swift */; };
 		AF48539E186525A12C570E9F /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 068F24BC7FC4CF7845F775E1 /* XCTest.framework */; };
@@ -138,6 +141,7 @@
 		A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastPlayerSheet.swift; sourceTree = "<group>"; };
 		BED1708A29200E8700F4508B /* HTMLTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLTextView.swift; sourceTree = "<group>"; };
 		BED6A4842926E14300BA378B /* AudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayer.swift; sourceTree = "<group>"; };
+		F0C0A1B2C3D4E5F607182930 /* AudioCuePlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCuePlayer.swift; sourceTree = "<group>"; };
 		CD18FC9FB6494384932AF3BD /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
 		3993A69E2CA7956518F22441 /* Favorites.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Favorites.swift; sourceTree = "<group>"; };
 		D1347120363C2B310653F610 /* AppMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppMenu.swift; sourceTree = "<group>"; };
@@ -158,6 +162,8 @@
 		ED2F0E60BF0E4CD1B0748873 /* AccessibleTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibleTextView.swift; sourceTree = "<group>"; };
 		78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLView.swift; sourceTree = "<group>"; };
 		BEEC27DA292E775700F0D869 /* ContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactView.swift; sourceTree = "<group>"; };
+		F0C0A1B2C3D4E5F607182932 /* ContactTextMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactTextMessageView.swift; sourceTree = "<group>"; };
+		F0C0A1B2C3D4E5F607182934 /* ContactVoiceMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactVoiceMessageView.swift; sourceTree = "<group>"; };
 		BEF5F7ED292E8BE20065E572 /* ContactResponse.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactResponse.swift; sourceTree = "<group>"; };
 		ECF1F44F4E7077BA610B02CD /* PodcastTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastTests.swift; sourceTree = "<group>"; };
 		E9036442801375F374C2F6B9 /* TyflocentrumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -268,6 +274,8 @@
 				BE71654029219DB700FF9A89 /* HTMLRendererHelper.swift */,
 				BEBAB45E292931BB009967A0 /* MediaPlayerView.swift */,
 				BEEC27DA292E775700F0D869 /* ContactView.swift */,
+				F0C0A1B2C3D4E5F607182932 /* ContactTextMessageView.swift */,
+				F0C0A1B2C3D4E5F607182934 /* ContactVoiceMessageView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -325,6 +333,7 @@
 					BE05F01029001CCA009069F7 /* TyfloAPI.swift */,
 					0BA3121BCB26744CEAE67FDD /* AsyncTimeout.swift */,
 					BED6A4842926E14300BA378B /* AudioPlayer.swift */,
+					F0C0A1B2C3D4E5F607182930 /* AudioCuePlayer.swift */,
 					D0C1B2A3F4E5D6C7B8A9F001 /* VoiceMessageRecorder.swift */,
 					BE2ACFFB292B67C1001914EB /* Changelog.rtf */,
 					BC1D24D02C256E5D00FB25D3 /* readme.md */,
@@ -489,6 +498,7 @@
 					BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,
 					74D0E52F50594708AD4B1AEA /* PodcastPlayerSheet.swift in Sources */,
 					BED6A4852926E14300BA378B /* AudioPlayer.swift in Sources */,
+					F0C0A1B2C3D4E5F607182931 /* AudioCuePlayer.swift in Sources */,
 					E2D3C4B5A697887766554433 /* VoiceMessageRecorder.swift in Sources */,
 					BE77EE8C29000B06002087ED /* ArticlesCategoriesView.swift in Sources */,
 					BEEA97BB28E9D4BB0073E5AB /* ContentView.swift in Sources */,
@@ -503,6 +513,8 @@
 				6E8B3030010D97CFDCD59665 /* LazyDetailedPodcastView.swift in Sources */,
 				DD8D357EC14072F7B8DCB985 /* LazyDetailedArticleView.swift in Sources */,
 				BEEC27DB292E775700F0D869 /* ContactView.swift in Sources */,
+				F0C0A1B2C3D4E5F607182933 /* ContactTextMessageView.swift in Sources */,
+				F0C0A1B2C3D4E5F607182935 /* ContactVoiceMessageView.swift in Sources */,
 				BEB8A67B291CE49C00A2836F /* DetailedCategoryView.swift in Sources */,
 				BE8A2E4C29066C7C00923FBF /* Podcast.swift in Sources */,
 				BE890DFC29087409005D8DC7 /* Category.swift in Sources */,

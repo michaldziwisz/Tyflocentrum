@@ -7,7 +7,6 @@
 
 import Foundation
 import SwiftUI
-import UIKit
 
 @MainActor
 final class ContactViewModel: ObservableObject {
@@ -92,220 +91,33 @@ final class ContactViewModel: ObservableObject {
 }
 
 struct ContactView: View {
-	@EnvironmentObject var api: TyfloAPI
-	@EnvironmentObject var audioPlayer: AudioPlayer
-	@EnvironmentObject var magicTapCoordinator: MagicTapCoordinator
 	@Environment(\.dismiss) var dismiss
-	@StateObject private var viewModel = ContactViewModel()
-	@StateObject private var voiceRecorder = VoiceMessageRecorder()
-	@AccessibilityFocusState private var focusedField: Field?
-	@State private var magicTapToken: UUID?
-
-	private enum Field: Hashable {
-		case name
-		case message
-	}
 
 	var body: some View {
-		let canSend = viewModel.canSend
-		let canSendVoice = !viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && voiceRecorder.canSend
 		NavigationView {
-			Form {
-				Section {
-					TextField("Imię", text: $viewModel.name)
-						.textContentType(.name)
-						.accessibilityIdentifier("contact.name")
-						.accessibilityHint("Wpisz imię, które będzie widoczne przy wiadomości.")
-						.accessibilityFocused($focusedField, equals: .name)
-					TextEditor(text: $viewModel.message)
-						.accessibilityLabel("Wiadomość")
-						.accessibilityIdentifier("contact.message")
-						.accessibilityHint("Wpisz treść wiadomości do redakcji.")
-						.accessibilityFocused($focusedField, equals: .message)
+			List {
+				NavigationLink {
+					ContactTextMessageView(onClose: { dismiss() })
+				} label: {
+					Label("Napisz wiadomość tekstową", systemImage: "square.and.pencil")
 				}
-				Section("Wiadomość głosowa") {
-					if voiceRecorder.state == .recording {
-						HStack {
-							ProgressView()
-							Text("Nagrywanie… \(formatTime(voiceRecorder.elapsedTime))")
-						}
-						.accessibilityElement(children: .combine)
-						.accessibilityIdentifier("contact.voice.recordingStatus")
+				.accessibilityIdentifier("contact.menu.text")
+				.accessibilityHint("Otwiera formularz wiadomości tekstowej.")
 
-						Button("Zatrzymaj") {
-							voiceRecorder.stopRecording()
-							UIAccessibility.post(notification: .announcement, argument: "Nagrywanie zakończone")
-						}
-						.accessibilityIdentifier("contact.voice.stop")
-						.accessibilityHint("Zatrzymuje nagrywanie.")
-					}
-					else if voiceRecorder.state == .recorded || voiceRecorder.state == .playingPreview {
-						Text("Długość: \(formatTime(TimeInterval(voiceRecorder.recordedDurationMs) / 1000.0))")
-							.accessibilityIdentifier("contact.voice.duration")
-
-						Button(voiceRecorder.state == .playingPreview ? "Zatrzymaj odsłuch" : "Odsłuchaj") {
-							voiceRecorder.togglePreview()
-						}
-						.accessibilityIdentifier("contact.voice.preview")
-						.accessibilityHint("Odtwarza nagraną głosówkę.")
-
-						Button("Usuń nagranie", role: .destructive) {
-							voiceRecorder.reset()
-							UIAccessibility.post(notification: .announcement, argument: "Nagranie usunięte")
-						}
-						.accessibilityIdentifier("contact.voice.delete")
-						.accessibilityHint("Usuwa nagraną głosówkę.")
-
-						Button {
-							Task {
-								guard let url = voiceRecorder.recordedFileURL else { return }
-								let didSend = await viewModel.sendVoice(
-									using: api,
-									audioFileURL: url,
-									durationMs: voiceRecorder.recordedDurationMs
-								)
-								guard didSend else { return }
-
-								voiceRecorder.reset()
-								UIAccessibility.post(notification: .announcement, argument: "Głosówka wysłana pomyślnie")
-								dismiss()
-							}
-						} label: {
-							if viewModel.isSending {
-								HStack {
-									ProgressView()
-									Text("Wysyłanie…")
-								}
-								.accessibilityElement(children: .combine)
-							} else {
-								Text("Wyślij głosówkę")
-							}
-						}
-						.disabled(!canSendVoice || viewModel.isSending)
-						.accessibilityIdentifier("contact.voice.send")
-						.accessibilityHint(
-							canSendVoice ? "Wysyła głosówkę do redakcji." : "Wpisz imię i nagraj głosówkę, aby wysłać."
-						)
-					}
-					else {
-						Button("Nagraj") {
-							Task {
-								await voiceRecorder.startRecording(pausing: audioPlayer)
-								if voiceRecorder.state == .recording {
-									UIAccessibility.post(notification: .announcement, argument: "Rozpoczęto nagrywanie")
-								}
-							}
-						}
-						.accessibilityIdentifier("contact.voice.record")
-						.accessibilityHint("Rozpoczyna nagrywanie wiadomości głosowej. Maksymalnie 20 minut.")
-						.disabled(viewModel.isSending)
-					}
+				NavigationLink {
+					ContactVoiceMessageView(onClose: { dismiss() })
+				} label: {
+					Label("Nagraj wiadomość głosową", systemImage: "mic")
 				}
-				Section {
-					Button {
-						Task {
-							let didSend = await viewModel.send(using: api)
-							guard didSend else { return }
-
-							voiceRecorder.reset()
-							UIAccessibility.post(notification: .announcement, argument: "Wiadomość wysłana pomyślnie")
-							dismiss()
-						}
-					} label: {
-						if viewModel.isSending {
-							HStack {
-								ProgressView()
-								Text("Wysyłanie…")
-							}
-							.accessibilityElement(children: .combine)
-						} else {
-							Text("Wyślij wiadomość")
-						}
-					}
-					.disabled(!canSend || viewModel.isSending)
-					.accessibilityIdentifier("contact.send")
-					.accessibilityHint(canSend ? "Wysyła wiadomość." : "Uzupełnij imię i wiadomość, aby wysłać.")
-					.alert("Błąd", isPresented: $viewModel.shouldShowError) {
-						Button("OK") {}
-					} message: {
-						Text(viewModel.errorMessage)
-					}
-				}
+				.accessibilityIdentifier("contact.menu.voice")
+				.accessibilityHint("Otwiera ekran nagrywania głosówki.")
 			}
-			.accessibilityIdentifier("contact.form")
 			.navigationTitle("Kontakt")
 			.toolbar {
-				Button("Anuluj") {
-					voiceRecorder.reset()
-					dismiss()
-				}
-				.accessibilityIdentifier("contact.cancel")
-				.accessibilityHint("Zamyka formularz bez wysyłania.")
+				Button("Anuluj") { dismiss() }
+					.accessibilityIdentifier("contact.cancel")
+					.accessibilityHint("Zamyka okno kontaktu.")
 			}
-		}
-		.alert("Błąd", isPresented: $voiceRecorder.shouldShowError) {
-			Button("OK") {}
-		} message: {
-			Text(voiceRecorder.errorMessage)
-		}
-		.task {
-			focusedField = .name
-			#if DEBUG
-			if ProcessInfo.processInfo.arguments.contains("UI_TESTING_SEED_VOICE_RECORDED") {
-				voiceRecorder.seedRecordedForUITesting()
-			}
-			#endif
-		}
-		.onChange(of: viewModel.shouldShowError) { shouldShowError in
-			guard !shouldShowError else { return }
-			focusedField = .message
-		}
-		.onAppear {
-			guard magicTapToken == nil else { return }
-			magicTapToken = magicTapCoordinator.push {
-				guard !viewModel.isSending else { return true }
-
-				if voiceRecorder.state == .recording {
-					voiceRecorder.stopRecording()
-					playHaptic(times: 1)
-					return true
-				}
-
-				Task {
-					await voiceRecorder.startRecording(pausing: audioPlayer)
-					guard voiceRecorder.state == .recording else { return }
-					playHaptic(times: 2)
-				}
-				return true
-			}
-		}
-		.onDisappear {
-			if let magicTapToken {
-				magicTapCoordinator.remove(magicTapToken)
-				self.magicTapToken = nil
-			}
-			voiceRecorder.reset()
-		}
-	}
-
-	private func formatTime(_ seconds: TimeInterval) -> String {
-		guard seconds.isFinite, seconds > 0 else { return "00:00" }
-		let total = Int(seconds.rounded(.down))
-		let m = total / 60
-		let s = total % 60
-		return String(format: "%02d:%02d", m, s)
-	}
-
-	private func playHaptic(times: Int) {
-		guard times > 0 else { return }
-		let generator = UIImpactFeedbackGenerator(style: .light)
-		generator.prepare()
-		generator.impactOccurred()
-
-		guard times > 1 else { return }
-		DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
-			generator.prepare()
-			generator.impactOccurred()
 		}
 	}
 }
