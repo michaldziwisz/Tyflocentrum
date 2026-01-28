@@ -20,6 +20,8 @@ struct ContactVoiceMessageView: View {
 	@State private var recordingTrigger: RecordingTrigger?
 	@State private var isEarModeEnabled = false
 	@State private var isHoldingToTalk = false
+	@State private var isHoldToTalkLocked = false
+	@State private var holdToTalkStartTask: Task<Void, Never>?
 
 	@AccessibilityFocusState private var focusedField: Field?
 
@@ -63,31 +65,19 @@ struct ContactVoiceMessageView: View {
 
 				HStack {
 					Image(systemName: "mic.fill")
-					Text(isHoldingToTalk ? "Mów… (puść, aby zakończyć)" : "Przytrzymaj i mów")
+					Text(holdToTalkVisualLabel(isRecording: isRecording))
 						.fontWeight(.semibold)
 				}
 				.frame(maxWidth: .infinity, minHeight: 56)
 				.contentShape(Rectangle())
 				.background(Color.accentColor.opacity(0.12))
 				.cornerRadius(12)
-				.onLongPressGesture(
-					minimumDuration: 0.2,
-					maximumDistance: 24,
-					pressing: { pressing in
-						isHoldingToTalk = pressing
-						if !pressing {
-							if recordingTrigger == .holdToTalk {
-								stopRecording()
-							}
-						}
-					},
-					perform: {
-						startRecording(trigger: .holdToTalk, announceBeforeStart: false)
-					}
-				)
+				.gesture(makeHoldToTalkGesture(hasName: hasName))
+				.accessibilityElement(children: .ignore)
+				.accessibilityLabel(holdToTalkAccessibilityLabel(isRecording: isRecording))
 				.accessibilityAddTraits(.isButton)
 				.accessibilityIdentifier("contact.voice.holdToTalk")
-				.accessibilityHint("Dwukrotnie stuknij i przytrzymaj, aby mówić. Puść, aby zakończyć.")
+				.accessibilityHint("Przytrzymaj, aby mówić. Puść, aby zakończyć. Przeciągnij w górę, aby zablokować nagrywanie.")
 				.disabled(
 					viewModel.isSending
 						|| !hasName
@@ -274,20 +264,20 @@ struct ContactVoiceMessageView: View {
 					}
 
 					AudioCuePlayer.shared.playStartCue()
-					playHaptic(times: 2)
+					playHaptic(times: 2, style: .heavy)
 				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds + 0.1
 				try? await Task.sleep(nanoseconds: UInt64(cueDelay * 1_000_000_000))
 				guard !Task.isCancelled else { return }
-			}
-			else if trigger == .proximity {
-				playHaptic(times: 2)
 			}
 
 			await voiceRecorder.startRecording(pausing: audioPlayer)
 
 			if voiceRecorder.state == .recording {
 				if trigger == .holdToTalk {
-					playHaptic(times: 1)
+					playHaptic(times: 1, style: .heavy)
+				}
+				if trigger == .proximity {
+					playHaptic(times: 2, style: .heavy)
 				}
 			} else {
 				recordingTrigger = nil
@@ -299,12 +289,15 @@ struct ContactVoiceMessageView: View {
 		let trigger = recordingTrigger
 		startRecordingTask?.cancel()
 		startRecordingTask = nil
+		holdToTalkStartTask?.cancel()
+		holdToTalkStartTask = nil
 
 		if voiceRecorder.state == .recording {
 			voiceRecorder.stopRecording()
 		}
 		recordingTrigger = nil
-		playHaptic(times: 1)
+		isHoldToTalkLocked = false
+		playHaptic(times: 1, style: .medium)
 		if trigger == .magicTap {
 			AudioCuePlayer.shared.playStopCue()
 		}
@@ -313,7 +306,10 @@ struct ContactVoiceMessageView: View {
 	private func resetRecording() {
 		startRecordingTask?.cancel()
 		startRecordingTask = nil
+		holdToTalkStartTask?.cancel()
+		holdToTalkStartTask = nil
 		recordingTrigger = nil
+		isHoldToTalkLocked = false
 		voiceRecorder.reset()
 	}
 
@@ -337,6 +333,71 @@ struct ContactVoiceMessageView: View {
 			guard recordingTrigger == .proximity else { return }
 			stopRecording()
 		}
+	}
+
+	private func makeHoldToTalkGesture(hasName: Bool) -> some Gesture {
+		DragGesture(minimumDistance: 0, coordinateSpace: .local)
+			.onChanged { value in
+				guard !viewModel.isSending, hasName else { return }
+
+				if !isHoldingToTalk {
+					isHoldingToTalk = true
+				}
+
+				if voiceRecorder.state == .idle, holdToTalkStartTask == nil, !isHoldToTalkLocked {
+					holdToTalkStartTask = Task { @MainActor in
+						try? await Task.sleep(nanoseconds: 200_000_000)
+						guard !Task.isCancelled else { return }
+						guard isHoldingToTalk else { return }
+						guard voiceRecorder.state == .idle else { return }
+						startRecording(trigger: .holdToTalk, announceBeforeStart: false)
+						holdToTalkStartTask = nil
+					}
+				}
+
+				guard !isHoldToTalkLocked else { return }
+				guard voiceRecorder.state == .recording, recordingTrigger == .holdToTalk else { return }
+				if value.translation.height <= -60 {
+					isHoldToTalkLocked = true
+					playHaptic(times: 1, style: .heavy)
+					if UIAccessibility.isVoiceOverRunning {
+						UIAccessibility.post(notification: .announcement, argument: "Nagrywanie zablokowane")
+					}
+				}
+			}
+			.onEnded { _ in
+				isHoldingToTalk = false
+				holdToTalkStartTask?.cancel()
+				holdToTalkStartTask = nil
+
+				guard recordingTrigger == .holdToTalk else { return }
+				guard voiceRecorder.state == .recording else { return }
+				guard !isHoldToTalkLocked else { return }
+				stopRecording()
+			}
+	}
+
+	private func holdToTalkVisualLabel(isRecording: Bool) -> String {
+		if isHoldToTalkLocked, recordingTrigger == .holdToTalk, isRecording {
+			return "Nagrywanie zablokowane"
+		}
+		if isHoldingToTalk, recordingTrigger == .holdToTalk, isRecording {
+			return "Mów… (puść, aby zakończyć)"
+		}
+		if isHoldingToTalk, voiceRecorder.state == .idle {
+			return "Trzymaj…"
+		}
+		return "Przytrzymaj i mów"
+	}
+
+	private func holdToTalkAccessibilityLabel(isRecording: Bool) -> String {
+		if isHoldToTalkLocked, recordingTrigger == .holdToTalk, isRecording {
+			return "Nagrywanie zablokowane"
+		}
+		if recordingTrigger == .holdToTalk, isRecording {
+			return "Mów. Puść, aby zakończyć."
+		}
+		return "Przytrzymaj i mów"
 	}
 
 	private func formatTime(_ seconds: TimeInterval) -> String {
@@ -363,9 +424,9 @@ struct ContactVoiceMessageView: View {
 		}
 	}
 
-	private func playHaptic(times: Int) {
+	private func playHaptic(times: Int, style: UIImpactFeedbackGenerator.FeedbackStyle = .medium) {
 		guard times > 0 else { return }
-		let generator = UIImpactFeedbackGenerator(style: .light)
+		let generator = UIImpactFeedbackGenerator(style: style)
 		generator.prepare()
 		generator.impactOccurred()
 
