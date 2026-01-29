@@ -14,6 +14,9 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 - Usunięto martwy, legacy kod renderowania HTML (`HTMLTextView`, `HTMLRendererHelper`).
 - Push (na teraz): UI i automatyczna rejestracja powiadomień są ukryte/wyłączone w buildzie Release (żeby nie dostarczać „pozornej” funkcji).
 - Zoptymalizowano `Podcast.PodcastTitle.plainText` (memoizacja + szybka ścieżka bez parsowania HTML) i dodano testy regresji.
+- Migracja `NavigationView` → `NavigationStack` w głównych widokach.
+- `TyfloAPI`: dla requestów WordPress domyślne `cachePolicy = .useProtocolCachePolicy` (a dla endpointów „na żywo” wymuszone `reloadIgnoringLocalCacheData`) + testy regresji.
+- Ujednolicono formatowanie w kilku kluczowych plikach wskazanych w review (m.in. `TyfloAPI`, `DetailedPodcastView`, `VoiceMessageRecorder`).
 
 ## Wymaga Apple Developer Program / zewnętrznej konfiguracji
 
@@ -30,6 +33,5 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 
 ## Kandydaci na kolejne iteracje (nie blokują 1.0)
 
-- Ujednolicenie formatowania (SwiftFormat/SwiftLint) w wybranych plikach wskazanych w review.
-- Migracja `NavigationView` → `NavigationStack`.
-- Rozważenie cache (URLCache / in‑memory) dla list, jeśli pojawią się problemy z energią/szybkością.
+- Dołożyć narzędzie do automatycznego formatowania (np. SwiftFormat/SwiftLint) i ustandaryzować styl w całym repo.
+- Rozważyć cache „prawdziwy” (in‑memory + TTL) dla endpointów z `cache-control: no-store` (jeśli pojawią się problemy z energią/szybkością).
