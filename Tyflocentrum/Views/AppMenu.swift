@@ -6,45 +6,37 @@ struct AppMenuContainer<Content: View>: View {
 	@State private var shouldShowSettings = false
 
 	var body: some View {
-		ZStack {
-			content
-		}
-		.toolbar {
-			ToolbarItem(placement: .navigationBarLeading) {
-				Menu {
-					Button {
-						shouldShowFavorites = true
-					} label: {
-						Label("Ulubione", systemImage: "star.fill")
-					}
-					.accessibilityIdentifier("app.menu.favorites")
+		content
+			.toolbar {
+				ToolbarItem(placement: .navigationBarLeading) {
+					Menu {
+						Button {
+							shouldShowFavorites = true
+						} label: {
+							Label("Ulubione", systemImage: "star.fill")
+						}
+						.accessibilityIdentifier("app.menu.favorites")
 
-					Button {
-						shouldShowSettings = true
+						Button {
+							shouldShowSettings = true
+						} label: {
+							Label("Ustawienia", systemImage: "gearshape.fill")
+						}
+						.accessibilityIdentifier("app.menu.settings")
 					} label: {
-						Label("Ustawienia", systemImage: "gearshape.fill")
+						Label("Menu", systemImage: "line.3.horizontal")
+							.labelStyle(.iconOnly)
 					}
-					.accessibilityIdentifier("app.menu.settings")
-				} label: {
-					Label("Menu", systemImage: "line.3.horizontal")
-						.labelStyle(.iconOnly)
+					.accessibilityHint("Otwiera menu aplikacji.")
+					.accessibilityIdentifier("app.menu")
 				}
-				.accessibilityHint("Otwiera menu aplikacji.")
-				.accessibilityIdentifier("app.menu")
 			}
-		}
-		.background(
-			NavigationLink(destination: FavoritesView(), isActive: $shouldShowFavorites) {
-				EmptyView()
+			.navigationDestination(isPresented: $shouldShowFavorites) {
+				FavoritesView()
 			}
-			.hidden()
-		)
-		.background(
-			NavigationLink(destination: SettingsView(), isActive: $shouldShowSettings) {
-				EmptyView()
+			.navigationDestination(isPresented: $shouldShowSettings) {
+				SettingsView()
 			}
-			.hidden()
-		)
 	}
 }
 
