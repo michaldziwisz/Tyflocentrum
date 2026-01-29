@@ -1,6 +1,6 @@
 # Wiadomości głosowe do TyfloRadia
 
-Status: obsługa głosówek jest zaimplementowana w aplikacji iOS. Panel kontaktowy (serwer) wymaga wdrożenia zmian opisanych w tym dokumencie.
+Status (2026-01-29): obsługa głosówek jest zaimplementowana w Tyflocentrum (iOS). Panel kontaktowy musi obsługiwać endpointy opisane poniżej (w repo `/mnt/d/projekty/kontakt/` są one zaimplementowane).
 
 ## Cel
 - Dodać w Tyflocentrum możliwość nagrania **głosówki** i wysłania jej do panelu kontaktowego TyfloRadia.
@@ -10,6 +10,19 @@ Status: obsługa głosówek jest zaimplementowana w aplikacji iOS. Panel kontakt
   - mają dawać się usuwać pojedynczo (jak komentarze) oraz przy zakończeniu audycji,
   - mają mieć standardowy odtwarzacz HTML5 (play/pause, scrub, download).
 - Zmiany muszą być **additive** (brak regresji dla istniejących endpointów i innych aplikacji korzystających z panelu).
+
+## Jak działa w aplikacji (Tyflocentrum)
+
+- Wejście: Tyfloradio → Kontakt → „Nagraj wiadomość głosową”.
+- Wymagane jest imię (podpis).
+- Nagrywanie: trzy sposoby start/stop:
+  - **Magic Tap**: zapowiedź VoiceOver → sygnał → nagrywanie; kolejny Magic Tap kończy (sygnał + haptyka).
+  - **Przytrzymaj i mów**: nagrywanie bez gadania VoiceOvera; puść, aby zakończyć; przeciągnij w górę, aby zablokować nagrywanie.
+  - **Tryb ucha**: przyłożenie telefonu do ucha rozpoczyna, oderwanie kończy.
+- Dogrywanie (append): po nagraniu możesz dograć kolejne fragmenty — aplikacja łączy je w jeden plik (może chwilę trwać; UI pokazuje „Przygotowywanie nagrania…”).
+- Odsłuch: „Odsłuchaj / Zatrzymaj odsłuch”.
+- Usuwanie: „Usuń nagranie”.
+- Przerwy audio (np. połączenie telefoniczne/CallKit): nagrywanie jest zatrzymywane i **nie** jest automatycznie wznawiane po zakończeniu przerwy.
 
 ## Kontrakt API (w skrócie)
 
@@ -31,13 +44,17 @@ Status: obsługa głosówek jest zaimplementowana w aplikacji iOS. Panel kontakt
 
 ## Research (current state)
 - Panel kontaktowy: `/mnt/d/projekty/kontakt/`
-  - `json.php` obsługuje `ac=current|add|del|create|dispose|list|schedule|setschedule`.
+  - `json.php` obsługuje m.in. `ac=current|add|addvoice|voice|del|create|dispose|list|schedule|setschedule`.
   - `functions.php` trzyma dane w pliku `._tp.dat` jako `TPData` z listą `TPComment` (serializacja PHP).
+  - audio jest trzymane w `._tp_voice/` (tworzone z prawami `0700`), a katalog jest blokowany przed dostępem z zewnątrz.
   - Admin: uwierzytelnienie przez `?pwd=...` → sesja `tp_session` → `isAdmin()`.
   - `admin.js` odświeża `ac=list` i renderuje listę komentarzy; usuwa po indeksie.
 - iOS:
-  - `Tyflocentrum/Views/ContactView.swift` – formularz „Kontakt” (imię + wiadomość).
-  - `Tyflocentrum/TyfloAPI.swift` – `contactRadio()` wysyła JSON do `https://kontakt.tyflopodcast.net/json.php?ac=add`.
+  - `Tyflocentrum/Views/ContactView.swift` – menu „Kontakt” (tekst / głosówka).
+  - `Tyflocentrum/Views/ContactTextMessageView.swift` – formularz wiadomości tekstowej.
+  - `Tyflocentrum/Views/ContactVoiceMessageView.swift` – nagrywanie/odsłuch/wyślij głosówkę + tryby nagrywania.
+  - `Tyflocentrum/VoiceMessageRecorder.swift` – logika nagrywania + dogrywania (łączenie fragmentów).
+  - `Tyflocentrum/TyfloAPI.swift` – `contactRadio()` wysyła JSON do `https://kontakt.tyflopodcast.net/json.php?ac=add`, a `contactRadioVoice()` wysyła multipart do `...&ac=addvoice`.
 
 ## Analysis
 ### Options (backend)
@@ -107,23 +124,23 @@ Kod panelu jest w osobnym katalogu/repo: `/mnt/d/projekty/kontakt/`.
    - zachować istniejące „Usuń”.
 
 ## Implementacja: iOS (Tyflocentrum)
-1) UI w `ContactView`:
-   - sekcja „Wiadomość tekstowa” (bez zmian),
-   - sekcja „Wiadomość głosowa”:
-     - przyciski: `Nagraj` / `Zatrzymaj` / `Odsłuchaj` / `Usuń nagranie` / `Wyślij głosówkę`,
-     - stan i komunikaty VO: czas nagrania, limit 20 min, błąd uprawnień.
+1) UI:
+   - `ContactView` jest menu wyboru: wiadomość tekstowa / głosówka,
+   - `ContactTextMessageView` – formularz tekstowy (imię + wiadomość),
+   - `ContactVoiceMessageView` – ekran nagrywania głosówki (odsłuch, usunięcie, wysyłka) + tryby nagrywania (Magic Tap / przytrzymaj / ucho) i dogrywanie.
 2) Nagrywanie:
    - `AVAudioRecorder` do `.m4a` (AAC-LC), mono, np. 44.1kHz, bitrate ~128–192 kbps.
-   - `AVAudioSession` `.playAndRecord` + obsługa route changes/interruption.
+   - `AVAudioSession` `.playAndRecord` + obsługa interruption (nagrywanie jest zatrzymywane i nie jest wznawiane automatycznie).
+   - Dogrywanie: kolejne fragmenty są łączone w jeden plik; w trakcie łączenia UI pokazuje stan przetwarzania.
    - `NSMicrophoneUsageDescription` w `Info.plist`.
 3) Upload:
    - `multipart/form-data` do `json.php?ac=addvoice`.
    - pola: `author`, `duration_ms`, `audio` (plik).
    - error handling: czytelny komunikat (VO) + retry.
 4) Testy (iOS):
-   - testy unit dla budowania requestu multipart (boundary, pola, MIME),
-   - testy logiki stanu recorder/upload (z protokołem `VoiceRecorder` i fejkową implementacją dla testów),
-   - testy UI: czy w trybie bez mikrofonu pokazujemy sensowny błąd (bez realnego nagrywania w CI).
+   - unit: `MultipartFormDataBuilderTests`, `TyfloAPITests.testContactRadioVoiceUsesAddvoiceAndMultipartContentType`, `VoiceMessageRecorderAudioSessionTests`,
+   - UI smoke: wejście w ekran głosówki + odsłuch nagrania w trybie `UI_TESTING_SEED_VOICE_RECORDED`,
+   - CI nie nagrywa realnego audio (brak mikrofonu) — nagranie jest seedowane na potrzeby testów UI.
 
 ## Testy do wykonania (po wdrożeniu serwera)
 - iOS: `xcodebuild test` (unit + UI smoke).

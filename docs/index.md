@@ -9,4 +9,4 @@ README w tym repo jest celowo utrzymywane **krótkie i stabilne**. Szczegóły, 
 - Architektura, testy, CI i repo layout: [docs/development.md](development.md)
 
 ## Dokumenty funkcjonalne
-- Wiadomości głosowe do TyfloRadia (kontrakt + wdrożenie panelu): [docs/voice-messages.md](voice-messages.md)
+- Wiadomości głosowe do TyfloRadia (zachowanie w aplikacji + kontrakt + wdrożenie panelu): [docs/voice-messages.md](voice-messages.md)

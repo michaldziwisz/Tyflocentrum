@@ -21,7 +21,7 @@ Aplikacja jest projektowana z naciskiem na **dostępność (VoiceOver)** i wygod
 - **Odtwarzacz**: play/pause, przewijanie ±30s, suwak pozycji, prędkość do 3.0x, wznawianie.
 - **Ulubione**: podcasty, artykuły (w tym z czasopisma), tematy (znaczniki czasu), linki.
 - **Ustawienia**: m.in. pozycja etykiety typu treści w komunikatach VoiceOver, zapamiętywanie prędkości.
-- **Kontakt z Tyfloradiem**: tekst + (jeśli panel jest wdrożony) możliwość wysłania głosówki.
+- **Kontakt z Tyfloradiem**: wiadomość tekstowa lub głosowa (nagrywanie, odsłuch, dogrywanie, wysyłka).
 
 ## Uruchomienie z Xcode (najprostsze)
 
@@ -48,5 +48,4 @@ Domyślnie plik trafia do `artifacts/tyflocentrum.ipa`.
 
 ## Wiadomości głosowe do Tyfloradia
 
-Opcja głosówek wymaga wdrożonego panelu kontaktowego (serwer). Kontrakt i notatki wdrożeniowe: [docs/voice-messages.md](voice-messages.md).
-
+Opcja głosówek wymaga panelu kontaktowego (serwer) obsługującego endpointy `addvoice` / `voice`. Kontrakt i notatki wdrożeniowe: [docs/voice-messages.md](voice-messages.md).
