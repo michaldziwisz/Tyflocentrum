@@ -34,6 +34,7 @@
 		BE77EE8C29000B06002087ED /* ArticlesCategoriesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE77EE8B29000B06002087ED /* ArticlesCategoriesView.swift */; };
 		BE77EE8E29000B2C002087ED /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE77EE8D29000B2C002087ED /* SearchView.swift */; };
 		BE77EE9029000B39002087ED /* MoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE77EE8F29000B39002087ED /* MoreView.swift */; };
+		F0C0A1B2C3D4E5F607182941 /* RadioScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C0A1B2C3D4E5F607182940 /* RadioScheduleView.swift */; };
 		BE890DFC29087409005D8DC7 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE890DFB29087409005D8DC7 /* Category.swift */; };
 		BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE890DFD29087659005D8DC7 /* ShortCategoryView.swift */; };
 		BE8A2E4C29066C7C00923FBF /* Podcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE8A2E4B29066C7C00923FBF /* Podcast.swift */; };
@@ -128,6 +129,7 @@
 		BE77EE8B29000B06002087ED /* ArticlesCategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticlesCategoriesView.swift; sourceTree = "<group>"; };
 		BE77EE8D29000B2C002087ED /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		BE77EE8F29000B39002087ED /* MoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MoreView.swift; sourceTree = "<group>"; };
+		F0C0A1B2C3D4E5F607182940 /* RadioScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioScheduleView.swift; sourceTree = "<group>"; };
 		BE890DFB29087409005D8DC7 /* Category.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Category.swift; sourceTree = "<group>"; };
 		BE890DFD29087659005D8DC7 /* ShortCategoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortCategoryView.swift; sourceTree = "<group>"; };
 		BE8A2E4B29066C7C00923FBF /* Podcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Podcast.swift; sourceTree = "<group>"; };
@@ -264,6 +266,7 @@
 				BE77EE8B29000B06002087ED /* ArticlesCategoriesView.swift */,
 				BE77EE8D29000B2C002087ED /* SearchView.swift */,
 				BE77EE8F29000B39002087ED /* MoreView.swift */,
+				F0C0A1B2C3D4E5F607182940 /* RadioScheduleView.swift */,
 				BED1708A29200E8700F4508B /* HTMLTextView.swift */,
 				BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */,
 				A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */,
@@ -503,6 +506,7 @@
 					BE77EE8C29000B06002087ED /* ArticlesCategoriesView.swift in Sources */,
 					BEEA97BB28E9D4BB0073E5AB /* ContentView.swift in Sources */,
 					BE77EE9029000B39002087ED /* MoreView.swift in Sources */,
+					F0C0A1B2C3D4E5F607182941 /* RadioScheduleView.swift in Sources */,
 				BEA9ECD429204CD400718254 /* DetailedArticleCategoryView.swift in Sources */,
 				BE77EE8E29000B2C002087ED /* SearchView.swift in Sources */,
 				BEC9AB97292E56FF009907EB /* Schedule.swift in Sources */,

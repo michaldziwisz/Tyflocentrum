@@ -4,7 +4,7 @@ Tyflocentrum to aplikacja iOS napisana w **SwiftUI**, która agreguje i udostęp
 
 - **Tyflopodcast**: podcasty + komentarze + dodatki do odcinków (znaczniki czasu, linki),
 - **Tyfloświat**: artykuły + **czasopismo TyfloŚwiat** (roczniki, numery, spis treści),
-- **Tyfloradio**: stream na żywo + kontakt z radiem (tekstowo i głosowo).
+- **Tyfloradio**: stream na żywo + ramówka + kontakt z radiem (tekstowo i głosowo).
 
 Aplikacja jest projektowana z naciskiem na **dostępność (VoiceOver)** i wygodę odsłuchu (pilot systemowy, wznawianie, prędkość).
 

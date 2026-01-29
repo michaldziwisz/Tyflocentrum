@@ -48,6 +48,18 @@ import Foundation
 			let totalPages: Int?
 		}
 
+		struct RadioSchedule: Decodable, Equatable {
+			let available: Bool
+			let text: String?
+			let error: String?
+
+			init(available: Bool, text: String?, error: String? = nil) {
+				self.available = available
+				self.text = text
+				self.error = error
+			}
+		}
+
 	private func makeWPURL(baseURL: URL, path: String, queryItems: [URLQueryItem]) -> URL? {
 		guard var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false) else { return nil }
 		components.queryItems = queryItems.isEmpty ? nil : queryItems
@@ -559,6 +571,27 @@ import Foundation
 		catch {
 			print("\(error.localizedDescription)\n\(url.absoluteString)")
 			return (false, Availability(available: false, title: nil))
+		}
+	}
+
+	func getRadioSchedule() async -> (Bool, RadioSchedule) {
+		guard var components = URLComponents(url: tyfloPodcastAPIURL, resolvingAgainstBaseURL: false) else {
+			return (false, RadioSchedule(available: false, text: nil, error: "Nie udało się pobrać ramówki. Spróbuj ponownie."))
+		}
+		components.queryItems = [URLQueryItem(name: "ac", value: "schedule")]
+		guard let url = components.url else {
+			return (false, RadioSchedule(available: false, text: nil, error: "Nie udało się pobrać ramówki. Spróbuj ponownie."))
+		}
+		do {
+			let decodedResponse: RadioSchedule = try await fetch(url)
+			if let error = decodedResponse.error, !error.isEmpty {
+				return (false, decodedResponse)
+			}
+			return (true, decodedResponse)
+		}
+		catch {
+			print("\(error.localizedDescription)\n\(url.absoluteString)")
+			return (false, RadioSchedule(available: false, text: nil, error: "Nie udało się pobrać ramówki. Spróbuj ponownie."))
 		}
 	}
 	func contactRadio(as name: String, with message: String) async -> (Bool, String?) {

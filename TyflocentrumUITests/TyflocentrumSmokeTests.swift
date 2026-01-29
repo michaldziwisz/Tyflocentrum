@@ -135,6 +135,23 @@ import XCTest
 			XCTAssertEqual(contactButton.label, "Skontaktuj się z Tyfloradiem")
 		}
 
+	func testCanOpenRadioScheduleFromMoreTab() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Tyfloradio"].tap()
+
+		let scheduleButton = app.descendants(matching: .any).matching(identifier: "more.schedule").firstMatch
+		XCTAssertTrue(scheduleButton.waitForExistence(timeout: 5))
+		scheduleButton.tap()
+
+		let scheduleView = app.descendants(matching: .any).matching(identifier: "radioSchedule.view").firstMatch
+		XCTAssertTrue(scheduleView.waitForExistence(timeout: 5))
+
+		let scheduleText = app.descendants(matching: .any).matching(identifier: "radioSchedule.text").firstMatch
+		XCTAssertTrue(scheduleText.waitForExistence(timeout: 5))
+	}
+
 		func testCanSendVoiceMessageWhenTextMessageIsEmpty() {
 			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE", "UI_TESTING_SEED_VOICE_RECORDED", "UI_TESTING_CONTACT_MESSAGE_WHITESPACE"])
 			app.launch()

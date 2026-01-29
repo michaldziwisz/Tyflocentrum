@@ -452,6 +452,13 @@ private final class UITestURLProtocol: URLProtocol {
 			if action == "add" {
 				return (200, #"{"author":"UI","comment":"Test","error":null}"#.data(using: .utf8) ?? Data())
 			}
+
+			if action == "schedule" {
+				return (
+					200,
+					#"{"available":true,"text":"Test ramówka\nPoniedziałek 10:00 - Audycja\nWtorek 12:00 - Audycja"}"#.data(using: .utf8) ?? Data()
+				)
+			}
 		}
 
 		return (200, Data("[]".utf8))

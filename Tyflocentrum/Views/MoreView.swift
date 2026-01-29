@@ -44,6 +44,16 @@ struct MoreView: View {
 				.accessibilityHint("Otwiera odtwarzacz strumienia na żywo.")
 				.accessibilityIdentifier("more.tyfloradio")
 
+				NavigationLink {
+					RadioScheduleView()
+				} label: {
+					Label("Sprawdź ramówkę", systemImage: "calendar")
+						.frame(maxWidth: .infinity, minHeight: 56)
+				}
+				.buttonStyle(.bordered)
+				.accessibilityHint("Pokazuje ramówkę Tyfloradia.")
+				.accessibilityIdentifier("more.schedule")
+
 				Button {
 					Task {
 						await performLiveCheck()

@@ -602,6 +602,35 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
+	func testGetRadioScheduleUsesCorrectQueryAndParsesText() async {
+		let requestMade = expectation(description: "request made")
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			XCTAssertEqual(url.host, "kontakt.tyflopodcast.net")
+			XCTAssertEqual(request.httpMethod ?? "GET", "GET")
+
+			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
+			let items = components.queryItems ?? []
+			XCTAssertEqual(items.first(where: { $0.name == "ac" })?.value, "schedule")
+
+			let responseBody = #"{"available":true,"text":"Line1\nLine2"}"#.data(using: .utf8)!
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, responseBody)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let (success, schedule) = await api.getRadioSchedule()
+
+		XCTAssertTrue(success)
+		XCTAssertTrue(schedule.available)
+		XCTAssertEqual(schedule.text, "Line1\nLine2")
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
 	func testGetLatestPodcastsReturnsEmptyOnServerError() async {
 		let requestMade = expectation(description: "request made")
 		requestMade.expectedFulfillmentCount = 2
