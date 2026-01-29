@@ -40,7 +40,6 @@ struct ShortPodcastView: View {
 	}
 
 	var body: some View {
-		let excerpt = podcast.excerpt.plainText
 		let title = podcast.title.plainText
 		let refreshID = "\(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)").\(settings.contentKindLabelPosition.rawValue)"
 		let accessibilityTitle = {
@@ -62,14 +61,6 @@ struct ShortPodcastView: View {
 				.font(.headline)
 				.foregroundColor(.primary)
 				.multilineTextAlignment(.leading)
-
-			if !excerpt.isEmpty {
-				Text(excerpt)
-					.font(.subheadline)
-					.foregroundColor(.secondary)
-					.multilineTextAlignment(.leading)
-					.lineLimit(3)
-			}
 
 			Text(podcast.formattedDate)
 				.font(.caption)
