@@ -119,12 +119,12 @@ struct SearchView: View {
 				let articles = try await api.fetchArticleSearchSummaries(matching: trimmed)
 				items = articles.map { SearchItem(kind: .article, post: $0) }
 			case .all:
-				async let podcasts = api.fetchPodcastSearchSummaries(matching: trimmed)
-				async let articles = api.fetchArticleSearchSummaries(matching: trimmed)
-				let (podcastPosts, articlePosts) = try await (podcasts, articles)
-				items = podcastPosts.map { SearchItem(kind: .podcast, post: $0) }
-					+ articlePosts.map { SearchItem(kind: .article, post: $0) }
-			}
+					async let podcasts = api.fetchPodcastSearchSummaries(matching: trimmed)
+					async let articles = api.fetchArticleSearchSummaries(matching: trimmed)
+					let (podcastPosts, articlePosts) = try await(podcasts, articles)
+					items = podcastPosts.map { SearchItem(kind: .podcast, post: $0) }
+						+ articlePosts.map { SearchItem(kind: .article, post: $0) }
+				}
 			return SearchItem.sortedByRelevance(items, query: trimmed)
 		}
 		let announcement = viewModel.errorMessage
