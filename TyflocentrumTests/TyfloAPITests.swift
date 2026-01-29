@@ -56,6 +56,7 @@ final class TyfloAPITests: XCTestCase {
 
 				XCTAssertEqual(url.host, "tyflopodcast.net")
 				XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+				XCTAssertEqual(request.cachePolicy, .useProtocolCachePolicy)
 
 				let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 				let items = components.queryItems ?? []
@@ -212,12 +213,13 @@ final class TyfloAPITests: XCTestCase {
 		func testGetLatestPodcastsUsesPerPage100() async {
 			let requestMade = expectation(description: "request made")
 
-		StubURLProtocol.requestHandler = { request in
-			requestMade.fulfill()
-			let url = try XCTUnwrap(request.url)
+			StubURLProtocol.requestHandler = { request in
+				requestMade.fulfill()
+				let url = try XCTUnwrap(request.url)
 
-			XCTAssertEqual(url.host, "tyflopodcast.net")
-			XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+				XCTAssertEqual(url.host, "tyflopodcast.net")
+				XCTAssertTrue(url.path.contains("/wp-json/wp/v2/posts"))
+				XCTAssertEqual(request.cachePolicy, .useProtocolCachePolicy)
 
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []
@@ -584,6 +586,7 @@ final class TyfloAPITests: XCTestCase {
 
 			XCTAssertEqual(url.host, "kontakt.tyflopodcast.net")
 			XCTAssertEqual(request.httpMethod ?? "GET", "GET")
+			XCTAssertEqual(request.cachePolicy, .reloadIgnoringLocalCacheData)
 
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []
@@ -611,6 +614,7 @@ final class TyfloAPITests: XCTestCase {
 
 			XCTAssertEqual(url.host, "kontakt.tyflopodcast.net")
 			XCTAssertEqual(request.httpMethod ?? "GET", "GET")
+			XCTAssertEqual(request.cachePolicy, .reloadIgnoringLocalCacheData)
 
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []

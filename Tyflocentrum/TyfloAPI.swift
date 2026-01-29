@@ -111,9 +111,13 @@ import Foundation
 		}
 	}
 
-	private func fetch<T: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> T {
+	private func fetch<T: Decodable>(
+		_ url: URL,
+		decoder: JSONDecoder = JSONDecoder(),
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> T {
 		var request = URLRequest(url: url)
-		request.cachePolicy = .reloadIgnoringLocalCacheData
+		request.cachePolicy = cachePolicy
 		request.timeoutInterval = Self.requestTimeoutSeconds
 		request.setValue("application/json", forHTTPHeaderField: "Accept")
 		return try await withRetry {
@@ -129,9 +133,13 @@ import Foundation
 		}
 		}
 
-		private func fetchWPPage<Item: Decodable>(_ url: URL, decoder: JSONDecoder = JSONDecoder()) async throws -> WPPage<Item> {
+		private func fetchWPPage<Item: Decodable>(
+			_ url: URL,
+			decoder: JSONDecoder = JSONDecoder(),
+			cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+		) async throws -> WPPage<Item> {
 			var request = URLRequest(url: url)
-			request.cachePolicy = .reloadIgnoringLocalCacheData
+			request.cachePolicy = cachePolicy
 			request.timeoutInterval = Self.requestTimeoutSeconds
 			request.setValue("application/json", forHTTPHeaderField: "Accept")
 			return try await withRetry {
@@ -565,7 +573,7 @@ import Foundation
 		do {
 			let decoder = JSONDecoder()
 			decoder.keyDecodingStrategy = .convertFromSnakeCase
-			let decodedResponse: Availability = try await fetch(url, decoder: decoder)
+			let decodedResponse: Availability = try await fetch(url, decoder: decoder, cachePolicy: .reloadIgnoringLocalCacheData)
 			return (decodedResponse.available, decodedResponse)
 		}
 		catch {
@@ -583,7 +591,7 @@ import Foundation
 			return (false, RadioSchedule(available: false, text: nil, error: "Nie udało się pobrać ramówki. Spróbuj ponownie."))
 		}
 		do {
-			let decodedResponse: RadioSchedule = try await fetch(url)
+			let decodedResponse: RadioSchedule = try await fetch(url, cachePolicy: .reloadIgnoringLocalCacheData)
 			if let error = decodedResponse.error, !error.isEmpty {
 				return (false, decodedResponse)
 			}

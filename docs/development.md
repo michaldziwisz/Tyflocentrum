@@ -24,6 +24,11 @@
 - Ulubione: `Tyflocentrum/FavoritesStore.swift`
 - Ustawienia: `Tyflocentrum/SettingsStore.swift`
 
+## Sieć i cache
+
+- `TyfloAPI.fetch*` domyślnie używa `cachePolicy = .useProtocolCachePolicy` dla requestów do WordPress (listy/detale), żeby pozwolić `URLCache` obniżyć koszt sieci i energii (o ile serwery zwracają cache‑friendly nagłówki).
+- Endpointy „na żywo” (`isTPAvailable`, `getRadioSchedule`) wymuszają `cachePolicy = .reloadIgnoringLocalCacheData` (żeby nie „przegapić” rozpoczęcia audycji / zmian w ramówce).
+
 ## Testy
 
 ### Unit tests
@@ -67,4 +72,3 @@ xcodebuild \
 - `README.md` trzymamy **krótkie** (opis projektu + szybki start + linki).
 - Szczegóły (funkcje, architektura, kontrakty, CI) trzymamy w `docs/`.
 - Guard w CI (`scripts/require-readme-update.sh`) wymaga aktualizacji **README lub `docs/`** tylko wtedy, gdy zmiana dotyka “public surface” (nowe funkcje/API/CI/build), a nie przy każdej drobnej poprawce.
-
