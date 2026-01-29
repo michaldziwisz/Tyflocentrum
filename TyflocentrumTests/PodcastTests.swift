@@ -27,6 +27,16 @@ final class PodcastTests: XCTestCase {
 		XCTAssertEqual(title.plainText, "Ala ma kota")
 	}
 
+	func testPlainTextDecodesHTMLEntities() {
+		let title = Podcast.PodcastTitle(rendered: "Ala &amp; kot")
+		XCTAssertEqual(title.plainText, "Ala & kot")
+	}
+
+	func testPlainTextTrimsWhitespaceWhenAlreadyPlain() {
+		let title = Podcast.PodcastTitle(rendered: "  Ala ma kota  ")
+		XCTAssertEqual(title.plainText, "Ala ma kota")
+	}
+
 	private func makePodcast(date: String) -> Podcast {
 		let title = Podcast.PodcastTitle(rendered: "Test")
 		return Podcast(id: 1, date: date, title: title, excerpt: title, content: title, guid: title)

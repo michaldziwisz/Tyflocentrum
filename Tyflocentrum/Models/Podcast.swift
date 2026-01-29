@@ -9,6 +9,11 @@ import Foundation
 struct Podcast: Codable, Identifiable {
 	struct PodcastTitle: Codable {
 		var rendered: String
+		private static let plainTextCache: NSCache<NSString, NSString> = {
+			let cache = NSCache<NSString, NSString>()
+			cache.countLimit = 2000
+			return cache
+		}()
 		var html: NSAttributedString {
 			let data = Data(rendered.utf8)
 			if let attrString = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.html], documentAttributes: nil) {
@@ -18,6 +23,16 @@ struct Podcast: Codable, Identifiable {
 		}
 
 		var plainText: String {
+			if let cached = Self.plainTextCache.object(forKey: rendered as NSString) {
+				return cached as String
+			}
+
+			let trimmedRendered = rendered.trimmingCharacters(in: .whitespacesAndNewlines)
+			if !trimmedRendered.contains("<"), !trimmedRendered.contains("&") {
+				Self.plainTextCache.setObject(trimmedRendered as NSString, forKey: rendered as NSString)
+				return trimmedRendered
+			}
+
 			let data = Data(rendered.utf8)
 			let options: [NSAttributedString.DocumentReadingOptionKey: Any] = [
 				.documentType: NSAttributedString.DocumentType.html,
@@ -26,10 +41,12 @@ struct Podcast: Codable, Identifiable {
 			if let attrString = try? NSAttributedString(data: data, options: options, documentAttributes: nil) {
 				let string = attrString.string.trimmingCharacters(in: .whitespacesAndNewlines)
 				if !string.isEmpty {
+					Self.plainTextCache.setObject(string as NSString, forKey: rendered as NSString)
 					return string
 				}
 			}
-			return rendered
+			Self.plainTextCache.setObject(trimmedRendered as NSString, forKey: rendered as NSString)
+			return trimmedRendered
 		}
 	}
 	var id: Int
