@@ -53,6 +53,7 @@ struct SettingsView: View {
 				.accessibilityIdentifier("settings.playbackRateRememberMode")
 			}
 
+#if DEBUG
 			Section("Powiadomienia push") {
 				Toggle(
 					"Wszystkie",
@@ -116,6 +117,7 @@ struct SettingsView: View {
 						.accessibilityIdentifier("settings.push.status.iosRegistrationError")
 				}
 			}
+#endif
 		}
 		.onChange(of: settings.playbackRateRememberMode) { _ in
 			audioPlayer.applyPlaybackRateRememberModeChange()

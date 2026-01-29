@@ -73,14 +73,16 @@ struct TyflocentrumApp: App {
 			}
 			.task {
 				guard !isUITesting else { return }
-				await pushNotifications.onAppLaunch(prefs: settingsStore.pushNotificationPreferences)
+				await pushNotifications.refreshAuthorizationStatus()
 			}
+#if DEBUG
 			.onChange(of: settingsStore.pushNotificationPreferences) { prefs in
 				guard !isUITesting else { return }
 				Task {
 					await pushNotifications.onPreferencesChanged(prefs: prefs)
 				}
 			}
+#endif
 		}
 	}
 
@@ -116,8 +118,8 @@ final class PushNotificationsManager: ObservableObject {
 	private let session: URLSession
 	private let userDefaults: UserDefaults
 	private let installationIDKey: String
-	private let installationID: String
 	private var lastKnownPrefs: PushNotificationPreferences = PushNotificationPreferences()
+	private var cachedInstallationID: String?
 
 	private(set) var hasRequestedSystemPermission = false
 
@@ -138,13 +140,6 @@ final class PushNotificationsManager: ObservableObject {
 		self.session = session
 		self.userDefaults = userDefaults
 		self.installationIDKey = installationIDKey
-		if let existing = userDefaults.string(forKey: installationIDKey), !existing.isEmpty {
-			installationID = existing
-		} else {
-			let generated = UUID().uuidString
-			userDefaults.set(generated, forKey: installationIDKey)
-			installationID = generated
-		}
 	}
 
 	func onAppLaunch(prefs: PushNotificationPreferences) async {
@@ -220,10 +215,16 @@ final class PushNotificationsManager: ObservableObject {
 			token = deviceTokenHex
 			env = "ios-apns"
 		} else {
-			// Without Apple Developer Program / proper entitlements we may not receive an APNs token.
-			// We still register an installation ID so we can validate end-to-end fan-out and server logic.
-			token = installationID
 			env = "ios-installation"
+			if anyEnabled {
+				// Without Apple Developer Program / proper entitlements we may not receive an APNs token.
+				// We still register an installation ID so we can validate end-to-end fan-out and server logic.
+				token = getOrCreateInstallationID()
+			} else if let existing = existingInstallationID() {
+				token = existing
+			} else {
+				return
+			}
 		}
 
 		do {
@@ -238,6 +239,25 @@ final class PushNotificationsManager: ObservableObject {
 		} catch {
 			lastServerSyncError = error.localizedDescription
 		}
+	}
+
+	private func existingInstallationID() -> String? {
+		let existing = userDefaults.string(forKey: installationIDKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+		return existing.isEmpty ? nil : existing
+	}
+
+	private func getOrCreateInstallationID() -> String {
+		if let cachedInstallationID {
+			return cachedInstallationID
+		}
+		if let existing = existingInstallationID() {
+			cachedInstallationID = existing
+			return existing
+		}
+		let generated = UUID().uuidString
+		userDefaults.set(generated, forKey: installationIDKey)
+		cachedInstallationID = generated
+		return generated
 	}
 
 	nonisolated private static func makeSharedSession() -> URLSession {
