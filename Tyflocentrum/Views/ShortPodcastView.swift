@@ -53,9 +53,10 @@ struct ShortPodcastView: View {
 				return "\(title). \(kind)"
 			}
 		}()
-		let hint = showsListenAction
-			? "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcje: Słuchaj, Skopiuj link."
-			: "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcja: Skopiuj link."
+		let favoriteTitle = favoriteItem.map { favorites.isFavorite($0) ? "Usuń z ulubionych" : "Dodaj do ulubionych" }
+		let actionLabels = ([showsListenAction ? "Słuchaj" : nil, favoriteTitle, "Skopiuj link"] as [String?])
+			.compactMap { $0 }
+		let hint = "Dwukrotnie stuknij, aby otworzyć szczegóły. Akcje: \(actionLabels.joined(separator: ", "))."
 		let rowContent = VStack(alignment: .leading, spacing: 6) {
 			Text(title)
 				.font(.headline)
@@ -83,39 +84,53 @@ struct ShortPodcastView: View {
 		.accessibilityIdentifier(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)")
 		.id(refreshID)
 
-		let favoriteActions = { (content: AnyView) -> AnyView in
-			guard let favoriteItem else { return content }
-
-			let isFavorite = favorites.isFavorite(favoriteItem)
-			let title = isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"
-
-			return AnyView(
-				content
-					.accessibilityAction(named: title) {
-						toggleFavorite(favoriteItem)
-					}
-					.contextMenu {
-						Button(title) {
-							toggleFavorite(favoriteItem)
-						}
-					}
-			)
-		}
-
 		Group {
 			if showsListenAction {
-				favoriteActions(AnyView(row))
-					.accessibilityAction(named: "Słuchaj") {
-						onListen?()
-					}
-					.accessibilityAction(named: "Skopiuj link") {
-						copyPodcastLink()
-					}
+				if let favoriteItem, let favoriteTitle {
+					row
+						.accessibilityAction(named: "Słuchaj") {
+							onListen?()
+						}
+						.accessibilityAction(named: favoriteTitle) {
+							toggleFavorite(favoriteItem)
+						}
+						.contextMenu {
+							Button(favoriteTitle) {
+								toggleFavorite(favoriteItem)
+							}
+						}
+						.accessibilityAction(named: "Skopiuj link") {
+							copyPodcastLink()
+						}
+				} else {
+					row
+						.accessibilityAction(named: "Słuchaj") {
+							onListen?()
+						}
+						.accessibilityAction(named: "Skopiuj link") {
+							copyPodcastLink()
+						}
+				}
 			} else {
-				favoriteActions(AnyView(row))
-					.accessibilityAction(named: "Skopiuj link") {
-						copyPodcastLink()
-					}
+				if let favoriteItem, let favoriteTitle {
+					row
+						.accessibilityAction(named: favoriteTitle) {
+							toggleFavorite(favoriteItem)
+						}
+						.contextMenu {
+							Button(favoriteTitle) {
+								toggleFavorite(favoriteItem)
+							}
+						}
+						.accessibilityAction(named: "Skopiuj link") {
+							copyPodcastLink()
+						}
+				} else {
+					row
+						.accessibilityAction(named: "Skopiuj link") {
+							copyPodcastLink()
+						}
+				}
 			}
 		}
 	}

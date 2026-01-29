@@ -1,7 +1,7 @@
 # Tyflocentrum — code review + App Store readiness (iOS)
 
 Data przeglądu: **2026-01-29**  
-Stan repozytorium: `bcc6402`  
+Stan repozytorium: `c4b0528`  
 Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITests/`) + komponent backendowy powiadomień (`push-service/`) w kontekście funkcji „push”.
 
 ## TL;DR (decyzje przed wysyłką do App Store)
@@ -14,6 +14,11 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 - Sieć: WordPress requesty domyślnie używają `.useProtocolCachePolicy`; endpointy „na żywo” nadal wymuszają `reloadIgnoringLocalCacheData`. Dodano też in‑memory TTL cache (5 min) dla odpowiedzi z `Cache-Control: no-store` + testy.
 - Repo: dodano SwiftFormat (`.swiftformat`, `.swift-version`) i lint w CI.
 - iPad/Mac: ukryto i wyłączono iPhone‑only „tryb ucha” (proximity) w ekranie głosówek + testy regresji.
+- `TyfloAPI`: dodano limity pamięci dla cache `no-store` (max wpisów / max bajtów / max rozmiar pojedynczej odpowiedzi) + testy ewikcji.
+- Logowanie: `print(...)` zastąpiono `Logger` (`os_log`) i ograniczono logowanie „wrażliwych” URL-i (bez querystringów).
+- `SafeHTMLView`: odświeża font-size po zmianie Dynamic Type (żeby treść HTML reagowała na ustawienia).
+- Projekt: ujednolicono niespójne build settings (`IPHONEOS_DEPLOYMENT_TARGET`).
+- Daty: zabezpieczono współdzielenie `DateFormatter` w `Podcast.formattedDate` (uniknięcie problemów przy concurrency).
 
 ### Najważniejsze ryzyka (w tej wersji)
 1. **App Store Connect**: przygotować i uzupełnić:
@@ -43,9 +48,9 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 - **Lepsza odporność na awarie**: usunięcie `fatalError` z Core Data (`DataController`) — aplikacja nie wywraca się w runtime, tylko ma fallback.
 
 ### Rzeczy do dopracowania (bez zmiany „feature scope”, ale dla jakości kodu)
-- **Cache a semantyka `no-store`**: `TyfloAPI` ma in‑memory cache dla odpowiedzi z `Cache-Control: no-store` (TTL 5 min). To jest świadome obejście dla UX, ale warto upewnić się, że nie dotyczy endpointów, gdzie `no-store` jest wymogiem prywatności.
-- **Logowanie**: nadal są `print(...)` przy błędach sieci. Na produkcji zwykle lepszy jest `Logger`/`os_log` (kontrola poziomów i brak przypadkowego logowania treści).
-- **Drobne porządki**: w `Tyflocentrum.xcodeproj/project.pbxproj` widać jeszcze stare wartości (np. `IPHONEOS_DEPLOYMENT_TARGET = 16.1` w części konfiguracji) — dobrze utrzymać spójność, żeby nie wprowadzać zamieszania w przyszłości.
+- **Cache a semantyka `no-store`**: `TyfloAPI` ma in‑memory cache (TTL + limity pamięci) dla odpowiedzi z `Cache-Control: no-store`. To jest świadome obejście dla UX — warto upewnić się, że nie dotyczy endpointów, gdzie `no-store` jest wymogiem prywatności/per‑user.
+- **Logowanie a prywatność**: `Logger` jest wdrożony, ale utrzymuj zasadę „nie logujemy treści wiadomości/głosówek” i nie logujemy pełnych URL z query (obecnie jest helper do bezpiecznego logowania endpointów).
+- **Try! w regex**: `ShowNotesParser` używa `try!` do kompilacji regex (praktycznie bezpieczne przy stałych patternach); jeśli chcesz dopiąć „zero `try!` w prod”, można to przerobić na bezpieczny fallback.
 
 ## 2) Optymalizacja (wydajność i responsywność)
 
@@ -190,11 +195,12 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
 - (Produktowo) jeśli chcesz wspierać uruchamianie na Macu: sanity‑testy „iPad app on Mac” (okno, scroll, fokus, skróty klawiaturowe w formularzach).
 
 ### Dodatkowe uwagi do kodu (do wdrożenia)
-- Zamienić `print(...)` na `Logger`/`os_log` i ograniczyć logowanie w `Release` (bez logowania treści wiadomości/głosówek i bez „wrażliwych” URL-i).
-- `SafeHTMLView`: dopilnować odświeżania font-size po zmianie Dynamic Type (żeby treść HTML reagowała na zmianę ustawień).
-- Cache: dopilnować limitów pamięci (np. limit wpisów/rozmiaru) dla in‑memory TTL cache oraz upewnić się, że obejście `no-store` nie dotyczy danych per‑user/wrażliwych.
-- Projekt: posprzątać pozostałości niespójnych build settings (np. `IPHONEOS_DEPLOYMENT_TARGET = 16.1` w części konfiguracji) dla jasności.
-- `DateFormatter`: jeśli formatowanie dat będzie wykonywane współbieżnie, rozważyć bezpieczniejsze podejście (uniknięcie współdzielenia `DateFormatter` poza main).
+- ✅ Zamieniono `print(...)` na `Logger` i ograniczono logowanie URL (bez querystringów).
+- ✅ `SafeHTMLView` reaguje na zmianę Dynamic Type.
+- ✅ Cache `no-store` ma limity pamięci + testy ewikcji.
+- ✅ Ujednolicono `IPHONEOS_DEPLOYMENT_TARGET`.
+- ✅ `Podcast.formattedDate` zabezpieczone pod concurrency (lock wokół `DateFormatter`).
+- (Opcjonalnie) `PodcastTitle.plainTextCache`: można dodać `totalCostLimit` (np. po długości stringa), jeśli w praktyce cache rośnie za bardzo pamięciowo.
 
 ### Niski priorytet (po wydaniu 1.0)
 - Doprecyzować strategię cache (np. per‑endpoint TTL, cache invalidation) jeśli użytkownicy zgłaszają „nieaktualne” treści.

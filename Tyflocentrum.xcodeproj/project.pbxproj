@@ -13,6 +13,7 @@
 			BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
 			A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */; };
 			A1B2C3D4E5F60718293A4B95 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B94 /* Logging.swift */; };
+			A1B2C3D4E5F60718293A4B97 /* VoiceOverScrollBarPrimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */; };
 			BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
 			A6FE8102C0FA7A26774E22AF /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD18FC9FB6494384932AF3BD /* FavoritesStore.swift */; };
 			2C876D8EFB2A3FA670837B5A /* Favorites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3993A69E2CA7956518F22441 /* Favorites.swift */; };
@@ -119,6 +120,7 @@
 			BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
 			A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilities.swift; sourceTree = "<group>"; };
 			A1B2C3D4E5F60718293A4B94 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
+			A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOverScrollBarPrimer.swift; sourceTree = "<group>"; };
 			8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowNotesParser.swift; sourceTree = "<group>"; };
 			D0C1B2A3F4E5D6C7B8A9F001 /* VoiceMessageRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMessageRecorder.swift; sourceTree = "<group>"; };
 			BE1FDCD328F6DE7D00B9601B /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
@@ -275,13 +277,14 @@
 				BEEA97BA28E9D4BB0073E5AB /* ContentView.swift */,
 				D1347120363C2B310653F610 /* AppMenu.swift */,
 				C6D07EF7B77E90D3593AD699 /* SettingsView.swift */,
-				A83E50FD9BC840E2A1847FB9 /* FavoritesView.swift */,
-				ED2F0E60BF0E4CD1B0748873 /* AccessibleTextView.swift */,
-				78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */,
-				BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */,
-				BE55421B28FD548300CC0128 /* NewsView.swift */,
-				9646723B6391FE47334552EF /* LazyDetailedPodcastView.swift */,
-				D5AFB1327CD2EA8E255044E9 /* LazyDetailedArticleView.swift */,
+					A83E50FD9BC840E2A1847FB9 /* FavoritesView.swift */,
+					ED2F0E60BF0E4CD1B0748873 /* AccessibleTextView.swift */,
+					78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */,
+					A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */,
+					BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */,
+					BE55421B28FD548300CC0128 /* NewsView.swift */,
+					9646723B6391FE47334552EF /* LazyDetailedPodcastView.swift */,
+					D5AFB1327CD2EA8E255044E9 /* LazyDetailedArticleView.swift */,
 				BE77EE8929000AE0002087ED /* PodcastCategoriesView.swift */,
 				BE77EE8B29000B06002087ED /* ArticlesCategoriesView.swift */,
 				BE77EE8D29000B2C002087ED /* SearchView.swift */,
@@ -516,10 +519,11 @@
 						BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
 						E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
 						C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */,
-					D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */,
-					F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */,
-					C47C765821AB1728150DA367 /* WPPostSummary.swift in Sources */,
-					BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
+						A1B2C3D4E5F60718293A4B97 /* VoiceOverScrollBarPrimer.swift in Sources */,
+						D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */,
+						F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */,
+						C47C765821AB1728150DA367 /* WPPostSummary.swift in Sources */,
+						BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
 					BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,
 					74D0E52F50594708AD4B1AEA /* PodcastPlayerSheet.swift in Sources */,
 					BED6A4852926E14300BA378B /* AudioPlayer.swift in Sources */,
