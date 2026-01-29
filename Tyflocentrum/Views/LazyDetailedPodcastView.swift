@@ -30,8 +30,7 @@ struct LazyDetailedPodcastView: View {
 		ZStack {
 			if let podcast {
 				DetailedPodcastView(podcast: podcast)
-			}
-			else if let message = errorMessage {
+			} else if let message = errorMessage {
 				VStack(alignment: .leading, spacing: 12) {
 					Text(message)
 						.foregroundColor(.secondary)
@@ -47,8 +46,7 @@ struct LazyDetailedPodcastView: View {
 				}
 				.frame(maxWidth: .infinity, alignment: .leading)
 				.padding()
-			}
-			else {
+			} else {
 				ProgressView("Ładowanie…")
 					.frame(maxWidth: .infinity, maxHeight: .infinity)
 			}
@@ -93,8 +91,7 @@ struct LazyDetailedPodcastView: View {
 		} catch {
 			if error is AsyncTimeoutError {
 				pendingErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
-			}
-			else {
+			} else {
 				pendingErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 			}
 		}

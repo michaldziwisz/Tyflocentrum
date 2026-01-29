@@ -152,7 +152,7 @@ struct SafeHTMLView: UIViewRepresentable {
 		}
 
 		func webView(
-			_ webView: WKWebView,
+			_: WKWebView,
 			decidePolicyFor navigationAction: WKNavigationAction,
 			decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
 		) {
@@ -181,10 +181,10 @@ struct SafeHTMLView: UIViewRepresentable {
 		}
 
 		func webView(
-			_ webView: WKWebView,
-			createWebViewWith configuration: WKWebViewConfiguration,
+			_: WKWebView,
+			createWebViewWith _: WKWebViewConfiguration,
 			for navigationAction: WKNavigationAction,
-			windowFeatures: WKWindowFeatures
+			windowFeatures _: WKWindowFeatures
 		) -> WKWebView? {
 			if let url = navigationAction.request.url {
 				openExternally(url)

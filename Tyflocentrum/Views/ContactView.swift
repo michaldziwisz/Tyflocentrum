@@ -32,16 +32,16 @@ final class ContactViewModel: ObservableObject {
 
 	init(userDefaults: UserDefaults = .standard) {
 		self.userDefaults = userDefaults
-		self.name = userDefaults.string(forKey: Self.nameKey) ?? ""
-		self.message = userDefaults.string(forKey: Self.messageKey) ?? Self.defaultMessage
+		name = userDefaults.string(forKey: Self.nameKey) ?? ""
+		message = userDefaults.string(forKey: Self.messageKey) ?? Self.defaultMessage
 		if message.isEmpty {
 			message = Self.defaultMessage
 		}
 
 		#if DEBUG
-		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_CONTACT_MESSAGE_WHITESPACE") {
-			message = " "
-		}
+			if ProcessInfo.processInfo.arguments.contains("UI_TESTING_CONTACT_MESSAGE_WHITESPACE") {
+				message = " "
+			}
 		#endif
 	}
 

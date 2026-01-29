@@ -111,8 +111,7 @@ struct ShortPodcastView: View {
 					.accessibilityAction(named: "Skopiuj link") {
 						copyPodcastLink()
 					}
-			}
-			else {
+			} else {
 				favoriteActions(AnyView(row))
 					.accessibilityAction(named: "Skopiuj link") {
 						copyPodcastLink()

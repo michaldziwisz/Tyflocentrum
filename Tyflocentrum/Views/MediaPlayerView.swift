@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import UIKit
+
 struct MediaPlayerView: View {
 	private static let timeFormatterHMS: DateComponentsFormatter = {
 		let formatter = DateComponentsFormatter()
@@ -65,15 +66,15 @@ struct MediaPlayerView: View {
 		relatedLinks = parsed.links
 	}
 
-	func performLiveCheck() async -> Void {
+	func performLiveCheck() async {
 		let (available, _) = await api.isTPAvailable()
 		if available {
 			shouldNavigateToContact = true
-		}
-		else {
+		} else {
 			shouldShowNoLiveAlert = true
 		}
 	}
+
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
 		UIAccessibility.post(notification: .announcement, argument: message)
@@ -104,11 +105,13 @@ struct MediaPlayerView: View {
 		audioPlayer.togglePlayPause(url: podcast, title: title, subtitle: subtitle, isLiveStream: canBeLive)
 		announceIfVoiceOver(willPlay ? "Odtwarzanie." : "Pauza.")
 	}
+
 	func formatTime(_ seconds: TimeInterval) -> String {
 		guard seconds.isFinite, seconds >= 0 else { return "--:--" }
 		let formatter = seconds >= 3600 ? Self.timeFormatterHMS : Self.timeFormatterMS
 		return formatter.string(from: seconds) ?? "--:--"
 	}
+
 	var body: some View {
 		let isLiveStream = canBeLive
 		let isPlayingCurrentItem = audioPlayer.isPlaying && audioPlayer.currentURL == podcast
@@ -193,7 +196,7 @@ struct MediaPlayerView: View {
 									scrubPosition = newValue
 								}
 							),
-							in: 0...duration,
+							in: 0 ... duration,
 							onEditingChanged: { editing in
 								isScrubbing = editing
 								if editing {
@@ -207,25 +210,24 @@ struct MediaPlayerView: View {
 						.accessibilityValue("\(formatTime(displayedTime)) z \(formatTime(duration))")
 						.accessibilityHint("Przesuń w górę lub w dół jednym palcem, aby przewinąć.")
 						.accessibilityIdentifier("player.position")
-					}
-					else {
+					} else {
 						ProgressView()
 							.accessibilityLabel("Ładowanie czasu trwania")
 					}
 				}
 			}
 
-				if !isLiveStream {
-					Button {
-						audioPlayer.cyclePlaybackRate()
-						announcePlaybackRate()
-					} label: {
-						Text("Prędkość: \(playbackRateText)x")
-					}
-					.accessibilityLabel("Zmień prędkość odtwarzania")
-					.accessibilityValue("\(playbackRateText)x")
-					.accessibilityHint("Dwukrotnie stuknij, aby przełączyć prędkość. Przesuń w górę lub w dół, aby zwiększyć lub zmniejszyć.")
-					.accessibilityIdentifier("player.speed")
+			if !isLiveStream {
+				Button {
+					audioPlayer.cyclePlaybackRate()
+					announcePlaybackRate()
+				} label: {
+					Text("Prędkość: \(playbackRateText)x")
+				}
+				.accessibilityLabel("Zmień prędkość odtwarzania")
+				.accessibilityValue("\(playbackRateText)x")
+				.accessibilityHint("Dwukrotnie stuknij, aby przełączyć prędkość. Przesuń w górę lub w dół, aby zwiększyć lub zmniejszyć.")
+				.accessibilityIdentifier("player.speed")
 				.accessibilityAdjustableAction { direction in
 					switch direction {
 					case .increment:
@@ -243,8 +245,7 @@ struct MediaPlayerView: View {
 				if isShowNotesLoading && (chapterMarkers.isEmpty && relatedLinks.isEmpty) {
 					ProgressView("Ładowanie dodatków…")
 						.accessibilityIdentifier("player.showNotesLoading")
-				}
-				else if !chapterMarkers.isEmpty || !relatedLinks.isEmpty {
+				} else if !chapterMarkers.isEmpty || !relatedLinks.isEmpty {
 					HStack(spacing: 12) {
 						if !chapterMarkers.isEmpty {
 							Button("Znaczniki czasu") {
@@ -279,7 +280,7 @@ struct MediaPlayerView: View {
 				} message: {
 					Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
 				}
-				}
+			}
 
 			Spacer()
 		}
@@ -305,8 +306,7 @@ struct MediaPlayerView: View {
 							markers: chapterMarkers,
 							formatTime: formatTime
 						)
-					}
-					else {
+					} else {
 						EmptyView()
 					}
 				},
@@ -326,8 +326,7 @@ struct MediaPlayerView: View {
 							podcastSubtitle: subtitle,
 							links: relatedLinks
 						)
-					}
-					else {
+					} else {
 						EmptyView()
 					}
 				},
@@ -543,9 +542,9 @@ struct SharePayload: Identifiable {
 struct ActivityView: UIViewControllerRepresentable {
 	let activityItems: [Any]
 
-	func makeUIViewController(context: Context) -> UIActivityViewController {
+	func makeUIViewController(context _: Context) -> UIActivityViewController {
 		UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
 	}
 
-	func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+	func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }

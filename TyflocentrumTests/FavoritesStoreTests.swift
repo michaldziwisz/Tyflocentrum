@@ -89,4 +89,3 @@ final class FavoritesStoreTests: XCTestCase {
 		XCTAssertEqual(store.filtered(.links).count, 1)
 	}
 }
-

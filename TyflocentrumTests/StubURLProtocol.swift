@@ -3,7 +3,7 @@ import Foundation
 final class StubURLProtocol: URLProtocol {
 	static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
 
-	override class func canInit(with request: URLRequest) -> Bool {
+	override class func canInit(with _: URLRequest) -> Bool {
 		true
 	}
 
@@ -29,4 +29,3 @@ final class StubURLProtocol: URLProtocol {
 
 	override func stopLoading() {}
 }
-

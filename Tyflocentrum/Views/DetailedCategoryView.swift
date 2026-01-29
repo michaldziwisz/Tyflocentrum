@@ -29,15 +29,15 @@ struct DetailedCategoryView: View {
 				let stubPodcast = summary.asPodcastStub()
 				NavigationLink {
 					LazyDetailedPodcastView(summary: summary)
-					} label: {
-						ShortPodcastView(
-							podcast: stubPodcast,
-							onListen: {
-								playerPodcast = stubPodcast
-							},
-							favoriteItem: .podcast(summary)
-						)
-					}
+				} label: {
+					ShortPodcastView(
+						podcast: stubPodcast,
+						onListen: {
+							playerPodcast = stubPodcast
+						},
+						favoriteItem: .podcast(summary)
+					)
+				}
 				.accessibilityRemoveTraits(.isButton)
 				.onAppear {
 					guard summary.id == viewModel.items.last?.id else { return }
@@ -57,8 +57,7 @@ struct DetailedCategoryView: View {
 						.disabled(viewModel.isLoadingMore)
 						.accessibilityHidden(viewModel.isLoadingMore)
 					}
-				}
-				else if viewModel.isLoadingMore {
+				} else if viewModel.isLoadingMore {
 					Section {
 						ProgressView("Ładowanie starszych treści…")
 					}
@@ -79,8 +78,7 @@ struct DetailedCategoryView: View {
 				destination: Group {
 					if let podcast = playerPodcast {
 						PodcastPlayerView(podcast: podcast)
-					}
-					else {
+					} else {
 						EmptyView()
 					}
 				},

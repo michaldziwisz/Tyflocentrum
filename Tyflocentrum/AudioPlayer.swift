@@ -44,7 +44,7 @@ protocol ChangePlaybackRateRemoteCommandProtocol: AnyObject {
 	func removeAllHandlers()
 }
 
-struct RemoteCommandWiring {
+enum RemoteCommandWiring {
 	static let defaultSkipInterval: Double = 30
 
 	static func install(
@@ -378,8 +378,8 @@ final class AudioPlayer: ObservableObject {
 		playbackRateModeProvider: @escaping () -> PlaybackRateRememberMode = { .global }
 	) {
 		self.player = player
-		self.resumeStore = ResumePositionStore(userDefaults: userDefaults)
-		self.playbackRateStore = PlaybackRateStore(userDefaults: userDefaults)
+		resumeStore = ResumePositionStore(userDefaults: userDefaults)
+		playbackRateStore = PlaybackRateStore(userDefaults: userDefaults)
 		self.playbackRateModeProvider = playbackRateModeProvider
 		player.automaticallyWaitsToMinimizeStalling = true
 
@@ -447,15 +447,13 @@ final class AudioPlayer: ObservableObject {
 			player.replaceCurrentItem(with: AVPlayerItem(url: url))
 			if let seconds, !isLiveStream, seconds.isFinite {
 				scheduleSeekWhenReady(seconds)
-			}
-			else {
+			} else {
 				restoreResumePositionIfNeeded()
 			}
 
 			updateRemoteCommandAvailability()
 			updateNowPlayingMetadata()
-		}
-		else if let seconds, !isLiveStream, seconds.isFinite {
+		} else if let seconds, !isLiveStream, seconds.isFinite {
 			seek(to: seconds)
 		}
 
@@ -632,8 +630,8 @@ final class AudioPlayer: ObservableObject {
 		) { [weak self] notification in
 			guard let self else { return }
 			guard let userInfo = notification.userInfo,
-				  let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-				  let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+			      let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+			      let type = AVAudioSession.InterruptionType(rawValue: typeValue)
 			else {
 				return
 			}
@@ -744,7 +742,7 @@ final class AudioPlayer: ObservableObject {
 		updateRemoteCommandAvailability()
 	}
 
-	nonisolated private func tearDownRemoteCommands() {
+	private nonisolated func tearDownRemoteCommands() {
 		let commandCenter = MPRemoteCommandCenter.shared()
 		commandCenter.playCommand.removeTarget(nil)
 		commandCenter.pauseCommand.removeTarget(nil)

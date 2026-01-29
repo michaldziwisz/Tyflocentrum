@@ -6,6 +6,7 @@
 //
 import Foundation
 import SwiftUI
+
 struct ShortCategoryView: View {
 	let category: Category
 	var body: some View {

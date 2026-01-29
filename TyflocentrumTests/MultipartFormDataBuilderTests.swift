@@ -39,4 +39,3 @@ final class MultipartFormDataBuilderTests: XCTestCase {
 		XCTAssertNotNil(data.range(of: Data(string.utf8)), "Expected body to contain: \(string)", file: file, line: line)
 	}
 }
-

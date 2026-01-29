@@ -42,8 +42,7 @@ struct TyflocentrumApp: App {
 				)
 			)
 			_favoritesStore = StateObject(wrappedValue: FavoritesStore(userDefaults: defaults))
-		}
-		else {
+		} else {
 			let settings = SettingsStore()
 			_settingsStore = StateObject(wrappedValue: settings)
 			_audioPlayer = StateObject(wrappedValue: AudioPlayer(playbackRateModeProvider: { settings.playbackRateRememberMode }))
@@ -75,14 +74,14 @@ struct TyflocentrumApp: App {
 				guard !isUITesting else { return }
 				await pushNotifications.refreshAuthorizationStatus()
 			}
-#if DEBUG
+			#if DEBUG
 			.onChange(of: settingsStore.pushNotificationPreferences) { prefs in
-				guard !isUITesting else { return }
-				Task {
-					await pushNotifications.onPreferencesChanged(prefs: prefs)
+					guard !isUITesting else { return }
+					Task {
+						await pushNotifications.onPreferencesChanged(prefs: prefs)
+					}
 				}
-			}
-#endif
+			#endif
 		}
 	}
 
@@ -96,13 +95,13 @@ struct TyflocentrumApp: App {
 final class AppDelegate: NSObject, UIApplicationDelegate {
 	weak var pushNotifications: PushNotificationsManager?
 
-	func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+	func application(_: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
 		Task { @MainActor in
 			pushNotifications?.didRegisterForRemoteNotifications(deviceToken: deviceToken)
 		}
 	}
 
-	func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+	func application(_: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
 		Task { @MainActor in
 			pushNotifications?.didFailToRegisterForRemoteNotifications(error: error)
 		}
@@ -111,14 +110,14 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 @MainActor
 final class PushNotificationsManager: ObservableObject {
-	nonisolated private static let defaultPushServiceBaseURL = URL(string: "https://tyflocentrum.tyflo.eu.org")!
-	nonisolated private static let defaultRequestTimeoutSeconds: TimeInterval = 10
+	private nonisolated static let defaultPushServiceBaseURL = URL(string: "https://tyflocentrum.tyflo.eu.org")!
+	private nonisolated static let defaultRequestTimeoutSeconds: TimeInterval = 10
 
 	private let pushServiceBaseURL: URL
 	private let session: URLSession
 	private let userDefaults: UserDefaults
 	private let installationIDKey: String
-	private var lastKnownPrefs: PushNotificationPreferences = PushNotificationPreferences()
+	private var lastKnownPrefs: PushNotificationPreferences = .init()
 	private var cachedInstallationID: String?
 
 	private(set) var hasRequestedSystemPermission = false
@@ -260,7 +259,7 @@ final class PushNotificationsManager: ObservableObject {
 		return generated
 	}
 
-	nonisolated private static func makeSharedSession() -> URLSession {
+	private nonisolated static func makeSharedSession() -> URLSession {
 		let config = URLSessionConfiguration.default
 		config.waitsForConnectivity = true
 		config.timeoutIntervalForRequest = defaultRequestTimeoutSeconds
@@ -290,7 +289,7 @@ final class PushNotificationsManager: ObservableObject {
 		request.httpBody = data
 
 		let (_, response) = try await session.data(for: request)
-		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+		guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
 			throw URLError(.badServerResponse)
 		}
 	}
@@ -315,7 +314,7 @@ final class PushNotificationsManager: ObservableObject {
 		request.httpBody = data
 
 		let (_, response) = try await session.data(for: request)
-		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+		guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
 			throw URLError(.badServerResponse)
 		}
 	}
@@ -359,13 +358,13 @@ struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 	let rootView: Content
 	let onMagicTap: () -> Bool
 
-	func makeUIViewController(context: Context) -> MagicTapHostingController<Content> {
+	func makeUIViewController(context _: Context) -> MagicTapHostingController<Content> {
 		let controller = MagicTapHostingController(rootView: rootView)
 		controller.onMagicTap = onMagicTap
 		return controller
 	}
 
-	func updateUIViewController(_ uiViewController: MagicTapHostingController<Content>, context: Context) {
+	func updateUIViewController(_ uiViewController: MagicTapHostingController<Content>, context _: Context) {
 		uiViewController.onMagicTap = onMagicTap
 	}
 }
@@ -396,7 +395,7 @@ private final class UITestURLProtocol: URLProtocol {
 
 	private var didCompleteLoading = false
 
-	override class func canInit(with request: URLRequest) -> Bool {
+	override class func canInit(with _: URLRequest) -> Bool {
 		true
 	}
 
@@ -480,93 +479,93 @@ private final class UITestURLProtocol: URLProtocol {
 			)
 		}
 
-			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/categories") {
-				if shouldFailOnce(&didFailTyfloswiatCategories) {
-					return (500, Data("[]".utf8))
-				}
-				let requestIndex = nextRequestIndex(for: &tyfloswiatCategoriesRequestCount)
+		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/categories") {
+			if shouldFailOnce(&didFailTyfloswiatCategories) {
+				return (500, Data("[]".utf8))
+			}
+			let requestIndex = nextRequestIndex(for: &tyfloswiatCategoriesRequestCount)
 			if requestIndex <= 1 {
 				return (200, #"[{"id":20,"name":"Test artykuły","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8))
 			}
 			return (
 				200,
-					#"[{"id":20,"name":"Test artykuły","count":1},{"id":21,"name":"Test artykuły 2","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8)
-				)
-			}
+				#"[{"id":20,"name":"Test artykuły","count":1},{"id":21,"name":"Test artykuły 2","count":1}]"#.data(using: .utf8) ?? Data("[]".utf8)
+			)
+		}
 
-			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/pages") {
-				if let pageID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/pages/") {
-					let shouldFail = shouldFailOnce(&didFailTyfloswiatPageDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-						print("UITestURLProtocol: tyfloswiat page detail id=\(pageID) shouldFail=\(shouldFail)")
-					}
-					if shouldFail {
-						return (500, Data("{}".utf8))
-					}
-					if pageID == 7772 {
-						return (
-							200,
-							#"""
-								{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"<h2>Spis treści</h2><ul><li><a href='https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/'>Test artykuł 1</a></li></ul><p>Pobierz PDF – <a href='https://tyfloswiat.pl/wp-content/uploads/2025/08/Tyflo-4_2025.pdf'>Tyflo 4_2025</a></p>"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7772"}}
-							"""#.data(using: .utf8) ?? Data()
-						)
-					}
-
-					if pageID == 7774 {
-						return (
-							200,
-							#"""
-							{"id":7774,"date":"2025-08-20T12:16:01","title":{"rendered":"Test artykuł 1"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7774"}}
-							"""#.data(using: .utf8) ?? Data()
-						)
-					}
-
+		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/pages") {
+			if let pageID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/pages/") {
+				let shouldFail = shouldFailOnce(&didFailTyfloswiatPageDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+					print("UITestURLProtocol: tyfloswiat page detail id=\(pageID) shouldFail=\(shouldFail)")
+				}
+				if shouldFail {
+					return (500, Data("{}".utf8))
+				}
+				if pageID == 7772 {
 					return (
 						200,
 						#"""
-						{"id":\#(pageID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test strona"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=\#(pageID)"}}
+							{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"<h2>Spis treści</h2><ul><li><a href='https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/'>Test artykuł 1</a></li></ul><p>Pobierz PDF – <a href='https://tyfloswiat.pl/wp-content/uploads/2025/08/Tyflo-4_2025.pdf'>Tyflo 4_2025</a></p>"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7772"}}
 						"""#.data(using: .utf8) ?? Data()
 					)
 				}
 
-				let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-				let queryItems = components?.queryItems ?? []
-
-				if queryItems.contains(where: { $0.name == "slug" && $0.value == "czasopismo" }) {
+				if pageID == 7774 {
 					return (
 						200,
-						#"[{"id":1409,"date":"2020-04-01T07:58:32","title":{"rendered":"Czasopismo Tyfloświat"},"excerpt":{"rendered":""},"link":"https://tyfloswiat.pl/czasopismo/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+						#"""
+						{"id":7774,"date":"2025-08-20T12:16:01","title":{"rendered":"Test artykuł 1"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7774"}}
+						"""#.data(using: .utf8) ?? Data()
 					)
 				}
 
-				if queryItems.contains(where: { $0.name == "parent" && $0.value == "1409" }) {
-					return (
-						200,
-						#"[{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"link":"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
-					)
-				}
-
-				if queryItems.contains(where: { $0.name == "parent" }) {
-					return (
-						200,
-						#"[{"id":7774,"date":"2025-08-20T12:16:01","title":{"rendered":"Test artykuł 1"},"excerpt":{"rendered":"Excerpt"},"link":"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
-					)
-				}
-
-				return (200, Data("[]".utf8))
+				return (
+					200,
+					#"""
+					{"id":\#(pageID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test strona"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=\#(pageID)"}}
+					"""#.data(using: .utf8) ?? Data()
+				)
 			}
 
-			if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
-				if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-					let shouldFail = shouldFailOnce(&didFailTyflopodcastPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-						print("UITestURLProtocol: tyflopodcast post detail id=\(postID) shouldFail=\(shouldFail)")
-					}
-					if shouldFail {
-						return (500, Data("{}".utf8))
-					}
-					return (
-						200,
+			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+			let queryItems = components?.queryItems ?? []
+
+			if queryItems.contains(where: { $0.name == "slug" && $0.value == "czasopismo" }) {
+				return (
+					200,
+					#"[{"id":1409,"date":"2020-04-01T07:58:32","title":{"rendered":"Czasopismo Tyfloświat"},"excerpt":{"rendered":""},"link":"https://tyfloswiat.pl/czasopismo/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+				)
+			}
+
+			if queryItems.contains(where: { $0.name == "parent" && $0.value == "1409" }) {
+				return (
+					200,
+					#"[{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"link":"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+				)
+			}
+
+			if queryItems.contains(where: { $0.name == "parent" }) {
+				return (
+					200,
+					#"[{"id":7774,"date":"2025-08-20T12:16:01","title":{"rendered":"Test artykuł 1"},"excerpt":{"rendered":"Excerpt"},"link":"https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/"}]"#.data(using: .utf8) ?? Data("[]".utf8)
+				)
+			}
+
+			return (200, Data("[]".utf8))
+		}
+
+		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
+			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+				let shouldFail = shouldFailOnce(&didFailTyflopodcastPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+					print("UITestURLProtocol: tyflopodcast post detail id=\(postID) shouldFail=\(shouldFail)")
+				}
+				if shouldFail {
+					return (500, Data("{}".utf8))
+				}
+				return (
+					200,
 					#"""
 					{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=\#(postID)"},"link":"https://tyflopodcast.net/?p=\#(postID)"}
 					"""#.data(using: .utf8) ?? Data()
@@ -622,18 +621,18 @@ private final class UITestURLProtocol: URLProtocol {
 			)
 		}
 
-			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
-				if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-					let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-						print("UITestURLProtocol: tyfloswiat post detail id=\(postID) shouldFail=\(shouldFail)")
-					}
-					if shouldFail {
-						return (500, Data("{}".utf8))
-					}
-					return (
-						200,
-						#"""
+		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
+			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+				let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+					print("UITestURLProtocol: tyfloswiat post detail id=\(postID) shouldFail=\(shouldFail)")
+				}
+				if shouldFail {
+					return (500, Data("{}".utf8))
+				}
+				return (
+					200,
+					#"""
 					{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=\#(postID)"},"link":"https://tyfloswiat.pl/?p=\#(postID)"}
 					"""#.data(using: .utf8) ?? Data()
 				)

@@ -78,4 +78,3 @@ final class PagedFeedViewModelTests: XCTestCase {
 		XCTAssertEqual(viewModel.loadMoreErrorMessage, "Nie udało się pobrać kolejnych treści. Spróbuj ponownie.")
 	}
 }
-

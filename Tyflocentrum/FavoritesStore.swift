@@ -14,8 +14,8 @@ final class FavoritesStore: ObservableObject {
 		self.storageKey = storageKey
 
 		let loaded = Self.load(from: userDefaults, key: storageKey)
-		self.items = loaded
-		self.knownIDs = Set(loaded.map(\.id))
+		items = loaded
+		knownIDs = Set(loaded.map(\.id))
 	}
 
 	func isFavorite(_ item: FavoriteItem) -> Bool {
@@ -25,8 +25,7 @@ final class FavoritesStore: ObservableObject {
 	func toggle(_ item: FavoriteItem) {
 		if isFavorite(item) {
 			remove(item)
-		}
-		else {
+		} else {
 			add(item)
 		}
 	}
@@ -68,4 +67,3 @@ final class FavoritesStore: ObservableObject {
 		return (try? decoder.decode([FavoriteItem].self, from: data)) ?? []
 	}
 }
-

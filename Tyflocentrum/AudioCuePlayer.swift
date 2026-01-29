@@ -5,15 +5,15 @@ import Foundation
 final class AudioCuePlayer {
 	static let shared = AudioCuePlayer()
 
-	private let sampleRate: Int = 44_100
+	private let sampleRate: Int = 44100
 
 	private lazy var startCueData: Data = {
 		let samples = Self.makeSamples(
 			sampleRate: sampleRate,
 			segments: [
-				(.tone(frequency: 1_000, amplitude: 0.25), 0.08),
+				(.tone(frequency: 1000, amplitude: 0.25), 0.08),
 				(.silence, 0.04),
-				(.tone(frequency: 1_000, amplitude: 0.25), 0.08),
+				(.tone(frequency: 1000, amplitude: 0.25), 0.08),
 			]
 		)
 		return Self.makeWAVData(samples: samples, sampleRate: sampleRate)
@@ -77,7 +77,7 @@ final class AudioCuePlayer {
 			case let .tone(frequency, amplitude):
 				let clampedAmplitude = max(0.0, min(1.0, amplitude))
 				let maxInt16 = Double(Int16.max)
-				for i in 0..<sampleCount {
+				for i in 0 ..< sampleCount {
 					let t = Double(i) / Double(sampleRate)
 					let value = sin(2.0 * Double.pi * frequency * t) * (maxInt16 * clampedAmplitude)
 					result.append(Int16(value))

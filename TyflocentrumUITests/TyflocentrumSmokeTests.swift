@@ -1,7 +1,7 @@
 import CoreGraphics
 import XCTest
 
-	final class TyflocentrumSmokeTests: XCTestCase {
+final class TyflocentrumSmokeTests: XCTestCase {
 	override func setUpWithError() throws {
 		continueAfterFailure = false
 	}
@@ -13,29 +13,29 @@ import XCTest
 		return app
 	}
 
-		private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
-			func dragDown() {
-				let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
-				let finish = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
-				start.press(forDuration: 0.05, thenDragTo: finish)
-			}
+	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
+		func dragDown() {
+			let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+			let finish = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+			start.press(forDuration: 0.05, thenDragTo: finish)
+		}
 
+		dragDown()
+		if !element.waitForExistence(timeout: 2) {
 			dragDown()
-			if !element.waitForExistence(timeout: 2) {
-				dragDown()
-			}
+		}
 		if scrollToReveal {
-			for _ in 0..<2 {
+			for _ in 0 ..< 2 {
 				if element.waitForExistence(timeout: 0.5) { break }
 				list.swipeDown()
 			}
-			for _ in 0..<8 {
+			for _ in 0 ..< 8 {
 				if element.waitForExistence(timeout: 0.5) { break }
 				list.swipeUp()
 			}
 		}
-			XCTAssertTrue(element.waitForExistence(timeout: 5))
-		}
+		XCTAssertTrue(element.waitForExistence(timeout: 5))
+	}
 
 	private func tapBackButton(in app: XCUIApplication) {
 		let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
@@ -43,64 +43,64 @@ import XCTest
 		backButton.tap()
 	}
 
-		private func openFavoritesFromMenu(in app: XCUIApplication) {
-			let menuQuery = app.descendants(matching: .any).matching(identifier: "app.menu")
-			var menuButton = menuQuery.firstMatch
+	private func openFavoritesFromMenu(in app: XCUIApplication) {
+		let menuQuery = app.descendants(matching: .any).matching(identifier: "app.menu")
+		var menuButton = menuQuery.firstMatch
 
-			// The app menu is available on tab root screens; on pushed detail screens we should go back first.
-			if !menuButton.waitForExistence(timeout: 2) {
-				let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
-				if backButton.waitForExistence(timeout: 2) {
-					backButton.tap()
-				}
+		// The app menu is available on tab root screens; on pushed detail screens we should go back first.
+		if !menuButton.waitForExistence(timeout: 2) {
+			let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
+			if backButton.waitForExistence(timeout: 2) {
+				backButton.tap()
 			}
+		}
 
-			menuButton = menuQuery.firstMatch
-			XCTAssertTrue(menuButton.waitForExistence(timeout: 5))
-			menuButton.tap()
+		menuButton = menuQuery.firstMatch
+		XCTAssertTrue(menuButton.waitForExistence(timeout: 5))
+		menuButton.tap()
 
-			let favoritesButton = app.descendants(matching: .any).matching(identifier: "app.menu.favorites").firstMatch
-			XCTAssertTrue(favoritesButton.waitForExistence(timeout: 5))
-			favoritesButton.tap()
+		let favoritesButton = app.descendants(matching: .any).matching(identifier: "app.menu.favorites").firstMatch
+		XCTAssertTrue(favoritesButton.waitForExistence(timeout: 5))
+		favoritesButton.tap()
 
 		let favoritesList = app.descendants(matching: .any).matching(identifier: "favorites.list").firstMatch
 		XCTAssertTrue(favoritesList.waitForExistence(timeout: 5))
 	}
 
-		private func openSettingsFromMenu(in app: XCUIApplication) {
-			let menuQuery = app.descendants(matching: .any).matching(identifier: "app.menu")
-			var menuButton = menuQuery.firstMatch
+	private func openSettingsFromMenu(in app: XCUIApplication) {
+		let menuQuery = app.descendants(matching: .any).matching(identifier: "app.menu")
+		var menuButton = menuQuery.firstMatch
 
-			// The app menu is available on tab root screens; on pushed detail screens we should go back first.
-			if !menuButton.waitForExistence(timeout: 2) {
-				let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
-				if backButton.waitForExistence(timeout: 2) {
-					backButton.tap()
-				}
+		// The app menu is available on tab root screens; on pushed detail screens we should go back first.
+		if !menuButton.waitForExistence(timeout: 2) {
+			let backButton = app.navigationBars.firstMatch.buttons.element(boundBy: 0)
+			if backButton.waitForExistence(timeout: 2) {
+				backButton.tap()
 			}
-
-			menuButton = menuQuery.firstMatch
-			XCTAssertTrue(menuButton.waitForExistence(timeout: 5))
-			menuButton.tap()
-
-			let settingsButton = app.descendants(matching: .any).matching(identifier: "app.menu.settings").firstMatch
-			XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
-			settingsButton.tap()
-
-			let settingsView = app.descendants(matching: .any).matching(identifier: "settings.view").firstMatch
-			XCTAssertTrue(settingsView.waitForExistence(timeout: 5))
 		}
+
+		menuButton = menuQuery.firstMatch
+		XCTAssertTrue(menuButton.waitForExistence(timeout: 5))
+		menuButton.tap()
+
+		let settingsButton = app.descendants(matching: .any).matching(identifier: "app.menu.settings").firstMatch
+		XCTAssertTrue(settingsButton.waitForExistence(timeout: 5))
+		settingsButton.tap()
+
+		let settingsView = app.descendants(matching: .any).matching(identifier: "settings.view").firstMatch
+		XCTAssertTrue(settingsView.waitForExistence(timeout: 5))
+	}
 
 	func testAppLaunchesAndShowsTabs() {
 		let app = makeApp()
 		app.launch()
 
 		XCTAssertTrue(app.tabBars.buttons["Nowości"].waitForExistence(timeout: 5))
-			XCTAssertTrue(app.tabBars.buttons["Podcasty"].exists)
-			XCTAssertTrue(app.tabBars.buttons["Artykuły"].exists)
-			XCTAssertTrue(app.tabBars.buttons["Szukaj"].exists)
-			XCTAssertTrue(app.tabBars.buttons["Tyfloradio"].exists)
-		}
+		XCTAssertTrue(app.tabBars.buttons["Podcasty"].exists)
+		XCTAssertTrue(app.tabBars.buttons["Artykuły"].exists)
+		XCTAssertTrue(app.tabBars.buttons["Szukaj"].exists)
+		XCTAssertTrue(app.tabBars.buttons["Tyfloradio"].exists)
+	}
 
 	func testNewsShowsRetryWhenRequestsStall() {
 		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_STALL_NEWS_REQUESTS", "UI_TESTING_FAST_TIMEOUTS"])
@@ -120,7 +120,7 @@ import XCTest
 		let app = makeApp()
 		app.launch()
 
-			app.tabBars.buttons["Tyfloradio"].tap()
+		app.tabBars.buttons["Tyfloradio"].tap()
 
 		let radioButton = app.descendants(matching: .any).matching(identifier: "more.tyfloradio").firstMatch
 		XCTAssertTrue(radioButton.waitForExistence(timeout: 5))
@@ -130,10 +130,10 @@ import XCTest
 		XCTAssertTrue(playPauseButton.waitForExistence(timeout: 5))
 		XCTAssertEqual(playPauseButton.label, "Odtwarzaj")
 
-			let contactButton = app.descendants(matching: .any).matching(identifier: "player.contactRadio").firstMatch
-			XCTAssertTrue(contactButton.exists)
-			XCTAssertEqual(contactButton.label, "Skontaktuj się z Tyfloradiem")
-		}
+		let contactButton = app.descendants(matching: .any).matching(identifier: "player.contactRadio").firstMatch
+		XCTAssertTrue(contactButton.exists)
+		XCTAssertEqual(contactButton.label, "Skontaktuj się z Tyfloradiem")
+	}
 
 	func testCanOpenRadioScheduleFromMoreTab() {
 		let app = makeApp()
@@ -152,89 +152,89 @@ import XCTest
 		XCTAssertTrue(scheduleText.waitForExistence(timeout: 5))
 	}
 
-		func testCanSendVoiceMessageWhenTextMessageIsEmpty() {
-			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE", "UI_TESTING_SEED_VOICE_RECORDED", "UI_TESTING_CONTACT_MESSAGE_WHITESPACE"])
-			app.launch()
+	func testCanSendVoiceMessageWhenTextMessageIsEmpty() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE", "UI_TESTING_SEED_VOICE_RECORDED", "UI_TESTING_CONTACT_MESSAGE_WHITESPACE"])
+		app.launch()
 
-			app.tabBars.buttons["Tyfloradio"].tap()
+		app.tabBars.buttons["Tyfloradio"].tap()
 
-			let contactButton = app.descendants(matching: .any).matching(identifier: "more.contactRadio").firstMatch
-			XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
-			contactButton.tap()
+		let contactButton = app.descendants(matching: .any).matching(identifier: "more.contactRadio").firstMatch
+		XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
+		contactButton.tap()
 
-			let voiceMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.voice").firstMatch
-			XCTAssertTrue(voiceMenuItem.waitForExistence(timeout: 5))
-			voiceMenuItem.tap()
+		let voiceMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.voice").firstMatch
+		XCTAssertTrue(voiceMenuItem.waitForExistence(timeout: 5))
+		voiceMenuItem.tap()
 
-			let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
-			XCTAssertTrue(nameField.waitForExistence(timeout: 5))
-				nameField.tap()
-				nameField.typeText("UI")
+		let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
+		XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+		nameField.tap()
+		nameField.typeText("UI")
 
-				let voiceSendButton = app.descendants(matching: .any).matching(identifier: "contact.voice.send").firstMatch
-				let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
-				XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
-				for _ in 0..<8 {
-					if voiceSendButton.exists { break }
-					voiceForm.swipeUp()
-				}
-				XCTAssertTrue(voiceSendButton.waitForExistence(timeout: 5))
-				XCTAssertTrue(voiceSendButton.isEnabled)
-
-			let backButton = app.navigationBars.buttons["Kontakt"].firstMatch
-			XCTAssertTrue(backButton.waitForExistence(timeout: 5))
-			backButton.tap()
-
-			let textMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.text").firstMatch
-			XCTAssertTrue(textMenuItem.waitForExistence(timeout: 5))
-			textMenuItem.tap()
-
-			let textSendButton = app.descendants(matching: .any).matching(identifier: "contact.send").firstMatch
-			XCTAssertTrue(textSendButton.waitForExistence(timeout: 5))
-			XCTAssertFalse(textSendButton.isEnabled)
+		let voiceSendButton = app.descendants(matching: .any).matching(identifier: "contact.voice.send").firstMatch
+		let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
+		XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
+		for _ in 0 ..< 8 {
+			if voiceSendButton.exists { break }
+			voiceForm.swipeUp()
 		}
+		XCTAssertTrue(voiceSendButton.waitForExistence(timeout: 5))
+		XCTAssertTrue(voiceSendButton.isEnabled)
 
-		func testCanPreviewRecordedVoiceMessage() {
-			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE", "UI_TESTING_SEED_VOICE_RECORDED"])
-			app.launch()
+		let backButton = app.navigationBars.buttons["Kontakt"].firstMatch
+		XCTAssertTrue(backButton.waitForExistence(timeout: 5))
+		backButton.tap()
 
-			app.tabBars.buttons["Tyfloradio"].tap()
+		let textMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.text").firstMatch
+		XCTAssertTrue(textMenuItem.waitForExistence(timeout: 5))
+		textMenuItem.tap()
 
-			let contactButton = app.descendants(matching: .any).matching(identifier: "more.contactRadio").firstMatch
-			XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
-			contactButton.tap()
+		let textSendButton = app.descendants(matching: .any).matching(identifier: "contact.send").firstMatch
+		XCTAssertTrue(textSendButton.waitForExistence(timeout: 5))
+		XCTAssertFalse(textSendButton.isEnabled)
+	}
 
-			let voiceMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.voice").firstMatch
-			XCTAssertTrue(voiceMenuItem.waitForExistence(timeout: 5))
-			voiceMenuItem.tap()
+	func testCanPreviewRecordedVoiceMessage() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE", "UI_TESTING_SEED_VOICE_RECORDED"])
+		app.launch()
 
-				let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
-				XCTAssertTrue(nameField.waitForExistence(timeout: 5))
-				nameField.tap()
-				nameField.typeText("UI")
+		app.tabBars.buttons["Tyfloradio"].tap()
 
-				let holdToTalkButton = app.descendants(matching: .any).matching(identifier: "contact.voice.holdToTalk").firstMatch
-				XCTAssertTrue(holdToTalkButton.waitForExistence(timeout: 5))
-				XCTAssertTrue(holdToTalkButton.isEnabled)
+		let contactButton = app.descendants(matching: .any).matching(identifier: "more.contactRadio").firstMatch
+		XCTAssertTrue(contactButton.waitForExistence(timeout: 5))
+		contactButton.tap()
 
-				let previewButton = app.descendants(matching: .any).matching(identifier: "contact.voice.preview").firstMatch
-				let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
-				XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
-			for _ in 0..<8 {
-				if previewButton.exists { break }
-				voiceForm.swipeUp()
-			}
-			XCTAssertTrue(previewButton.waitForExistence(timeout: 5))
-			XCTAssertEqual(previewButton.label, "Odsłuchaj")
+		let voiceMenuItem = app.descendants(matching: .any).matching(identifier: "contact.menu.voice").firstMatch
+		XCTAssertTrue(voiceMenuItem.waitForExistence(timeout: 5))
+		voiceMenuItem.tap()
 
-			previewButton.tap()
-			expectation(for: NSPredicate(format: "label == %@", "Zatrzymaj odsłuch"), evaluatedWith: previewButton)
-			waitForExpectations(timeout: 5)
+		let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
+		XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+		nameField.tap()
+		nameField.typeText("UI")
 
-			previewButton.tap()
-			expectation(for: NSPredicate(format: "label == %@", "Odsłuchaj"), evaluatedWith: previewButton)
-			waitForExpectations(timeout: 5)
+		let holdToTalkButton = app.descendants(matching: .any).matching(identifier: "contact.voice.holdToTalk").firstMatch
+		XCTAssertTrue(holdToTalkButton.waitForExistence(timeout: 5))
+		XCTAssertTrue(holdToTalkButton.isEnabled)
+
+		let previewButton = app.descendants(matching: .any).matching(identifier: "contact.voice.preview").firstMatch
+		let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
+		XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
+		for _ in 0 ..< 8 {
+			if previewButton.exists { break }
+			voiceForm.swipeUp()
 		}
+		XCTAssertTrue(previewButton.waitForExistence(timeout: 5))
+		XCTAssertEqual(previewButton.label, "Odsłuchaj")
+
+		previewButton.tap()
+		expectation(for: NSPredicate(format: "label == %@", "Zatrzymaj odsłuch"), evaluatedWith: previewButton)
+		waitForExpectations(timeout: 5)
+
+		previewButton.tap()
+		expectation(for: NSPredicate(format: "label == %@", "Odsłuchaj"), evaluatedWith: previewButton)
+		waitForExpectations(timeout: 5)
+	}
 
 	func testCanOpenPodcastPlayerAndSeeSeekControls() {
 		let app = makeApp()
@@ -271,9 +271,9 @@ import XCTest
 		XCTAssertEqual(speedButton.label, "Zmień prędkość odtwarzania")
 	}
 
-		func testCanAddPodcastToFavoritesAndSeeItInFavorites() {
-			let app = makeApp()
-			app.launch()
+	func testCanAddPodcastToFavoritesAndSeeItInFavorites() {
+		let app = makeApp()
+		app.launch()
 
 		app.tabBars.buttons["Nowości"].tap()
 
@@ -288,12 +288,12 @@ import XCTest
 		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
 		favoriteButton.tap()
 
-			openFavoritesFromMenu(in: app)
+		openFavoritesFromMenu(in: app)
 
-			let favoritesPodcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(favoritesPodcastRow.waitForExistence(timeout: 5))
-			tapBackButton(in: app)
-		}
+		let favoritesPodcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(favoritesPodcastRow.waitForExistence(timeout: 5))
+		tapBackButton(in: app)
+	}
 
 	func testCanAddArticleToFavoritesAndFilterIt() {
 		let app = makeApp()
@@ -364,11 +364,11 @@ import XCTest
 		XCTAssertTrue(content.waitForExistence(timeout: 5))
 	}
 
-		func testCanSearchAndOpenPodcastFromResults() {
-			let app = makeApp()
-			app.launch()
+	func testCanSearchAndOpenPodcastFromResults() {
+		let app = makeApp()
+		app.launch()
 
-			app.tabBars.buttons["Szukaj"].tap()
+		app.tabBars.buttons["Szukaj"].tap()
 
 		let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
 		XCTAssertTrue(searchField.waitForExistence(timeout: 5))
@@ -379,75 +379,75 @@ import XCTest
 		XCTAssertTrue(searchButton.exists)
 		searchButton.tap()
 
-			let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
-			XCTAssertEqual(podcastRow.label, "Podcast. Test podcast")
-			podcastRow.tap()
+		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+		XCTAssertEqual(podcastRow.label, "Podcast. Test podcast")
+		podcastRow.tap()
 
-			let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
-			XCTAssertTrue(content.waitForExistence(timeout: 5))
+		let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+	}
+
+	func testContentKindLabelPositionUpdatesImmediately() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let initialRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(initialRow.waitForExistence(timeout: 5))
+		XCTAssertEqual(initialRow.label, "Podcast. Test podcast")
+
+		openSettingsFromMenu(in: app)
+
+		let picker = app.segmentedControls["settings.contentKindLabelPosition"]
+		XCTAssertTrue(picker.waitForExistence(timeout: 5))
+		picker.buttons["Po"].tap()
+		let pickerAfterTap = app.segmentedControls["settings.contentKindLabelPosition"]
+		XCTAssertTrue(pickerAfterTap.waitForExistence(timeout: 5))
+		XCTAssertEqual(pickerAfterTap.value as? String, "Po")
+
+		tapBackButton(in: app)
+
+		let updatedRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(updatedRow.waitForExistence(timeout: 5))
+
+		let expectedLabel = "Test podcast. Podcast"
+		let predicate = NSPredicate(format: "label == %@", expectedLabel)
+		let waitExpectation = expectation(for: predicate, evaluatedWith: updatedRow)
+		let result = XCTWaiter().wait(for: [waitExpectation], timeout: 5)
+		if result != .completed {
+			XCTFail("Expected label '\(expectedLabel)', got '\(updatedRow.label)'.")
 		}
-
-		func testContentKindLabelPositionUpdatesImmediately() {
-			let app = makeApp()
-			app.launch()
-
-			app.tabBars.buttons["Nowości"].tap()
-
-			let initialRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(initialRow.waitForExistence(timeout: 5))
-			XCTAssertEqual(initialRow.label, "Podcast. Test podcast")
-
-			openSettingsFromMenu(in: app)
-
-			let picker = app.segmentedControls["settings.contentKindLabelPosition"]
-			XCTAssertTrue(picker.waitForExistence(timeout: 5))
-			picker.buttons["Po"].tap()
-			let pickerAfterTap = app.segmentedControls["settings.contentKindLabelPosition"]
-			XCTAssertTrue(pickerAfterTap.waitForExistence(timeout: 5))
-			XCTAssertEqual(pickerAfterTap.value as? String, "Po")
-
-			tapBackButton(in: app)
-
-			let updatedRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(updatedRow.waitForExistence(timeout: 5))
-
-			let expectedLabel = "Test podcast. Podcast"
-			let predicate = NSPredicate(format: "label == %@", expectedLabel)
-			let waitExpectation = expectation(for: predicate, evaluatedWith: updatedRow)
-			let result = XCTWaiter().wait(for: [waitExpectation], timeout: 5)
-			if result != .completed {
-				XCTFail("Expected label '\(expectedLabel)', got '\(updatedRow.label)'.")
-			}
-		}
+	}
 
 	func testCanSearchArticlesWhenScopeIsArticles() {
-			let app = makeApp()
-			app.launch()
+		let app = makeApp()
+		app.launch()
 
-			app.tabBars.buttons["Szukaj"].tap()
+		app.tabBars.buttons["Szukaj"].tap()
 
-			let scopePicker = app.segmentedControls["search.scope"]
-			XCTAssertTrue(scopePicker.waitForExistence(timeout: 5))
-			scopePicker.buttons["Artykuły"].tap()
+		let scopePicker = app.segmentedControls["search.scope"]
+		XCTAssertTrue(scopePicker.waitForExistence(timeout: 5))
+		scopePicker.buttons["Artykuły"].tap()
 
-			let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
-			XCTAssertTrue(searchField.waitForExistence(timeout: 5))
-			searchField.tap()
-			searchField.typeText("test")
+		let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
+		XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+		searchField.tap()
+		searchField.typeText("test")
 
-			let searchButton = app.descendants(matching: .any).matching(identifier: "search.button").firstMatch
-			XCTAssertTrue(searchButton.exists)
-			searchButton.tap()
+		let searchButton = app.descendants(matching: .any).matching(identifier: "search.button").firstMatch
+		XCTAssertTrue(searchButton.exists)
+		searchButton.tap()
 
-			let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
-			XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
-			XCTAssertEqual(articleRow.label, "Artykuł. Test artykuł")
-			articleRow.tap()
+		let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
+		XCTAssertTrue(articleRow.waitForExistence(timeout: 5))
+		XCTAssertEqual(articleRow.label, "Artykuł. Test artykuł")
+		articleRow.tap()
 
-			let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
-			XCTAssertTrue(content.waitForExistence(timeout: 5))
-		}
+		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: 5))
+	}
 
 	func testCanOpenArticleFromNewsAndSeeReadableContent() {
 		let app = makeApp()
@@ -467,7 +467,7 @@ import XCTest
 		let app = makeApp()
 		app.launch()
 
-			app.tabBars.buttons["Tyfloradio"].tap()
+		app.tabBars.buttons["Tyfloradio"].tap()
 
 		let radioButton = app.descendants(matching: .any).matching(identifier: "more.tyfloradio").firstMatch
 		XCTAssertTrue(radioButton.waitForExistence(timeout: 5))
@@ -486,7 +486,7 @@ import XCTest
 		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_TP_AVAILABLE"])
 		app.launch()
 
-			app.tabBars.buttons["Tyfloradio"].tap()
+		app.tabBars.buttons["Tyfloradio"].tap()
 
 		let radioButton = app.descendants(matching: .any).matching(identifier: "more.tyfloradio").firstMatch
 		XCTAssertTrue(radioButton.waitForExistence(timeout: 5))
@@ -581,48 +581,48 @@ import XCTest
 		XCTAssertEqual(refreshedCategoryArticle.label, "Test artykuł 2")
 	}
 
-		func testListsRecoverAutomaticallyWhenFirstRequestFails() {
-			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
-			app.launch()
+	func testListsRecoverAutomaticallyWhenFirstRequestFails() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
+		app.launch()
 
-			let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
-			XCTAssertTrue(newsList.waitForExistence(timeout: 5))
-			let firstNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(firstNewsRow.waitForExistence(timeout: 10))
+		let newsList = app.descendants(matching: .any).matching(identifier: "news.list").firstMatch
+		XCTAssertTrue(newsList.waitForExistence(timeout: 5))
+		let firstNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(firstNewsRow.waitForExistence(timeout: 10))
 
-			app.tabBars.buttons["Podcasty"].tap()
-			let categoryRow = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
-			XCTAssertTrue(categoryRow.waitForExistence(timeout: 10))
-			categoryRow.tap()
-			let firstCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(firstCategoryPodcast.waitForExistence(timeout: 10))
+		app.tabBars.buttons["Podcasty"].tap()
+		let categoryRow = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+		XCTAssertTrue(categoryRow.waitForExistence(timeout: 10))
+		categoryRow.tap()
+		let firstCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(firstCategoryPodcast.waitForExistence(timeout: 10))
 
-			app.tabBars.buttons["Artykuły"].tap()
-			let articleCategory = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
-			XCTAssertTrue(articleCategory.waitForExistence(timeout: 10))
-		}
+		app.tabBars.buttons["Artykuły"].tap()
+		let articleCategory = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+		XCTAssertTrue(articleCategory.waitForExistence(timeout: 10))
+	}
 
-		func testSearchRecoversAutomaticallyWhenFirstRequestFails() {
-			let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
-			app.launch()
+	func testSearchRecoversAutomaticallyWhenFirstRequestFails() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_FAIL_FIRST_REQUEST"])
+		app.launch()
 
-			app.tabBars.buttons["Szukaj"].tap()
+		app.tabBars.buttons["Szukaj"].tap()
 
-			let searchList = app.descendants(matching: .any).matching(identifier: "search.list").firstMatch
-			XCTAssertTrue(searchList.waitForExistence(timeout: 5))
+		let searchList = app.descendants(matching: .any).matching(identifier: "search.list").firstMatch
+		XCTAssertTrue(searchList.waitForExistence(timeout: 5))
 
-			let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
-			XCTAssertTrue(searchField.waitForExistence(timeout: 5))
-			searchField.tap()
-			searchField.typeText("test")
+		let searchField = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
+		XCTAssertTrue(searchField.waitForExistence(timeout: 5))
+		searchField.tap()
+		searchField.typeText("test")
 
-			let searchButton = app.descendants(matching: .any).matching(identifier: "search.button").firstMatch
-			XCTAssertTrue(searchButton.exists)
-			searchButton.tap()
+		let searchButton = app.descendants(matching: .any).matching(identifier: "search.button").firstMatch
+		XCTAssertTrue(searchButton.exists)
+		searchButton.tap()
 
-			let firstResult = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
-			XCTAssertTrue(firstResult.waitForExistence(timeout: 10))
-		}
+		let firstResult = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(firstResult.waitForExistence(timeout: 10))
+	}
 
 	func testCanBrowsePodcastCategoriesAndOpenPodcast() {
 		let app = makeApp()
@@ -679,17 +679,17 @@ import XCTest
 		XCTAssertTrue(yearRow.waitForExistence(timeout: 5))
 		yearRow.tap()
 
-			let issueRow = app.descendants(matching: .any).matching(identifier: "magazine.issue.7772").firstMatch
-			XCTAssertTrue(issueRow.waitForExistence(timeout: 5))
-			issueRow.tap()
+		let issueRow = app.descendants(matching: .any).matching(identifier: "magazine.issue.7772").firstMatch
+		XCTAssertTrue(issueRow.waitForExistence(timeout: 5))
+		issueRow.tap()
 
-			let issueNavigationBar = app.navigationBars["Tyfloświat 4/2025"]
-			XCTAssertTrue(issueNavigationBar.waitForExistence(timeout: 5))
-		}
+		let issueNavigationBar = app.navigationBars["Tyfloświat 4/2025"]
+		XCTAssertTrue(issueNavigationBar.waitForExistence(timeout: 5))
+	}
 
-		func testCanNavigateBackFromPodcastDetail() {
-			let app = makeApp()
-			app.launch()
+	func testCanNavigateBackFromPodcastDetail() {
+		let app = makeApp()
+		app.launch()
 
 		app.tabBars.buttons["Podcasty"].tap()
 

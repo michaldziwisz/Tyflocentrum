@@ -280,7 +280,7 @@ enum ShowNotesParser {
 		return unique
 	}
 
-	private static func makeLinkTitle(baseTitle: String, url: URL, isDisambiguationNeeded: Bool) -> String {
+	private static func makeLinkTitle(baseTitle: String, url _: URL, isDisambiguationNeeded _: Bool) -> String {
 		baseTitle
 	}
 }

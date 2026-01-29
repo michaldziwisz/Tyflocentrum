@@ -1,5 +1,5 @@
 //
-//  ArticlesView.swift
+//  ArticlesCategoriesView.swift
 //  Tyflocentrum
 //
 //  Created by Arkadiusz Świętnicki on 19/10/2022.
@@ -69,8 +69,7 @@ struct ArticlesCategoriesView: View {
 							.disabled(viewModel.isLoadingMore)
 							.accessibilityHidden(viewModel.isLoadingMore)
 						}
-					}
-					else if viewModel.isLoadingMore {
+					} else if viewModel.isLoadingMore {
 						Section {
 							ProgressView("Ładowanie kolejnych kategorii…")
 						}
@@ -157,8 +156,7 @@ struct AllArticlesView: View {
 						}
 						.disabled(viewModel.isLoadingMore)
 					}
-				}
-				else if viewModel.isLoadingMore {
+				} else if viewModel.isLoadingMore {
 					Section {
 						ProgressView("Ładowanie starszych treści…")
 					}
@@ -338,8 +336,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 			if let issue {
 				if tocItems.isEmpty {
 					DetailedArticleView(article: issue, favoriteOrigin: .page)
-				}
-				else {
+				} else {
 					List {
 						if let pdfURL {
 							Section {
@@ -370,8 +367,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 					}
 					.accessibilityIdentifier("magazine.toc.list")
 				}
-			}
-			else if let errorMessage {
+			} else if let errorMessage {
 				AsyncListStatusSection(
 					errorMessage: errorMessage,
 					isLoading: isLoading,
@@ -382,8 +378,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 					retryIdentifier: "magazine.issue.retry",
 					isRetryDisabled: isLoading
 				)
-			}
-			else {
+			} else {
 				AsyncListStatusSection(
 					errorMessage: nil,
 					isLoading: true,
@@ -457,8 +452,7 @@ struct LazyDetailedTyfloswiatPageView: View {
 		Group {
 			if let page {
 				DetailedArticleView(article: page, favoriteOrigin: .page)
-			}
-			else if let errorMessage {
+			} else if let errorMessage {
 				AsyncListStatusSection(
 					errorMessage: errorMessage,
 					isLoading: isLoading,
@@ -467,8 +461,7 @@ struct LazyDetailedTyfloswiatPageView: View {
 					emptyMessage: "",
 					retryAction: { await load() }
 				)
-			}
-			else {
+			} else {
 				AsyncListStatusSection(
 					errorMessage: nil,
 					isLoading: true,
@@ -515,7 +508,7 @@ private enum TyfloSwiatMagazineParsing {
 	private static let pdfPattern = try? NSRegularExpression(pattern: "href\\s*=\\s*['\\\"]([^'\\\"]+\\.pdf[^'\\\"]*)['\\\"]", options: [.caseInsensitive])
 
 	static func parseIssueNumberAndYear(from title: String) -> (number: Int?, year: Int?) {
-		let range = NSRange(title.startIndex..<title.endIndex, in: title)
+		let range = NSRange(title.startIndex ..< title.endIndex, in: title)
 
 		if let issuePattern, let match = issuePattern.firstMatch(in: title, options: [], range: range) {
 			let numberRange = match.range(at: 1)
@@ -536,7 +529,7 @@ private enum TyfloSwiatMagazineParsing {
 
 	static func extractFirstPDFURL(from html: String) -> URL? {
 		guard let pdfPattern else { return nil }
-		let range = NSRange(html.startIndex..<html.endIndex, in: html)
+		let range = NSRange(html.startIndex ..< html.endIndex, in: html)
 		guard let match = pdfPattern.firstMatch(in: html, options: [], range: range),
 		      let urlRange = Range(match.range(at: 1), in: html)
 		else {
@@ -581,7 +574,7 @@ private enum TyfloSwiatMagazineParsing {
 
 	private static func extractLinks(from html: String) -> [String] {
 		guard let hrefPattern else { return [] }
-		let range = NSRange(html.startIndex..<html.endIndex, in: html)
+		let range = NSRange(html.startIndex ..< html.endIndex, in: html)
 
 		var results: [String] = []
 		for match in hrefPattern.matches(in: html, options: [], range: range) {

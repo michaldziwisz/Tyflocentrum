@@ -8,6 +8,7 @@
 import Foundation
 import SwiftUI
 import UIKit
+
 struct DetailedArticleView: View {
 	let article: Podcast
 	let favoriteOrigin: FavoriteArticleOrigin

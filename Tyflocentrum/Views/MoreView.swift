@@ -1,5 +1,5 @@
 //
-//  LibraryView.swift
+//  MoreView.swift
 //  Tyflocentrum
 //
 //  Created by Arkadiusz Świętnicki on 19/10/2022.
@@ -18,8 +18,7 @@ struct MoreView: View {
 		let (available, _) = await api.isTPAvailable()
 		if available {
 			shouldNavigateToContact = true
-		}
-		else {
+		} else {
 			shouldShowNoLiveAlert = true
 		}
 	}

@@ -11,7 +11,7 @@ struct AccessibleTextView: UIViewRepresentable {
 	var textStyle: UIFont.TextStyle = .body
 	var accessibilityIdentifier: String? = nil
 
-	func makeUIView(context: Context) -> UITextView {
+	func makeUIView(context _: Context) -> UITextView {
 		let textView = UITextView()
 		textView.backgroundColor = .clear
 		textView.isEditable = false
@@ -28,7 +28,7 @@ struct AccessibleTextView: UIViewRepresentable {
 		return textView
 	}
 
-	func updateUIView(_ uiView: UITextView, context: Context) {
+	func updateUIView(_ uiView: UITextView, context _: Context) {
 		uiView.accessibilityIdentifier = accessibilityIdentifier
 		updateText(in: uiView)
 	}
@@ -43,4 +43,3 @@ struct AccessibleTextView: UIViewRepresentable {
 		}
 	}
 }
-

@@ -51,7 +51,7 @@ final class SettingsStore: ObservableObject {
 		}
 	}
 
-	@Published var pushNotificationPreferences: PushNotificationPreferences = PushNotificationPreferences() {
+	@Published var pushNotificationPreferences: PushNotificationPreferences = .init() {
 		didSet {
 			let encoder = JSONEncoder()
 			do {
@@ -75,12 +75,14 @@ final class SettingsStore: ObservableObject {
 		self.pushNotificationPreferencesKey = pushNotificationPreferencesKey
 
 		if let rawValue = userDefaults.string(forKey: contentKindLabelPositionKey),
-		   let loaded = ContentKindLabelPosition(rawValue: rawValue) {
+		   let loaded = ContentKindLabelPosition(rawValue: rawValue)
+		{
 			contentKindLabelPosition = loaded
 		}
 
 		if let rawValue = userDefaults.string(forKey: playbackRateRememberModeKey),
-		   let loaded = PlaybackRateRememberMode(rawValue: rawValue) {
+		   let loaded = PlaybackRateRememberMode(rawValue: rawValue)
+		{
 			playbackRateRememberMode = loaded
 		}
 

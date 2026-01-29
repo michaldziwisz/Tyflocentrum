@@ -37,21 +37,20 @@ struct FavoritesView: View {
 					Text("Brak ulubionych.")
 						.foregroundColor(.secondary)
 				}
-			}
-			else {
+			} else {
 				Section {
 					ForEach(visibleItems) { item in
 						switch item {
-						case .podcast(let summary):
+						case let .podcast(summary):
 							FavoritePodcastRow(
 								summary: summary,
 								onListen: { playerPodcast = summary.asPodcastStub() }
 							)
-						case .article(let summary, let origin):
+						case let .article(summary, origin):
 							FavoriteArticleRow(summary: summary, origin: origin)
-						case .topic(let topic):
+						case let .topic(topic):
 							FavoriteTopicRow(topic: topic)
-						case .link(let link):
+						case let .link(link):
 							FavoriteLinkRow(link: link)
 						}
 					}
@@ -66,8 +65,7 @@ struct FavoritesView: View {
 				destination: Group {
 					if let podcast = playerPodcast {
 						PodcastPlayerView(podcast: podcast)
-					}
-					else {
+					} else {
 						EmptyView()
 					}
 				},
@@ -356,8 +354,7 @@ private struct FavoriteLinkRow: View {
 			.sheet(item: $sharePayload) { payload in
 				ActivityView(activityItems: payload.activityItems)
 			}
-		}
-		else {
+		} else {
 			Text(link.title)
 				.foregroundColor(.secondary)
 		}

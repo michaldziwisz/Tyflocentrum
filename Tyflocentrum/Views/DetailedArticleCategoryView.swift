@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+
 struct DetailedArticleCategoryView: View {
 	let category: Category
 	@EnvironmentObject var api: TyfloAPI
@@ -25,18 +26,18 @@ struct DetailedArticleCategoryView: View {
 			)
 
 			ForEach(viewModel.items) { summary in
-					NavigationLink {
-						LazyDetailedArticleView(summary: summary)
-					} label: {
-						ShortPodcastView(
-							podcast: summary.asPodcastStub(),
-							showsListenAction: false,
-							favoriteItem: .article(summary: summary, origin: .post)
-						)
-					}
-					.accessibilityRemoveTraits(.isButton)
-					.onAppear {
-						guard summary.id == viewModel.items.last?.id else { return }
+				NavigationLink {
+					LazyDetailedArticleView(summary: summary)
+				} label: {
+					ShortPodcastView(
+						podcast: summary.asPodcastStub(),
+						showsListenAction: false,
+						favoriteItem: .article(summary: summary, origin: .post)
+					)
+				}
+				.accessibilityRemoveTraits(.isButton)
+				.onAppear {
+					guard summary.id == viewModel.items.last?.id else { return }
 					Task { await viewModel.loadMore(fetchPage: fetchPage) }
 				}
 			}
@@ -53,8 +54,7 @@ struct DetailedArticleCategoryView: View {
 						.disabled(viewModel.isLoadingMore)
 						.accessibilityHidden(viewModel.isLoadingMore)
 					}
-				}
-				else if viewModel.isLoadingMore {
+				} else if viewModel.isLoadingMore {
 					Section {
 						ProgressView("Ładowanie starszych treści…")
 					}

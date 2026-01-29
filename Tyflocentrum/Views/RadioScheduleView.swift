@@ -16,20 +16,17 @@ struct RadioScheduleView: View {
 				if isLoading {
 					ProgressView("Ładowanie ramówki…")
 						.accessibilityIdentifier("radioSchedule.loading")
-				}
-				else if let scheduleText, !scheduleText.isEmpty {
+				} else if let scheduleText, !scheduleText.isEmpty {
 					AccessibleTextView(
 						text: scheduleText,
 						accessibilityIdentifier: "radioSchedule.text"
 					)
 					.frame(maxWidth: .infinity, alignment: .leading)
-				}
-				else if isAvailable {
+				} else if isAvailable {
 					Text("Ramówka jest dostępna, ale nie zawiera treści.")
 						.foregroundColor(.secondary)
 						.accessibilityIdentifier("radioSchedule.empty")
-				}
-				else {
+				} else {
 					Text("Brak dostępnej ramówki.")
 						.foregroundColor(.secondary)
 						.accessibilityIdentifier("radioSchedule.unavailable")
@@ -67,4 +64,3 @@ struct RadioScheduleView: View {
 		shouldShowError = true
 	}
 }
-

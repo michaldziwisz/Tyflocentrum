@@ -6,6 +6,7 @@
 //
 
 import Foundation
+
 struct Podcast: Codable, Identifiable {
 	struct PodcastTitle: Codable {
 		var rendered: String
@@ -14,6 +15,7 @@ struct Podcast: Codable, Identifiable {
 			cache.countLimit = 2000
 			return cache
 		}()
+
 		var html: NSAttributedString {
 			let data = Data(rendered.utf8)
 			if let attrString = try? NSAttributedString(data: data, options: [.documentType: NSAttributedString.DocumentType.html], documentAttributes: nil) {
@@ -49,6 +51,7 @@ struct Podcast: Codable, Identifiable {
 			return trimmedRendered
 		}
 	}
+
 	var id: Int
 	var date: String
 	var title: PodcastTitle

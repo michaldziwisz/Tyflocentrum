@@ -24,7 +24,7 @@ protocol AudioSessionProtocol: AnyObject {
 extension AVAudioSession: AudioSessionProtocol {}
 
 @MainActor
-	final class VoiceMessageRecorder: NSObject, ObservableObject {
+final class VoiceMessageRecorder: NSObject, ObservableObject {
 	enum State: Equatable {
 		case idle
 		case recording
@@ -109,7 +109,7 @@ extension AVAudioSession: AudioSessionProtocol {}
 
 			let settings: [String: Any] = [
 				AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
-				AVSampleRateKey: 44_100,
+				AVSampleRateKey: 44100,
 				AVNumberOfChannelsKey: 1,
 				AVEncoderBitRateKey: 160_000,
 				AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue,
@@ -121,11 +121,11 @@ extension AVAudioSession: AudioSessionProtocol {}
 			recorder.prepareToRecord()
 
 			self.recorder = recorder
-			self.activeRecordingFileURL = fileURL
-			self.appendBaseFileURL = shouldAppend ? recordedFileURL : nil
-			self.recordingElapsedTimeOffset = baseDurationSeconds
-			self.elapsedTime = baseDurationSeconds
-			self.state = .recording
+			activeRecordingFileURL = fileURL
+			appendBaseFileURL = shouldAppend ? recordedFileURL : nil
+			recordingElapsedTimeOffset = baseDurationSeconds
+			elapsedTime = baseDurationSeconds
+			state = .recording
 
 			recorder.record(forDuration: remainingSeconds)
 			startTimer { [weak self] in
@@ -362,31 +362,31 @@ extension AVAudioSession: AudioSessionProtocol {}
 	}
 
 	#if DEBUG
-	func seedRecordedForUITesting(durationMs: Int = 5_000) {
-		guard ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
+		func seedRecordedForUITesting(durationMs: Int = 5000) {
+			guard ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
 
-		stopPreviewIfNeeded()
-		timer?.invalidate()
-		timer = nil
+			stopPreviewIfNeeded()
+			timer?.invalidate()
+			timer = nil
 
-		recorder?.stop()
-		recorder = nil
+			recorder?.stop()
+			recorder = nil
 
-		cleanupRecordingFile()
+			cleanupRecordingFile()
 
-		let durationSeconds = max(0.05, TimeInterval(durationMs) / 1000.0)
-		let sampleRate = 44_100
-		let fileURL = FileManager.default.temporaryDirectory
-			.appendingPathComponent("ui-test-voice-\(UUID().uuidString)")
-			.appendingPathExtension("wav")
-		let wavData = Self.makeSilentWAVData(sampleRate: sampleRate, durationSeconds: durationSeconds)
-		try? wavData.write(to: fileURL, options: .atomic)
+			let durationSeconds = max(0.05, TimeInterval(durationMs) / 1000.0)
+			let sampleRate = 44100
+			let fileURL = FileManager.default.temporaryDirectory
+				.appendingPathComponent("ui-test-voice-\(UUID().uuidString)")
+				.appendingPathExtension("wav")
+			let wavData = Self.makeSilentWAVData(sampleRate: sampleRate, durationSeconds: durationSeconds)
+			try? wavData.write(to: fileURL, options: .atomic)
 
-		recordedFileURL = fileURL
-		recordedDurationMs = max(1, durationMs)
-		elapsedTime = TimeInterval(recordedDurationMs) / 1000.0
-		state = .recorded
-	}
+			recordedFileURL = fileURL
+			recordedDurationMs = max(1, durationMs)
+			elapsedTime = TimeInterval(recordedDurationMs) / 1000.0
+			state = .recorded
+		}
 
 		private static func makeSilentWAVData(sampleRate: Int, durationSeconds: TimeInterval) -> Data {
 			let channels: UInt16 = 1
@@ -419,46 +419,46 @@ extension AVAudioSession: AudioSessionProtocol {}
 			data.append(contentsOf: repeatElement(0, count: Int(dataSize)))
 			return data
 		}
-		#endif
+	#endif
 
-		private func startPreview() {
-			guard let url = recordedFileURL else { return }
-			DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-				do {
-					let player = try AVAudioPlayer(contentsOf: url)
-					player.prepareToPlay()
+	private func startPreview() {
+		guard let url = recordedFileURL else { return }
+		DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+			do {
+				let player = try AVAudioPlayer(contentsOf: url)
+				player.prepareToPlay()
 
-					DispatchQueue.main.async { [weak self] in
-						guard let self else { return }
-						guard self.recordedFileURL == url else { return }
-						guard self.state == .recorded else { return }
-						do {
-							if self.audioSession.category != .playback || self.audioSession.mode != .default {
-								try self.audioSession.setCategory(.playback, mode: .default, options: [])
-							}
-							try self.audioSession.setActive(true, options: [])
-						} catch {
-							self.showError("Nie udało się przygotować odsłuchu nagrania.")
-							return
+				DispatchQueue.main.async { [weak self] in
+					guard let self else { return }
+					guard self.recordedFileURL == url else { return }
+					guard self.state == .recorded else { return }
+					do {
+						if self.audioSession.category != .playback || self.audioSession.mode != .default {
+							try self.audioSession.setCategory(.playback, mode: .default, options: [])
 						}
-
-						player.delegate = self
-						let didStart = player.play()
-						guard didStart else {
-							self.showError("Nie udało się rozpocząć odsłuchu nagrania.")
-							return
-						}
-
-						self.previewPlayer = player
-						self.state = .playingPreview
+						try self.audioSession.setActive(true, options: [])
+					} catch {
+						self.showError("Nie udało się przygotować odsłuchu nagrania.")
+						return
 					}
-				} catch {
-					DispatchQueue.main.async { [weak self] in
-						self?.showError("Nie udało się odtworzyć nagrania.")
+
+					player.delegate = self
+					let didStart = player.play()
+					guard didStart else {
+						self.showError("Nie udało się rozpocząć odsłuchu nagrania.")
+						return
 					}
+
+					self.previewPlayer = player
+					self.state = .playingPreview
+				}
+			} catch {
+				DispatchQueue.main.async { [weak self] in
+					self?.showError("Nie udało się odtworzyć nagrania.")
 				}
 			}
 		}
+	}
 
 	private func stopPreviewIfNeeded() {
 		timer?.invalidate()
@@ -510,54 +510,54 @@ extension AVAudioSession: AudioSessionProtocol {}
 }
 
 #if DEBUG
-private extension Data {
-	mutating func appendASCII(_ string: String) {
-		if let data = string.data(using: .ascii) {
-			append(data)
-		}
-	}
-
-	mutating func appendUInt16LE(_ value: UInt16) {
-		var v = value.littleEndian
-		Swift.withUnsafeBytes(of: &v) { append(contentsOf: $0) }
-	}
-
-	mutating func appendUInt32LE(_ value: UInt32) {
-		var v = value.littleEndian
-		Swift.withUnsafeBytes(of: &v) { append(contentsOf: $0) }
-	}
-}
-#endif
-
-	extension VoiceMessageRecorder: AVAudioRecorderDelegate {
-		nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
-			Task { @MainActor in
-				guard self.recorder === recorder else { return }
-				if flag {
-					self.stopRecording()
-					return
-				}
-
-				let segmentURL = self.activeRecordingFileURL
-				let segmentFileSize = (try? segmentURL?.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
-				if segmentFileSize > 0 {
-					self.stopRecording()
-					return
-				}
-
-				self.cleanupActiveRecordingFile()
-				self.appendBaseFileURL = nil
-				self.recordingElapsedTimeOffset = 0
-				self.timer?.invalidate()
-				self.timer = nil
-				self.recorder = nil
-
-				self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
-				self.state = self.recordedFileIsUsable() ? .recorded : .idle
-				self.showError("Nagrywanie nie powiodło się.")
+	private extension Data {
+		mutating func appendASCII(_ string: String) {
+			if let data = string.data(using: .ascii) {
+				append(data)
 			}
 		}
+
+		mutating func appendUInt16LE(_ value: UInt16) {
+			var v = value.littleEndian
+			Swift.withUnsafeBytes(of: &v) { append(contentsOf: $0) }
+		}
+
+		mutating func appendUInt32LE(_ value: UInt32) {
+			var v = value.littleEndian
+			Swift.withUnsafeBytes(of: &v) { append(contentsOf: $0) }
+		}
 	}
+#endif
+
+extension VoiceMessageRecorder: AVAudioRecorderDelegate {
+	nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+		Task { @MainActor in
+			guard self.recorder === recorder else { return }
+			if flag {
+				self.stopRecording()
+				return
+			}
+
+			let segmentURL = self.activeRecordingFileURL
+			let segmentFileSize = (try? segmentURL?.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+			if segmentFileSize > 0 {
+				self.stopRecording()
+				return
+			}
+
+			self.cleanupActiveRecordingFile()
+			self.appendBaseFileURL = nil
+			self.recordingElapsedTimeOffset = 0
+			self.timer?.invalidate()
+			self.timer = nil
+			self.recorder = nil
+
+			self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
+			self.state = self.recordedFileIsUsable() ? .recorded : .idle
+			self.showError("Nagrywanie nie powiodło się.")
+		}
+	}
+}
 
 extension VoiceMessageRecorder: AVAudioPlayerDelegate {
 	nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {

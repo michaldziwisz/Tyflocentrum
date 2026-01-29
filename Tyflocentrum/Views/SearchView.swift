@@ -165,9 +165,9 @@ struct SearchView: View {
 						performSearch()
 					}
 					.accessibilityIdentifier("search.button")
-						.accessibilityHint("Wyszukuje audycje po podanej frazie.")
-						.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
-						.accessibilityHidden(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+					.accessibilityHint("Wyszukuje audycje po podanej frazie.")
+					.disabled(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
+					.accessibilityHidden(searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isLoading)
 				}
 
 				AsyncListStatusSection(
@@ -262,8 +262,7 @@ struct SearchView: View {
 					destination: Group {
 						if let podcast = playerPodcast {
 							PodcastPlayerView(podcast: podcast)
-						}
-						else {
+						} else {
 							EmptyView()
 						}
 					},

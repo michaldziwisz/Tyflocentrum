@@ -100,39 +100,39 @@ struct ContactVoiceMessageView: View {
 					}
 					Text(recordingStatusText(isRecording: isRecording, isProcessing: isProcessing))
 				}
-					.accessibilityElement(children: .combine)
-					.accessibilityIdentifier("contact.voice.recordingStatus")
+				.accessibilityElement(children: .combine)
+				.accessibilityIdentifier("contact.voice.recordingStatus")
 
-					if isRecording {
-						Button("Zatrzymaj") {
-							stopRecording(silent: false)
-						}
-						.accessibilityIdentifier("contact.voice.stop")
-						.accessibilityHint("Zatrzymuje nagrywanie. Możesz też użyć Magic Tap lub oderwać telefon od ucha.")
-						.disabled(viewModel.isSending)
-						.accessibilityHidden(viewModel.isSending)
+				if isRecording {
+					Button("Zatrzymaj") {
+						stopRecording(silent: false)
 					}
+					.accessibilityIdentifier("contact.voice.stop")
+					.accessibilityHint("Zatrzymuje nagrywanie. Możesz też użyć Magic Tap lub oderwać telefon od ucha.")
+					.disabled(viewModel.isSending)
+					.accessibilityHidden(viewModel.isSending)
 				}
+			}
 
 			if voiceRecorder.state == .recorded || voiceRecorder.state == .playingPreview {
-					Section("Nagranie") {
-						Text("Długość: \(formatTime(TimeInterval(voiceRecorder.recordedDurationMs) / 1000.0))")
-							.accessibilityIdentifier("contact.voice.duration")
+				Section("Nagranie") {
+					Text("Długość: \(formatTime(TimeInterval(voiceRecorder.recordedDurationMs) / 1000.0))")
+						.accessibilityIdentifier("contact.voice.duration")
 
-						Button(voiceRecorder.state == .playingPreview ? "Zatrzymaj odsłuch" : "Odsłuchaj") {
-							voiceRecorder.togglePreview()
-						}
-						.accessibilityIdentifier("contact.voice.preview")
-						.accessibilityHint("Odtwarza nagraną głosówkę.")
-						.disabled(viewModel.isSending || isProcessing)
+					Button(voiceRecorder.state == .playingPreview ? "Zatrzymaj odsłuch" : "Odsłuchaj") {
+						voiceRecorder.togglePreview()
+					}
+					.accessibilityIdentifier("contact.voice.preview")
+					.accessibilityHint("Odtwarza nagraną głosówkę.")
+					.disabled(viewModel.isSending || isProcessing)
 
-						Button("Usuń nagranie", role: .destructive) {
-							resetRecording()
-							UIAccessibility.post(notification: .announcement, argument: "Nagranie usunięte")
-						}
-						.accessibilityIdentifier("contact.voice.delete")
-						.accessibilityHint("Usuwa nagraną głosówkę.")
-						.disabled(viewModel.isSending || isProcessing)
+					Button("Usuń nagranie", role: .destructive) {
+						resetRecording()
+						UIAccessibility.post(notification: .announcement, argument: "Nagranie usunięte")
+					}
+					.accessibilityIdentifier("contact.voice.delete")
+					.accessibilityHint("Usuwa nagraną głosówkę.")
+					.disabled(viewModel.isSending || isProcessing)
 
 					Button {
 						Task { @MainActor in
@@ -151,16 +151,15 @@ struct ContactVoiceMessageView: View {
 								Text("Wysyłanie…")
 							}
 							.accessibilityElement(children: .combine)
-						}
-						else {
+						} else {
 							Text("Wyślij głosówkę")
 						}
-						}
-						.disabled(!canSendVoice)
-						.accessibilityIdentifier("contact.voice.send")
-						.accessibilityHint(canSendVoice ? "Wysyła głosówkę do redakcji." : "Wpisz imię i nagraj głosówkę, aby wysłać.")
 					}
+					.disabled(!canSendVoice)
+					.accessibilityIdentifier("contact.voice.send")
+					.accessibilityHint(canSendVoice ? "Wysyła głosówkę do redakcji." : "Wpisz imię i nagraj głosówkę, aby wysłać.")
 				}
+			}
 		}
 		.accessibilityIdentifier("contactVoice.form")
 		.navigationTitle("Głosówka")
@@ -183,9 +182,9 @@ struct ContactVoiceMessageView: View {
 				focusedField = .name
 			}
 			#if DEBUG
-			if ProcessInfo.processInfo.arguments.contains("UI_TESTING_SEED_VOICE_RECORDED") {
-				voiceRecorder.seedRecordedForUITesting()
-			}
+				if ProcessInfo.processInfo.arguments.contains("UI_TESTING_SEED_VOICE_RECORDED") {
+					voiceRecorder.seedRecordedForUITesting()
+				}
 			#endif
 		}
 		.onAppear {
@@ -203,14 +202,14 @@ struct ContactVoiceMessageView: View {
 				disableProximityMonitoring()
 			}
 		}
-			.onReceive(NotificationCenter.default.publisher(for: UIDevice.proximityStateDidChangeNotification)) { _ in
-				guard isEarModeEnabled else { return }
-				handleProximityChange()
-			}
-			.onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { notification in
-				handleAudioSessionInterruption(notification)
-			}
+		.onReceive(NotificationCenter.default.publisher(for: UIDevice.proximityStateDidChangeNotification)) { _ in
+			guard isEarModeEnabled else { return }
+			handleProximityChange()
 		}
+		.onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { notification in
+			handleAudioSessionInterruption(notification)
+		}
+	}
 
 	private func registerMagicTapOverrideIfNeeded() {
 		guard magicTapToken == nil else { return }
@@ -257,20 +256,20 @@ struct ContactVoiceMessageView: View {
 			audioPlayer.pause()
 		}
 
-			let isAppending = voiceRecorder.state == .recorded || voiceRecorder.state == .playingPreview
-			startRecordingTask = Task { @MainActor in
-				if trigger == .magicTap {
-					let announcement = isAppending ? "Dogrywaj wiadomość po sygnale." : "Nagrywaj wiadomość po sygnale."
-					if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
-						UIAccessibility.post(notification: .announcement, argument: announcement)
-						await waitForVoiceOverAnnouncementToFinish(announcement)
-						guard !Task.isCancelled else { return }
-						try? await Task.sleep(nanoseconds: 200_000_000)
-						guard !Task.isCancelled else { return }
-					}
+		let isAppending = voiceRecorder.state == .recorded || voiceRecorder.state == .playingPreview
+		startRecordingTask = Task { @MainActor in
+			if trigger == .magicTap {
+				let announcement = isAppending ? "Dogrywaj wiadomość po sygnale." : "Nagrywaj wiadomość po sygnale."
+				if announceBeforeStart, UIAccessibility.isVoiceOverRunning {
+					UIAccessibility.post(notification: .announcement, argument: announcement)
+					await waitForVoiceOverAnnouncementToFinish(announcement)
+					guard !Task.isCancelled else { return }
+					try? await Task.sleep(nanoseconds: 200_000_000)
+					guard !Task.isCancelled else { return }
+				}
 
-					AudioCuePlayer.shared.playStartCue()
-					playHaptic(times: 2, style: .heavy, intensity: 1.0)
+				AudioCuePlayer.shared.playStartCue()
+				playHaptic(times: 2, style: .heavy, intensity: 1.0)
 				let cueDelay = AudioCuePlayer.shared.startCueDurationSeconds + 0.1
 				try? await Task.sleep(nanoseconds: UInt64(cueDelay * 1_000_000_000))
 				guard !Task.isCancelled else { return }
@@ -370,17 +369,17 @@ struct ContactVoiceMessageView: View {
 					playHaptic(times: 1, style: .heavy, intensity: 1.0)
 				}
 
-					if voiceRecorder.state != .recording, holdToTalkStartTask == nil, !isHoldToTalkLocked, !voiceRecorder.isProcessing {
-						holdToTalkStartTask = Task { @MainActor in
-							try? await Task.sleep(nanoseconds: 200_000_000)
-							guard !Task.isCancelled else { return }
-							guard isHoldingToTalk else { return }
-							guard voiceRecorder.state != .recording else { return }
-							guard !voiceRecorder.isProcessing else { return }
-							startRecording(trigger: .holdToTalk, announceBeforeStart: false)
-							holdToTalkStartTask = nil
-						}
+				if voiceRecorder.state != .recording, holdToTalkStartTask == nil, !isHoldToTalkLocked, !voiceRecorder.isProcessing {
+					holdToTalkStartTask = Task { @MainActor in
+						try? await Task.sleep(nanoseconds: 200_000_000)
+						guard !Task.isCancelled else { return }
+						guard isHoldingToTalk else { return }
+						guard voiceRecorder.state != .recording else { return }
+						guard !voiceRecorder.isProcessing else { return }
+						startRecording(trigger: .holdToTalk, announceBeforeStart: false)
+						holdToTalkStartTask = nil
 					}
+				}
 
 				guard !isHoldToTalkLocked else { return }
 				guard voiceRecorder.state == .recording, recordingTrigger == .holdToTalk else { return }
@@ -397,13 +396,13 @@ struct ContactVoiceMessageView: View {
 				holdToTalkStartTask?.cancel()
 				holdToTalkStartTask = nil
 
-					guard recordingTrigger == .holdToTalk else { return }
-					if voiceRecorder.state == .recording {
-						guard !isHoldToTalkLocked else { return }
-						stopRecording(silent: false)
-					} else {
-						startRecordingTask?.cancel()
-						startRecordingTask = nil
+				guard recordingTrigger == .holdToTalk else { return }
+				if voiceRecorder.state == .recording {
+					guard !isHoldToTalkLocked else { return }
+					stopRecording(silent: false)
+				} else {
+					startRecordingTask?.cancel()
+					startRecordingTask = nil
 					recordingTrigger = nil
 				}
 			}
@@ -473,17 +472,17 @@ struct ContactVoiceMessageView: View {
 		generator.impactOccurred(intensity: intensity)
 
 		guard times > 1 else { return }
-			DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
-				generator.prepare()
-				generator.impactOccurred(intensity: intensity)
-			}
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.20) {
+			generator.prepare()
+			generator.impactOccurred(intensity: intensity)
 		}
+	}
 
 	private func handleAudioSessionInterruption(_ notification: Notification) {
 		guard voiceRecorder.state == .recording || startRecordingTask != nil else { return }
 		guard let userInfo = notification.userInfo,
-			  let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
-			  let type = AVAudioSession.InterruptionType(rawValue: typeValue)
+		      let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+		      let type = AVAudioSession.InterruptionType(rawValue: typeValue)
 		else { return }
 
 		switch type {

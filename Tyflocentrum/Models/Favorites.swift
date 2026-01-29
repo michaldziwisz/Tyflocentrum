@@ -94,25 +94,25 @@ struct FavoriteLink: Codable, Equatable, Identifiable {
 	var url: URL? { URL(string: urlString) }
 }
 
-	enum FavoriteItem: Identifiable, Codable, Equatable {
-		case podcast(WPPostSummary)
-		case article(summary: WPPostSummary, origin: FavoriteArticleOrigin)
-		case topic(FavoriteTopic)
-		case link(FavoriteLink)
+enum FavoriteItem: Identifiable, Codable, Equatable {
+	case podcast(WPPostSummary)
+	case article(summary: WPPostSummary, origin: FavoriteArticleOrigin)
+	case topic(FavoriteTopic)
+	case link(FavoriteLink)
 
-		static func == (lhs: FavoriteItem, rhs: FavoriteItem) -> Bool {
-			lhs.id == rhs.id
-		}
+	static func == (lhs: FavoriteItem, rhs: FavoriteItem) -> Bool {
+		lhs.id == rhs.id
+	}
 
-		var id: String {
-			switch self {
-			case .podcast(let summary):
-				return "podcast.\(summary.id)"
-		case .article(let summary, let origin):
+	var id: String {
+		switch self {
+		case let .podcast(summary):
+			return "podcast.\(summary.id)"
+		case let .article(summary, origin):
 			return "article.\(origin.rawValue).\(summary.id)"
-		case .topic(let topic):
+		case let .topic(topic):
 			return topic.id
-		case .link(let link):
+		case let .link(link):
 			return link.id
 		}
 	}
@@ -132,26 +132,26 @@ struct FavoriteLink: Codable, Equatable, Identifiable {
 
 	var title: String {
 		switch self {
-		case .podcast(let summary):
+		case let .podcast(summary):
 			return summary.title.plainText
-		case .article(let summary, _):
+		case let .article(summary, _):
 			return summary.title.plainText
-		case .topic(let topic):
+		case let .topic(topic):
 			return topic.title
-		case .link(let link):
+		case let .link(link):
 			return link.title
 		}
 	}
 
 	var subtitle: String? {
 		switch self {
-		case .podcast(let summary):
+		case let .podcast(summary):
 			return summary.asPodcastStub().formattedDate
-		case .article(let summary, _):
+		case let .article(summary, _):
 			return summary.asPodcastStub().formattedDate
-		case .topic(let topic):
+		case let .topic(topic):
 			return topic.podcastTitle
-		case .link(let link):
+		case let .link(link):
 			return link.podcastTitle
 		}
 	}
@@ -194,17 +194,17 @@ struct FavoriteLink: Codable, Equatable, Identifiable {
 	func encode(to encoder: Encoder) throws {
 		var container = encoder.container(keyedBy: CodingKeys.self)
 		switch self {
-		case .podcast(let summary):
+		case let .podcast(summary):
 			try container.encode(ItemType.podcast, forKey: .type)
 			try container.encode(summary, forKey: .summary)
-		case .article(let summary, let origin):
+		case let .article(summary, origin):
 			try container.encode(ItemType.article, forKey: .type)
 			try container.encode(summary, forKey: .summary)
 			try container.encode(origin, forKey: .origin)
-		case .topic(let topic):
+		case let .topic(topic):
 			try container.encode(ItemType.topic, forKey: .type)
 			try container.encode(topic, forKey: .topic)
-		case .link(let link):
+		case let .link(link):
 			try container.encode(ItemType.link, forKey: .type)
 			try container.encode(link, forKey: .link)
 		}

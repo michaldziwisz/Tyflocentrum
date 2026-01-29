@@ -40,7 +40,6 @@ enum NewsItemKind: String {
 	}
 }
 
-
 struct NewsItem: Identifiable {
 	let kind: NewsItemKind
 	let post: WPPostSummary
@@ -111,8 +110,7 @@ final class AsyncListViewModel<Item>: ObservableObject {
 
 			if error is AsyncTimeoutError {
 				pendingErrorMessage = timeoutErrorMessage
-			}
-			else {
+			} else {
 				pendingErrorMessage = fallbackErrorMessage
 			}
 			hasLoaded = true
@@ -181,8 +179,7 @@ final class NewsFeedViewModel: ObservableObject {
 	) {
 		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
 			self.requestTimeoutSeconds = 2
-		}
-		else {
+		} else {
 			self.requestTimeoutSeconds = requestTimeoutSeconds
 		}
 		self.sourcePerPage = max(1, sourcePerPage)
@@ -250,7 +247,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 		do {
 			let nextPage = source.nextPage
-			let perPage = self.sourcePerPage
+			let perPage = sourcePerPage
 
 			let page: TyfloAPI.WPPage<WPPostSummary>
 			switch source.kind {
@@ -324,10 +321,10 @@ final class NewsFeedViewModel: ObservableObject {
 			let podcastNext = podcasts.nextItem
 			let articleNext = articles.nextItem
 
-			if podcastNext == nil && podcasts.hasMore {
+			if podcastNext == nil, podcasts.hasMore {
 				_ = await fetchNextPodcastPage(api: api)
 			}
-			if articleNext == nil && articles.hasMore {
+			if articleNext == nil, articles.hasMore {
 				_ = await fetchNextArticlePage(api: api)
 			}
 
@@ -557,8 +554,7 @@ struct AsyncListStatusSection: View {
 						.accessibilityIdentifier(retryIdentifier)
 						.disabled(isRetryDisabled)
 						.accessibilityHidden(isRetryDisabled)
-					}
-					else {
+					} else {
 						Button("Spróbuj ponownie") {
 							Task { await retryAction() }
 						}
@@ -568,13 +564,11 @@ struct AsyncListStatusSection: View {
 					}
 				}
 			}
-		}
-		else if isLoading && isEmpty {
+		} else if isLoading && isEmpty {
 			Section {
 				ProgressView(loadingMessage)
 			}
-		}
-		else if hasLoaded && isEmpty {
+		} else if hasLoaded && isEmpty {
 			Section {
 				Text(emptyMessage)
 					.foregroundColor(.secondary)
@@ -649,8 +643,7 @@ struct NewsView: View {
 							.disabled(viewModel.isLoadingMore)
 							.accessibilityHidden(viewModel.isLoadingMore)
 						}
-					}
-					else if viewModel.isLoadingMore {
+					} else if viewModel.isLoadingMore {
 						Section {
 							ProgressView("Ładowanie starszych treści…")
 						}
@@ -673,8 +666,7 @@ struct NewsView: View {
 					destination: Group {
 						if let podcast = playerPodcast {
 							PodcastPlayerView(podcast: podcast)
-						}
-						else {
+						} else {
 							EmptyView()
 						}
 					},

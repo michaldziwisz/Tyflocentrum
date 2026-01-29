@@ -26,8 +26,7 @@ struct LazyDetailedArticleView: View {
 		ZStack {
 			if let article {
 				DetailedArticleView(article: article, favoriteOrigin: .post)
-			}
-			else if let message = errorMessage {
+			} else if let message = errorMessage {
 				VStack(alignment: .leading, spacing: 12) {
 					Text(message)
 						.foregroundColor(.secondary)
@@ -43,8 +42,7 @@ struct LazyDetailedArticleView: View {
 				}
 				.frame(maxWidth: .infinity, alignment: .leading)
 				.padding()
-			}
-			else {
+			} else {
 				ProgressView("Ładowanie…")
 					.frame(maxWidth: .infinity, maxHeight: .infinity)
 			}
@@ -81,8 +79,7 @@ struct LazyDetailedArticleView: View {
 		} catch {
 			if error is AsyncTimeoutError {
 				pendingErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
-			}
-			else {
+			} else {
 				pendingErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 			}
 		}
