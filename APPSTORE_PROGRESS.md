@@ -7,7 +7,7 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 ## Stan CI
 
 - Baseline (przed poprawkami z tej iteracji): workflow `iOS (unsigned IPA)` – **success** (run `21481970583`).
-- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21484408407`).
+- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21491076190`).
 
 ## Wdrożone (bez Apple Developer Program)
 
@@ -16,7 +16,9 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 - Zoptymalizowano `Podcast.PodcastTitle.plainText` (memoizacja + szybka ścieżka bez parsowania HTML) i dodano testy regresji.
 - Migracja `NavigationView` → `NavigationStack` w głównych widokach.
 - `TyfloAPI`: dla requestów WordPress domyślne `cachePolicy = .useProtocolCachePolicy` (a dla endpointów „na żywo” wymuszone `reloadIgnoringLocalCacheData`) + testy regresji.
-- Ujednolicono formatowanie w kilku kluczowych plikach wskazanych w review (m.in. `TyfloAPI`, `DetailedPodcastView`, `VoiceMessageRecorder`).
+- SwiftFormat: dodano `.swiftformat` + `.swift-version`, lint w CI oraz workflow `SwiftFormat` do automatycznego formatowania bez Maca.
+- `TyfloAPI`: dodano in‑memory cache z TTL (5 min) dla odpowiedzi z `cache-control: no-store` + testy regresji.
+- Ustabilizowano nawigację z menu aplikacji (żeby UI testy i nawigacja były deterministyczne).
 
 ## Wymaga Apple Developer Program / zewnętrznej konfiguracji
 
@@ -33,5 +35,5 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 
 ## Kandydaci na kolejne iteracje (nie blokują 1.0)
 
-- Dołożyć narzędzie do automatycznego formatowania (np. SwiftFormat/SwiftLint) i ustandaryzować styl w całym repo.
-- Rozważyć cache „prawdziwy” (in‑memory + TTL) dla endpointów z `cache-control: no-store` (jeśli pojawią się problemy z energią/szybkością).
+- ✅ Dołożono narzędzie do automatycznego formatowania (**SwiftFormat**) i ustandaryzowano styl w repo (lint w CI).
+- ✅ Dodano „prawdziwy” cache (in‑memory + TTL) dla endpointów z `cache-control: no-store` (z testami).

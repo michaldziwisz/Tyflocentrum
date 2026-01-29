@@ -85,5 +85,5 @@ xcodebuild \
 
 - `README.md` trzymamy **krótkie** (opis projektu + szybki start + linki).
 - Szczegóły (funkcje, architektura, kontrakty, CI) trzymamy w `docs/`.
-- Formatowanie kodu utrzymujemy spójne (docelowo można dołożyć SwiftFormat/SwiftLint, ale nie jest to blocker 1.0).
+- Formatowanie kodu utrzymujemy spójne przez **SwiftFormat** (lint w CI + manual workflow do automatycznej poprawy).
 - Guard w CI (`scripts/require-readme-update.sh`) wymaga aktualizacji **README lub `docs/`** tylko wtedy, gdy zmiana dotyka “public surface” (nowe funkcje/API/CI/build), a nie przy każdej drobnej poprawce.
