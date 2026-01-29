@@ -10,3 +10,4 @@ README w tym repo jest celowo utrzymywane **krótkie i stabilne**. Szczegóły, 
 
 ## Dokumenty funkcjonalne
 - Wiadomości głosowe do TyfloRadia (zachowanie w aplikacji + kontrakt + wdrożenie panelu): [docs/voice-messages.md](voice-messages.md)
+- Powiadomienia push (plan + MVP): [docs/push-notifications.md](push-notifications.md)

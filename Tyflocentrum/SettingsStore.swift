@@ -37,6 +37,7 @@ final class SettingsStore: ObservableObject {
 	private let userDefaults: UserDefaults
 	private let contentKindLabelPositionKey: String
 	private let playbackRateRememberModeKey: String
+	private let pushNotificationPreferencesKey: String
 
 	@Published var contentKindLabelPosition: ContentKindLabelPosition = .before {
 		didSet {
@@ -50,14 +51,28 @@ final class SettingsStore: ObservableObject {
 		}
 	}
 
+	@Published var pushNotificationPreferences: PushNotificationPreferences = PushNotificationPreferences() {
+		didSet {
+			let encoder = JSONEncoder()
+			do {
+				let data = try encoder.encode(pushNotificationPreferences)
+				userDefaults.set(data, forKey: pushNotificationPreferencesKey)
+			} catch {
+				// Avoid crashing the app because of persistence issues.
+			}
+		}
+	}
+
 	init(
 		userDefaults: UserDefaults = .standard,
 		contentKindLabelPositionKey: String = "settings.contentKindLabelPosition",
-		playbackRateRememberModeKey: String = "settings.playbackRateRememberMode"
+		playbackRateRememberModeKey: String = "settings.playbackRateRememberMode",
+		pushNotificationPreferencesKey: String = "settings.pushNotificationPreferences.v1"
 	) {
 		self.userDefaults = userDefaults
 		self.contentKindLabelPositionKey = contentKindLabelPositionKey
 		self.playbackRateRememberModeKey = playbackRateRememberModeKey
+		self.pushNotificationPreferencesKey = pushNotificationPreferencesKey
 
 		if let rawValue = userDefaults.string(forKey: contentKindLabelPositionKey),
 		   let loaded = ContentKindLabelPosition(rawValue: rawValue) {
@@ -67,6 +82,13 @@ final class SettingsStore: ObservableObject {
 		if let rawValue = userDefaults.string(forKey: playbackRateRememberModeKey),
 		   let loaded = PlaybackRateRememberMode(rawValue: rawValue) {
 			playbackRateRememberMode = loaded
+		}
+
+		if let data = userDefaults.data(forKey: pushNotificationPreferencesKey) {
+			let decoder = JSONDecoder()
+			if let loaded = try? decoder.decode(PushNotificationPreferences.self, from: data) {
+				pushNotificationPreferences = loaded
+			}
 		}
 	}
 }
