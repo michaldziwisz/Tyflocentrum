@@ -7,7 +7,7 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 ## Stan CI
 
 - Baseline (przed poprawkami z tej iteracji): workflow `iOS (unsigned IPA)` – **success** (run `21481970583`).
-- Po poprawkach z tej iteracji: _w trakcie weryfikacji na CI_.
+- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21484408407`).
 
 ## Wdrożone (bez Apple Developer Program)
 
@@ -33,4 +33,3 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 - Ujednolicenie formatowania (SwiftFormat/SwiftLint) w wybranych plikach wskazanych w review.
 - Migracja `NavigationView` → `NavigationStack`.
 - Rozważenie cache (URLCache / in‑memory) dla list, jeśli pojawią się problemy z energią/szybkością.
-
