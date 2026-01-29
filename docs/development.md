@@ -35,6 +35,18 @@
 
 - `TyflocentrumTests/` (m.in. stubowanie `URLSession` przez `StubURLProtocol`).
 
+## Formatowanie (SwiftFormat)
+
+- Konfiguracja: `.swiftformat` (repo root).
+- Lokalnie na macOS:
+
+```bash
+brew install swiftformat
+swiftformat --config .swiftformat .
+```
+
+- Bez Maca: uruchom workflow GitHub Actions **SwiftFormat** (manual). Jeśli są zmiany, workflow sam je zacommituje do `master`.
+
 ### UI tests
 
 - `TyflocentrumUITests/`
