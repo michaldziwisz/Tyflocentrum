@@ -88,32 +88,35 @@ struct ShortPodcastView: View {
 			if showsListenAction {
 				if let favoriteItem, let favoriteTitle {
 					row
-						.accessibilityAction(named: "Słuchaj") {
-							onListen?()
+						.accessibilityAction(named: "Skopiuj link") {
+							copyPodcastLink()
 						}
 						.accessibilityAction(named: favoriteTitle) {
 							toggleFavorite(favoriteItem)
+						}
+						.accessibilityAction(named: "Słuchaj") {
+							onListen?()
 						}
 						.contextMenu {
 							Button(favoriteTitle) {
 								toggleFavorite(favoriteItem)
 							}
 						}
-						.accessibilityAction(named: "Skopiuj link") {
-							copyPodcastLink()
-						}
 				} else {
 					row
-						.accessibilityAction(named: "Słuchaj") {
-							onListen?()
-						}
 						.accessibilityAction(named: "Skopiuj link") {
 							copyPodcastLink()
+						}
+						.accessibilityAction(named: "Słuchaj") {
+							onListen?()
 						}
 				}
 			} else {
 				if let favoriteItem, let favoriteTitle {
 					row
+						.accessibilityAction(named: "Skopiuj link") {
+							copyPodcastLink()
+						}
 						.accessibilityAction(named: favoriteTitle) {
 							toggleFavorite(favoriteItem)
 						}
@@ -121,9 +124,6 @@ struct ShortPodcastView: View {
 							Button(favoriteTitle) {
 								toggleFavorite(favoriteItem)
 							}
-						}
-						.accessibilityAction(named: "Skopiuj link") {
-							copyPodcastLink()
 						}
 				} else {
 					row

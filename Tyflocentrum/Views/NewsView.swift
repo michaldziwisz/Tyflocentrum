@@ -651,13 +651,14 @@ struct NewsView: View {
 				}
 			}
 			.accessibilityIdentifier("news.list")
-			.background(
-				VoiceOverScrollBarPrimer(
-					shouldPrime: viewModel.hasLoaded && !viewModel.items.isEmpty && viewModel.errorMessage == nil
+				.background(
+					VoiceOverScrollBarPrimer(
+						shouldPrime: viewModel.hasLoaded && !viewModel.items.isEmpty && viewModel.errorMessage == nil,
+						targetIdentifier: "news.list"
+					)
+					.frame(width: 0, height: 0)
+					.accessibilityHidden(true)
 				)
-				.frame(width: 0, height: 0)
-				.accessibilityHidden(true)
-			)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
