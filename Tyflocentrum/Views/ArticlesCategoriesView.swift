@@ -424,8 +424,8 @@ private struct TyfloSwiatMagazineIssueView: View {
 			async let page = api.fetchTyfloswiatPage(id: issueSummary.id)
 			async let children = api.fetchTyfloswiatPageSummaries(parentPageID: issueSummary.id, perPage: 100)
 
-				let (loadedPage, loadedChildren) = try await(page, children)
-				guard !Task.isCancelled else { return }
+			let (loadedPage, loadedChildren) = try await(page, children)
+			guard !Task.isCancelled else { return }
 
 			issue = loadedPage
 			pdfURL = TyfloSwiatMagazineParsing.extractFirstPDFURL(from: loadedPage.content.rendered)
