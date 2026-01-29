@@ -7,7 +7,7 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 ## Stan CI
 
 - Baseline (przed poprawkami z tej iteracji): workflow `iOS (unsigned IPA)` – **success** (run `21481970583`).
-- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21493903930`).
+- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21495748088`).
 
 ## Wdrożone (bez Apple Developer Program)
 
@@ -18,8 +18,13 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 - `TyfloAPI`: dla requestów WordPress domyślne `cachePolicy = .useProtocolCachePolicy` (a dla endpointów „na żywo” wymuszone `reloadIgnoringLocalCacheData`) + testy regresji.
 - SwiftFormat: dodano `.swiftformat` + `.swift-version`, lint w CI oraz workflow `SwiftFormat` do automatycznego formatowania bez Maca.
 - `TyfloAPI`: dodano in‑memory cache z TTL (5 min) dla odpowiedzi z `cache-control: no-store` + testy regresji.
+- `TyfloAPI`: dodano limity pamięci dla cache `no-store` (max wpisów / max bajtów / max rozmiar pojedynczej odpowiedzi) + testy ewikcji.
+- Logowanie: `print(...)` zastąpiono `Logger` (`os_log`) i ograniczono logowanie „wrażliwych” URL-i (bez querystringów).
 - Ustabilizowano nawigację z menu aplikacji (żeby UI testy i nawigacja były deterministyczne).
 - iPad/Mac: ukryto i wyłączono iPhone‑only „tryb ucha” (proximity) w ekranie głosówek + testy regresji.
+- `SafeHTMLView`: odświeża font-size po zmianie Dynamic Type (żeby treść HTML reagowała na ustawienia).
+- Projekt: ujednolicono niespójne build settings (`IPHONEOS_DEPLOYMENT_TARGET`).
+- Daty: zabezpieczono współdzielenie `DateFormatter` w `Podcast.formattedDate` (uniknięcie problemów przy concurrency).
 
 ## Wymaga Apple Developer Program / zewnętrznej konfiguracji
 
