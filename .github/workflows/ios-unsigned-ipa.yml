@@ -14,6 +14,11 @@ jobs:
       - name: Xcode version
         run: xcodebuild -version
 
+      - name: SwiftFormat (lint)
+        run: |
+          brew install swiftformat
+          swiftformat --config .swiftformat --lint .
+
       - name: Test (Simulator)
         run: |
           xcodebuild \

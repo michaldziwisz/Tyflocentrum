@@ -38,6 +38,7 @@
 ## Formatowanie (SwiftFormat)
 
 - Konfiguracja: `.swiftformat` (repo root).
+- CI: workflow `iOS (unsigned IPA)` uruchamia `swiftformat --lint` przed testami.
 - Lokalnie na macOS:
 
 ```bash
