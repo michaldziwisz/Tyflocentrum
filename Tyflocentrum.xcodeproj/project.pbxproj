@@ -11,12 +11,14 @@
 		89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA3121BCB26744CEAE67FDD /* AsyncTimeout.swift */; };
 		F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C0D1E2F3A4B5C6D7E8F901 /* MultipartFormDataBuilder.swift */; };
 		BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
+		A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */; };
 		BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
 		A6FE8102C0FA7A26774E22AF /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD18FC9FB6494384932AF3BD /* FavoritesStore.swift */; };
 		2C876D8EFB2A3FA670837B5A /* Favorites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3993A69E2CA7956518F22441 /* Favorites.swift */; };
 		D382729BD51E13C68BF56155 /* AppMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1347120363C2B310653F610 /* AppMenu.swift */; };
 		B49CD206A577ECD1CD15E285 /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83E50FD9BC840E2A1847FB9 /* FavoritesView.swift */; };
 		69853FC208E384B34801168A /* FavoritesStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF01FA9E1D6240CDA0600363 /* FavoritesStoreTests.swift */; };
+		A1B2C3D4E5F60718293A4B92 /* DeviceCapabilitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B91 /* DeviceCapabilitiesTests.swift */; };
 		A1B2C3D4E5F60718293A4B74 /* NewsFeedViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B73 /* NewsFeedViewModelTests.swift */; };
 		A1B2C3D4E5F60718293A4B76 /* PagedFeedViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B75 /* PagedFeedViewModelTests.swift */; };
 		A1B2C3D4E5F60718293A4B78 /* PlaybackRatePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B77 /* PlaybackRatePersistenceTests.swift */; };
@@ -114,6 +116,7 @@
 		A1B2C3D4E5F60718293A4B5E /* TyflocentrumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumSmokeTests.swift; sourceTree = "<group>"; };
 		BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilities.swift; sourceTree = "<group>"; };
 		8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowNotesParser.swift; sourceTree = "<group>"; };
 		D0C1B2A3F4E5D6C7B8A9F001 /* VoiceMessageRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMessageRecorder.swift; sourceTree = "<group>"; };
 		BE1FDCD328F6DE7D00B9601B /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
@@ -154,6 +157,7 @@
 		A1B2C3D4E5F60718293A4B71 /* PushNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationPreferences.swift; sourceTree = "<group>"; };
 		C6D07EF7B77E90D3593AD699 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		EF01FA9E1D6240CDA0600363 /* FavoritesStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStoreTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B91 /* DeviceCapabilitiesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilitiesTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B73 /* NewsFeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsFeedViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B75 /* PagedFeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagedFeedViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B77 /* PlaybackRatePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackRatePersistenceTests.swift; sourceTree = "<group>"; };
@@ -245,6 +249,7 @@
 				51AEB5EB9C8F4260E80FB3CA /* TyfloAPITests.swift */,
 				C0FFEE1234567890ABCDEF12 /* MultipartFormDataBuilderTests.swift */,
 				EF01FA9E1D6240CDA0600363 /* FavoritesStoreTests.swift */,
+				A1B2C3D4E5F60718293A4B91 /* DeviceCapabilitiesTests.swift */,
 				A1B2C3D4E5F60718293A4B73 /* NewsFeedViewModelTests.swift */,
 				A1B2C3D4E5F60718293A4B75 /* PagedFeedViewModelTests.swift */,
 				A1B2C3D4E5F60718293A4B77 /* PlaybackRatePersistenceTests.swift */,
@@ -335,6 +340,7 @@
 				children = (
 					BEEA97C628E9D6880073E5AB /* Info.plist */,
 					BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
+					A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */,
 					8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */,
 					A9C0D1E2F3A4B5C6D7E8F901 /* MultipartFormDataBuilder.swift */,
 					BEA9ECD129203FD700718254 /* Views */,
@@ -501,6 +507,7 @@
 				files = (
 					BE9381D228EAED6400ABB964 /* Tyflocentrum.xcdatamodeld in Sources */,
 					89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */,
+					A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */,
 					BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */,
 					BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
 					E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
@@ -556,6 +563,7 @@
 				13B97F309E41DA3DB11FF9FB /* TyfloAPITests.swift in Sources */,
 				D3C4B5A69788776655443322 /* MultipartFormDataBuilderTests.swift in Sources */,
 				69853FC208E384B34801168A /* FavoritesStoreTests.swift in Sources */,
+				A1B2C3D4E5F60718293A4B92 /* DeviceCapabilitiesTests.swift in Sources */,
 				A1B2C3D4E5F60718293A4B74 /* NewsFeedViewModelTests.swift in Sources */,
 				A1B2C3D4E5F60718293A4B76 /* PagedFeedViewModelTests.swift in Sources */,
 				A1B2C3D4E5F60718293A4B78 /* PlaybackRatePersistenceTests.swift in Sources */,
