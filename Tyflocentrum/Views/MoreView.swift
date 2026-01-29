@@ -25,7 +25,7 @@ struct MoreView: View {
 	}
 
 	var body: some View {
-		NavigationView {
+		NavigationStack {
 			VStack(spacing: 16) {
 				Spacer()
 
@@ -73,12 +73,11 @@ struct MoreView: View {
 			}
 			.padding()
 			.withAppMenu()
-			.navigationTitle("Tyfloradio")
-			.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
-				Button("OK") {}
-			} message: {
-				Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
-			}
-			}
+				.navigationTitle("Tyfloradio")
+				.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {
+					Button("OK") {}
+				} message: {
+					Text("Na antenie Tyfloradia nie trwa teraz żadna audycja interaktywna.")
+				}
 		}
 	}

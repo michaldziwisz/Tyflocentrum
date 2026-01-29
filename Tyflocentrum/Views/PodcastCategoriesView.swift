@@ -12,7 +12,7 @@ struct PodcastCategoriesView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@StateObject private var viewModel = PagedFeedViewModel<Category>(perPage: 100)
 	var body: some View {
-		NavigationView {
+		NavigationStack {
 			List {
 				Section {
 					NavigationLink {

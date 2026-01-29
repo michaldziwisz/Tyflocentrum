@@ -590,7 +590,7 @@ struct NewsView: View {
 	@State private var playerPodcast: Podcast?
 
 	var body: some View {
-		NavigationView {
+		NavigationStack {
 			List {
 				AsyncListStatusSection(
 					errorMessage: viewModel.errorMessage,
