@@ -134,7 +134,7 @@ final class TyfloAPI: ObservableObject {
 	private let noStoreCache: NoStoreInMemoryCache
 	init(session: URLSession = .shared, noStoreCacheConfig: NoStoreCacheConfig = .init()) {
 		self.session = session
-		self.noStoreCache = NoStoreInMemoryCache(
+		noStoreCache = NoStoreInMemoryCache(
 			ttlSeconds: noStoreCacheConfig.ttlSeconds,
 			maxEntries: noStoreCacheConfig.maxEntries,
 			maxTotalBytes: noStoreCacheConfig.maxTotalBytes,
