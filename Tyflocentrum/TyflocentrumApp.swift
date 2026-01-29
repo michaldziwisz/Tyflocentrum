@@ -493,19 +493,19 @@ private final class UITestURLProtocol: URLProtocol {
 			)
 		}
 
-			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/pages") {
-				if let pageID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/pages/") {
-					let shouldFail = shouldFailOnce(&didFailTyfloswiatPageDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-						AppLog.uiTests.debug("tyfloswiat page detail id=\(pageID) shouldFail=\(shouldFail)")
-					}
-					if shouldFail {
-						return (500, Data("{}".utf8))
-					}
-					if pageID == 7772 {
-						return (
-							200,
-							#"""
+		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/pages") {
+			if let pageID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/pages/") {
+				let shouldFail = shouldFailOnce(&didFailTyfloswiatPageDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+					AppLog.uiTests.debug("tyfloswiat page detail id=\(pageID) shouldFail=\(shouldFail)")
+				}
+				if shouldFail {
+					return (500, Data("{}".utf8))
+				}
+				if pageID == 7772 {
+					return (
+						200,
+						#"""
 							{"id":7772,"date":"2025-08-20T12:16:01","title":{"rendered":"Tyfloświat 4/2025"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"<h2>Spis treści</h2><ul><li><a href='https://tyfloswiat.pl/czasopismo/tyfloswiat-4-2025/test-article-1/'>Test artykuł 1</a></li></ul><p>Pobierz PDF – <a href='https://tyfloswiat.pl/wp-content/uploads/2025/08/Tyflo-4_2025.pdf'>Tyflo 4_2025</a></p>"},"guid":{"rendered":"https://tyfloswiat.pl/?page_id=7772"}}
 						"""#.data(using: .utf8) ?? Data()
 					)
@@ -555,18 +555,18 @@ private final class UITestURLProtocol: URLProtocol {
 			return (200, Data("[]".utf8))
 		}
 
-			if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
-				if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-					let shouldFail = shouldFailOnce(&didFailTyflopodcastPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-						AppLog.uiTests.debug("tyflopodcast post detail id=\(postID) shouldFail=\(shouldFail)")
-					}
-					if shouldFail {
-						return (500, Data("{}".utf8))
-					}
-					return (
-						200,
-						#"""
+		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
+			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+				let shouldFail = shouldFailOnce(&didFailTyflopodcastPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+					AppLog.uiTests.debug("tyflopodcast post detail id=\(postID) shouldFail=\(shouldFail)")
+				}
+				if shouldFail {
+					return (500, Data("{}".utf8))
+				}
+				return (
+					200,
+					#"""
 						{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=\#(postID)"},"link":"https://tyflopodcast.net/?p=\#(postID)"}
 					"""#.data(using: .utf8) ?? Data()
 				)
@@ -621,18 +621,18 @@ private final class UITestURLProtocol: URLProtocol {
 			)
 		}
 
-			if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
-				if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-					let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-						AppLog.uiTests.debug("tyfloswiat post detail id=\(postID) shouldFail=\(shouldFail)")
-					}
-					if shouldFail {
-						return (500, Data("{}".utf8))
-					}
-					return (
-						200,
-						#"""
+		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
+			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
+				let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+					AppLog.uiTests.debug("tyfloswiat post detail id=\(postID) shouldFail=\(shouldFail)")
+				}
+				if shouldFail {
+					return (500, Data("{}".utf8))
+				}
+				return (
+					200,
+					#"""
 						{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=\#(postID)"},"link":"https://tyfloswiat.pl/?p=\#(postID)"}
 					"""#.data(using: .utf8) ?? Data()
 				)
