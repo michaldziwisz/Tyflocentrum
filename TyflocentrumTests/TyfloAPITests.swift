@@ -453,6 +453,39 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
+	func testFetchArticleSummariesPageUsesNoStoreInMemoryCache() async throws {
+		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 1
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: [
+					"Cache-Control": "no-store, no-cache, must-revalidate",
+					"X-WP-Total": "10",
+					"X-WP-TotalPages": "2",
+				]
+			)!
+			return (response, Data("[]".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let first = try await api.fetchArticleSummariesPage(page: 3, perPage: 10)
+		let second = try await api.fetchArticleSummariesPage(page: 3, perPage: 10)
+
+		XCTAssertEqual(first.total, 10)
+		XCTAssertEqual(first.totalPages, 2)
+		XCTAssertEqual(second.total, 10)
+		XCTAssertEqual(second.totalPages, 2)
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
 	func testGetArticleCategoriesUsesCorrectHost() async {
 		let requestMade = expectation(description: "request made")
 
@@ -631,6 +664,31 @@ final class TyfloAPITests: XCTestCase {
 		XCTAssertTrue(success)
 		XCTAssertTrue(schedule.available)
 		XCTAssertEqual(schedule.text, "Line1\nLine2")
+
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testGetRadioScheduleDoesNotUseNoStoreInMemoryCache() async {
+		let requestMade = expectation(description: "request made")
+		requestMade.expectedFulfillmentCount = 2
+
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+			let url = try XCTUnwrap(request.url)
+
+			let responseBody = #"{"available":true,"text":"Test"}"#.data(using: .utf8)!
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: ["Cache-Control": "no-store, no-cache, must-revalidate"]
+			)!
+			return (response, responseBody)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		_ = await api.getRadioSchedule()
+		_ = await api.getRadioSchedule()
 
 		await fulfillment(of: [requestMade], timeout: 1)
 	}

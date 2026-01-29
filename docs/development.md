@@ -27,6 +27,7 @@
 ## Sieć i cache
 
 - `TyfloAPI.fetch*` domyślnie używa `cachePolicy = .useProtocolCachePolicy` dla requestów do WordPress (listy/detale), żeby pozwolić `URLCache` obniżyć koszt sieci i energii (o ile serwery zwracają cache‑friendly nagłówki).
+- Dla odpowiedzi z `cache-control: no-store` (np. część endpointów TyfloŚwiata) TyfloAPI ma dodatkowy **in-memory cache z TTL = 5 min** (żeby ograniczyć powtarzane requesty i drenaż baterii).
 - Endpointy „na żywo” (`isTPAvailable`, `getRadioSchedule`) wymuszają `cachePolicy = .reloadIgnoringLocalCacheData` (żeby nie „przegapić” rozpoczęcia audycji / zmian w ramówce).
 
 ## Testy

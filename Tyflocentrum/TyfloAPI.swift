@@ -7,6 +7,63 @@
 
 import Foundation
 
+private actor NoStoreInMemoryCache {
+	struct Entry {
+		let data: Data
+		let expiresAt: Date
+		let wpTotal: Int?
+		let wpTotalPages: Int?
+
+		var isExpired: Bool {
+			Date() >= expiresAt
+		}
+	}
+
+	private let ttlSeconds: TimeInterval
+	private let maxEntries: Int
+	private var entries: [URL: Entry] = [:]
+
+	init(ttlSeconds: TimeInterval, maxEntries: Int = 256) {
+		self.ttlSeconds = ttlSeconds
+		self.maxEntries = max(1, maxEntries)
+	}
+
+	func get(_ url: URL) -> Entry? {
+		guard let entry = entries[url] else { return nil }
+		if entry.isExpired {
+			entries[url] = nil
+			return nil
+		}
+		return entry
+	}
+
+	func set(_ url: URL, data: Data, wpTotal: Int? = nil, wpTotalPages: Int? = nil) {
+		let expiresAt = Date().addingTimeInterval(ttlSeconds)
+		entries[url] = Entry(data: data, expiresAt: expiresAt, wpTotal: wpTotal, wpTotalPages: wpTotalPages)
+		pruneIfNeeded()
+	}
+
+	func remove(_ url: URL) {
+		entries[url] = nil
+	}
+
+	private func pruneIfNeeded() {
+		guard entries.count > maxEntries else { return }
+
+		entries = entries.filter { !$0.value.isExpired }
+
+		guard entries.count > maxEntries else { return }
+
+		let victims = entries
+			.sorted(by: { $0.value.expiresAt < $1.value.expiresAt })
+			.prefix(entries.count - maxEntries)
+			.map(\.key)
+		for key in victims {
+			entries[key] = nil
+		}
+	}
+}
+
 final class TyfloAPI: ObservableObject {
 	private let session: URLSession
 	private let tyfloPodcastBaseURL = URL(string: "https://tyflopodcast.net/wp-json")!
@@ -17,6 +74,7 @@ final class TyfloAPI: ObservableObject {
 	private let wpCategoryFields = "id,name,count"
 
 	private static let requestTimeoutSeconds: TimeInterval = 30
+	private static let noStoreCacheTTLSeconds: TimeInterval = 5 * 60
 	private static let retryableErrorCodes: Set<URLError.Code> = [
 		.notConnectedToInternet,
 		.timedOut,
@@ -38,6 +96,8 @@ final class TyfloAPI: ObservableObject {
 	}
 
 	static let shared = TyfloAPI(session: makeSharedSession())
+
+	private let noStoreCache = NoStoreInMemoryCache(ttlSeconds: noStoreCacheTTLSeconds)
 	init(session: URLSession = .shared) {
 		self.session = session
 	}
@@ -88,6 +148,13 @@ final class TyfloAPI: ObservableObject {
 		}
 	}
 
+	private static func shouldUseNoStoreCache(for http: HTTPURLResponse) -> Bool {
+		guard let cacheControl = http.value(forHTTPHeaderField: "Cache-Control")?.lowercased() else {
+			return false
+		}
+		return cacheControl.contains("no-store")
+	}
+
 	private func withRetry<T>(
 		maxAttempts: Int = 2,
 		operation: @escaping () async throws -> T
@@ -114,34 +181,53 @@ final class TyfloAPI: ObservableObject {
 	private func fetch<T: Decodable>(
 		_ url: URL,
 		decoder: JSONDecoder = JSONDecoder(),
-		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
-	) async throws -> T {
-		var request = URLRequest(url: url)
-		request.cachePolicy = cachePolicy
-		request.timeoutInterval = Self.requestTimeoutSeconds
-		request.setValue("application/json", forHTTPHeaderField: "Accept")
+			cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+		) async throws -> T {
+			if cachePolicy == .useProtocolCachePolicy, let cached = await noStoreCache.get(url) {
+				if let decoded = try? decoder.decode(T.self, from: cached.data) {
+					return decoded
+				}
+				await noStoreCache.remove(url)
+			}
+
+			var request = URLRequest(url: url)
+			request.cachePolicy = cachePolicy
+			request.timeoutInterval = Self.requestTimeoutSeconds
+			request.setValue("application/json", forHTTPHeaderField: "Accept")
 		return try await withRetry {
 			let (data, response) = try await self.session.data(for: request)
-			guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
-				throw URLError(.badServerResponse)
-			}
-			do {
-				return try decoder.decode(T.self, from: data)
-			} catch {
-				throw URLError(.cannotDecodeContentData)
+				guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
+					throw URLError(.badServerResponse)
+				}
+
+				if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
+					await noStoreCache.set(url, data: data)
+				}
+
+				do {
+					return try decoder.decode(T.self, from: data)
+				} catch {
+					throw URLError(.cannotDecodeContentData)
 			}
 		}
 	}
 
 	private func fetchWPPage<Item: Decodable>(
 		_ url: URL,
-		decoder: JSONDecoder = JSONDecoder(),
-		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
-	) async throws -> WPPage<Item> {
-		var request = URLRequest(url: url)
-		request.cachePolicy = cachePolicy
-		request.timeoutInterval = Self.requestTimeoutSeconds
-		request.setValue("application/json", forHTTPHeaderField: "Accept")
+			decoder: JSONDecoder = JSONDecoder(),
+			cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+		) async throws -> WPPage<Item> {
+			if cachePolicy == .useProtocolCachePolicy, let cached = await noStoreCache.get(url) {
+				if let decodedItems = try? decoder.decode([Item].self, from: cached.data) {
+					return WPPage(items: decodedItems, total: cached.wpTotal, totalPages: cached.wpTotalPages)
+				}
+				await noStoreCache.remove(url)
+			}
+
+			var request = URLRequest(url: url)
+			request.cachePolicy = cachePolicy
+			request.timeoutInterval = Self.requestTimeoutSeconds
+			request.setValue("application/json", forHTTPHeaderField: "Accept")
 		return try await withRetry {
 			let (data, response) = try await self.session.data(for: request)
 			guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
@@ -154,11 +240,16 @@ final class TyfloAPI: ObservableObject {
 			} catch {
 				throw URLError(.cannotDecodeContentData)
 			}
-			let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
-			let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
-			return WPPage(items: items, total: total, totalPages: totalPages)
+				let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
+				let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
+
+				if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
+					await noStoreCache.set(url, data: data, wpTotal: total, wpTotalPages: totalPages)
+				}
+
+				return WPPage(items: items, total: total, totalPages: totalPages)
+			}
 		}
-	}
 
 	func fetchLatestPodcasts() async throws -> [Podcast] {
 		guard let url = makeWPURL(
