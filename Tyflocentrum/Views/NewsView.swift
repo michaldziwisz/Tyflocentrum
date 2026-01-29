@@ -630,7 +630,6 @@ struct NewsView: View {
 						Task { await viewModel.loadMore(api: api) }
 					}
 				}
-
 				if viewModel.errorMessage == nil, viewModel.hasLoaded {
 					if let loadMoreError = viewModel.loadMoreErrorMessage {
 						Section {
@@ -649,19 +648,19 @@ struct NewsView: View {
 						}
 					}
 				}
-				}
-				.accessibilityIdentifier("news.list")
-				.background(
-					VoiceOverScrollBarPrimer(
-						shouldPrime: viewModel.hasLoaded && !viewModel.items.isEmpty && viewModel.errorMessage == nil,
-						targetIdentifier: "news.list"
-					)
-					.frame(width: 0, height: 0)
-					.accessibilityHidden(true)
+			}
+			.accessibilityIdentifier("news.list")
+			.background(
+				VoiceOverScrollBarPrimer(
+					shouldPrime: viewModel.hasLoaded && !viewModel.items.isEmpty && viewModel.errorMessage == nil,
+					targetIdentifier: "news.list"
 				)
-				.refreshable {
-					await viewModel.refresh(api: api)
-				}
+				.frame(width: 0, height: 0)
+				.accessibilityHidden(true)
+			)
+			.refreshable {
+				await viewModel.refresh(api: api)
+			}
 			.task {
 				await viewModel.loadIfNeeded(api: api)
 			}
