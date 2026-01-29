@@ -31,7 +31,6 @@
 		FC1F7CD5BB2E35CBF0F19C55 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4283FEFC63F0CD0E873A0000 /* SettingsStore.swift */; };
 		A1B2C3D4E5F60718293A4B72 /* PushNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B71 /* PushNotificationPreferences.swift */; };
 		7067CBBE80C46D1FB6DFBDB0 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6D07EF7B77E90D3593AD699 /* SettingsView.swift */; };
-		BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE71654029219DB700FF9A89 /* HTMLRendererHelper.swift */; };
 		BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */; };
 		E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED2F0E60BF0E4CD1B0748873 /* AccessibleTextView.swift */; };
 		C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */; };
@@ -53,7 +52,6 @@
 		BEC9AB97292E56FF009907EB /* Schedule.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEC9AB96292E56FF009907EB /* Schedule.swift */; };
 		BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */; };
 		74D0E52F50594708AD4B1AEA /* PodcastPlayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */; };
-		BED1708B29200E8700F4508B /* HTMLTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BED1708A29200E8700F4508B /* HTMLTextView.swift */; };
 		BED6A4772926DDFE00BA378B /* AudioToolbox.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6C12925A1F9001F9A45 /* AudioToolbox.framework */; };
 		BED6A4782926DE2C00BA378B /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6CA2925A296001F9A45 /* SystemConfiguration.framework */; };
 		BED6A4792926DE4700BA378B /* CFNetwork.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = BE64D6C62925A221001F9A45 /* CFNetwork.framework */; };
@@ -129,7 +127,6 @@
 		BE64D6CA2925A296001F9A45 /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = System/Library/Frameworks/SystemConfiguration.framework; sourceTree = SDKROOT; };
 		BE64D6CE2925A2C7001F9A45 /* AVFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AVFoundation.framework; path = System/Library/Frameworks/AVFoundation.framework; sourceTree = SDKROOT; };
 		BE64D6D22925A327001F9A45 /* Accelerate.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Accelerate.framework; path = System/Library/Frameworks/Accelerate.framework; sourceTree = SDKROOT; };
-		BE71654029219DB700FF9A89 /* HTMLRendererHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLRendererHelper.swift; sourceTree = "<group>"; };
 		BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DetailedArticleView.swift; sourceTree = "<group>"; };
 		BE77EE8929000AE0002087ED /* PodcastCategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastCategoriesView.swift; sourceTree = "<group>"; };
 		BE77EE8B29000B06002087ED /* ArticlesCategoriesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArticlesCategoriesView.swift; sourceTree = "<group>"; };
@@ -147,7 +144,6 @@
 		BEC9AB96292E56FF009907EB /* Schedule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Schedule.swift; sourceTree = "<group>"; };
 		BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShortPodcastView.swift; sourceTree = "<group>"; };
 		A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastPlayerSheet.swift; sourceTree = "<group>"; };
-		BED1708A29200E8700F4508B /* HTMLTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLTextView.swift; sourceTree = "<group>"; };
 		BED6A4842926E14300BA378B /* AudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioPlayer.swift; sourceTree = "<group>"; };
 		F0C0A1B2C3D4E5F607182930 /* AudioCuePlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioCuePlayer.swift; sourceTree = "<group>"; };
 		CD18FC9FB6494384932AF3BD /* FavoritesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesStore.swift; sourceTree = "<group>"; };
@@ -284,14 +280,12 @@
 				BE77EE8D29000B2C002087ED /* SearchView.swift */,
 				BE77EE8F29000B39002087ED /* MoreView.swift */,
 				F0C0A1B2C3D4E5F607182940 /* RadioScheduleView.swift */,
-				BED1708A29200E8700F4508B /* HTMLTextView.swift */,
 				BECDC3B52907F057009B92B2 /* ShortPodcastView.swift */,
 				A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */,
 				BE890DFD29087659005D8DC7 /* ShortCategoryView.swift */,
 				BE56ED2E290B3BE9006ADF67 /* DetailedPodcastView.swift */,
 				BEB8A67A291CE49C00A2836F /* DetailedCategoryView.swift */,
 				BEA9ECD329204CD400718254 /* DetailedArticleCategoryView.swift */,
-				BE71654029219DB700FF9A89 /* HTMLRendererHelper.swift */,
 				BEBAB45E292931BB009967A0 /* MediaPlayerView.swift */,
 				BEEC27DA292E775700F0D869 /* ContactView.swift */,
 				F0C0A1B2C3D4E5F607182932 /* ContactTextMessageView.swift */,
@@ -515,7 +509,6 @@
 					F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */,
 					C47C765821AB1728150DA367 /* WPPostSummary.swift in Sources */,
 					BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */,
-					BE71654129219DB700FF9A89 /* HTMLRendererHelper.swift in Sources */,
 					BECDC3B62907F057009B92B2 /* ShortPodcastView.swift in Sources */,
 					74D0E52F50594708AD4B1AEA /* PodcastPlayerSheet.swift in Sources */,
 					BED6A4852926E14300BA378B /* AudioPlayer.swift in Sources */,
@@ -543,7 +536,6 @@
 				BEDE145E292CE26E00C25C27 /* Comment.swift in Sources */,
 				BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */,
 				BEEA97B928E9D4BB0073E5AB /* TyflocentrumApp.swift in Sources */,
-				BED1708B29200E8700F4508B /* HTMLTextView.swift in Sources */,
 				BE77EE8A29000AE0002087ED /* PodcastCategoriesView.swift in Sources */,
 				A6FE8102C0FA7A26774E22AF /* FavoritesStore.swift in Sources */,
 				2C876D8EFB2A3FA670837B5A /* Favorites.swift in Sources */,
