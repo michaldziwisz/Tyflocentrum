@@ -36,6 +36,10 @@ struct ContactVoiceMessageView: View {
 		case proximity
 	}
 
+	private var supportsEarMode: Bool {
+		DeviceCapabilities.supportsProximityRecording
+	}
+
 	var body: some View {
 		let hasName = !viewModel.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 		let canSendVoice = hasName && voiceRecorder.canSend && !viewModel.isSending
@@ -54,11 +58,13 @@ struct ContactVoiceMessageView: View {
 			}
 
 			Section("Nagrywanie") {
-				Toggle("Nagrywaj po przyłożeniu telefonu do ucha", isOn: $isEarModeEnabled)
-					.accessibilityIdentifier("contact.voice.earMode")
-					.accessibilityHint(hasName ? "Gdy włączone, przyłożenie telefonu do ucha rozpoczyna nagrywanie, a oderwanie kończy." : "Najpierw uzupełnij imię, aby włączyć ten tryb.")
-					.disabled(viewModel.isSending || isRecording || isProcessing || !hasName)
-					.accessibilityHidden(viewModel.isSending || !hasName)
+				if supportsEarMode {
+					Toggle("Nagrywaj po przyłożeniu telefonu do ucha", isOn: $isEarModeEnabled)
+						.accessibilityIdentifier("contact.voice.earMode")
+						.accessibilityHint(hasName ? "Gdy włączone, przyłożenie telefonu do ucha rozpoczyna nagrywanie, a oderwanie kończy." : "Najpierw uzupełnij imię, aby włączyć ten tryb.")
+						.disabled(viewModel.isSending || isRecording || isProcessing || !hasName)
+						.accessibilityHidden(viewModel.isSending || !hasName)
+				}
 
 				Text("Magic Tap: rozpocznij/zatrzymaj nagrywanie. Możesz dogrywać kolejne fragmenty. Przytrzymaj przycisk i mów, aby nagrywać bez gadania VoiceOvera.")
 					.font(.footnote)
@@ -188,6 +194,9 @@ struct ContactVoiceMessageView: View {
 			#endif
 		}
 		.onAppear {
+			if !supportsEarMode, isEarModeEnabled {
+				isEarModeEnabled = false
+			}
 			registerMagicTapOverrideIfNeeded()
 		}
 		.onDisappear {
@@ -196,6 +205,10 @@ struct ContactVoiceMessageView: View {
 			resetRecording()
 		}
 		.onChange(of: isEarModeEnabled) { enabled in
+			guard supportsEarMode else {
+				isEarModeEnabled = false
+				return
+			}
 			if enabled {
 				enableProximityMonitoring()
 			} else {
@@ -203,7 +216,7 @@ struct ContactVoiceMessageView: View {
 			}
 		}
 		.onReceive(NotificationCenter.default.publisher(for: UIDevice.proximityStateDidChangeNotification)) { _ in
-			guard isEarModeEnabled else { return }
+			guard supportsEarMode, isEarModeEnabled else { return }
 			handleProximityChange()
 		}
 		.onReceive(NotificationCenter.default.publisher(for: AVAudioSession.interruptionNotification)) { notification in
@@ -337,15 +350,18 @@ struct ContactVoiceMessageView: View {
 	}
 
 	private func enableProximityMonitoring() {
+		guard supportsEarMode else { return }
 		UIDevice.current.isProximityMonitoringEnabled = true
 		handleProximityChange()
 	}
 
 	private func disableProximityMonitoring() {
+		guard supportsEarMode else { return }
 		UIDevice.current.isProximityMonitoringEnabled = false
 	}
 
 	private func handleProximityChange() {
+		guard supportsEarMode else { return }
 		let isNear = UIDevice.current.proximityState
 
 		if isNear {
