@@ -7,7 +7,7 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 ## Stan CI
 
 - Baseline (przed poprawkami z tej iteracji): workflow `iOS (unsigned IPA)` – **success** (run `21481970583`).
-- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21491855112`).
+- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21493903930`).
 
 ## Wdrożone (bez Apple Developer Program)
 
@@ -19,6 +19,7 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 - SwiftFormat: dodano `.swiftformat` + `.swift-version`, lint w CI oraz workflow `SwiftFormat` do automatycznego formatowania bez Maca.
 - `TyfloAPI`: dodano in‑memory cache z TTL (5 min) dla odpowiedzi z `cache-control: no-store` + testy regresji.
 - Ustabilizowano nawigację z menu aplikacji (żeby UI testy i nawigacja były deterministyczne).
+- iPad/Mac: ukryto i wyłączono iPhone‑only „tryb ucha” (proximity) w ekranie głosówek + testy regresji.
 
 ## Wymaga Apple Developer Program / zewnętrznej konfiguracji
 
