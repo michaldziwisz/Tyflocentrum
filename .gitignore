@@ -3,6 +3,7 @@ artifacts/
 installers/
 .gh-cache/
 .gh-artifacts/
+.artifacts/
 
 # Xcode / iOS
 DerivedData/

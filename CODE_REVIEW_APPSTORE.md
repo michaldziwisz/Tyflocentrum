@@ -1,28 +1,37 @@
 # Tyflocentrum — code review + App Store readiness (iOS)
 
 Data przeglądu: **2026-01-29**  
-Stan repozytorium: `83bb751`  
+Stan repozytorium: `500b02d`  
 Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITests/`) + komponent backendowy powiadomień (`push-service/`) w kontekście funkcji „push”.
 
 ## TL;DR (decyzje przed wysyłką do App Store)
 
+### Co się zmieniło od poprzedniej wersji (repo: `83bb751`)
+- Usunięto legacy renderowanie HTML (`HTMLTextView`, `HTMLRendererHelper`) i zostało jedno, bezpieczne rozwiązanie (`SafeHTMLView`).
+- Push: sekcja w UI i automatyczna rejestracja zostały wyłączone w buildzie **Release** (zostawione jako debug‑only narzędzie).
+- Wydajność: `Podcast.PodcastTitle.plainText` ma memoizację i „szybką ścieżkę” dla tekstu bez HTML; są testy regresji.
+- Nawigacja: migracja `NavigationView` → `NavigationStack` + stabilniejsze menu aplikacji (`navigationDestination`).
+- Sieć: WordPress requesty domyślnie używają `.useProtocolCachePolicy`; endpointy „na żywo” nadal wymuszają `reloadIgnoringLocalCacheData`. Dodano też in‑memory TTL cache (5 min) dla odpowiedzi z `Cache-Control: no-store` + testy.
+- Repo: dodano SwiftFormat (`.swiftformat`, `.swift-version`) i lint w CI.
+
 ### Najważniejsze ryzyka (w tej wersji)
-1. **Powiadomienia push są niegotowe end‑to‑end**:
-   - iOS: brak włączonej capability/entitlements dla APNs w projekcie (`Tyflocentrum.xcodeproj/project.pbxproj` nie zawiera konfiguracji push).
-   - backend: `push-service/server.js` **nie wysyła** do APNs (tylko loguje fan‑out).
-   - UI: sekcja „Powiadomienia push” jest widoczna w `Tyflocentrum/Views/SettingsView.swift`, domyślnie wszystko jest włączone → prompt o pozwolenie na powiadomienia może pojawić się na starcie.
-
-   **Wniosek**: jeśli push ma być elementem tej wersji, to jest **blokada**. Jeśli push ma być „później”, rozważ ukrycie/wyłączenie UI push w buildzie App Store (żeby nie dostarczyć funkcji pozornej).
-
-2. **Prywatność / App Store Connect**: musisz przygotować i podać **URL polityki prywatności** (wymóg w App Store Connect) oraz poprawnie wypełnić „App Privacy” (zbierane dane: podpis/imie, treść wiadomości, głosówka, token push/identyfikator instalacji).
-
-3. **UX w Ustawieniach (push)**: w obecnym UI są techniczne statusy typu „Tryb rejestracji: ios-installation” i komunikat o braku Apple Developer Program — dla użytkowników końcowych może to wyglądać jak debug.
+1. **App Store Connect**: przygotować i uzupełnić:
+   - **Privacy Policy URL** i **Support URL**,
+   - „App Privacy” zgodne z realnym działaniem aplikacji (kontakt/wiadomości/głosówki + dane lokalne).
+2. **iPad**: projekt wspiera iPad (`TARGETED_DEVICE_FAMILY = "1,2"`), więc musisz przygotować **zrzuty ekranu iPad** i zrobić sanity‑check UI (czytelność na szerokich ekranach, orientacje, nawigacja).
+3. **Mac (uruchamianie na macOS)**:
+   - najprostsza ścieżka to „**iPad app na Macu (Apple silicon)**” — zwykle bez zmian w kodzie, ale wymaga testu UX (okno, klawiatura/mysz/scroll) i upewnienia się, że nie polegasz na sprzętowych feature’ach iPhone’a,
+   - funkcje typu „tryb ucha” (proximity sensor) są **sensowne tylko na iPhone** — na iPad/Mac warto je ukryć/wyłączyć, żeby nie wyglądały na niedziałające.
+4. **Powiadomienia push**:
+   - w tej wersji **Release** push są wyłączone w UI i logice rejestracji (celowo, żeby nie dostarczać „pozornej” funkcji),
+   - jeśli wrócą w kolejnej iteracji: wymagają APNs (capability/entitlements + klucze) i realnej wysyłki w `push-service`.
 
 ### Co jest mocne (duże plusy pod App Store i jakość)
 - **Dostępność (VoiceOver)**: wiele `accessibilityLabel/Hint/Identifier`, sensowne akcje na wierszach list, Magic Tap (globalny i kontekstowy).
 - **Audio**: przejście na `AVPlayer` + pilot systemowy (`MPRemoteCommandCenter`) + wznawianie + prędkość.
 - **Bezpieczne renderowanie HTML**: `SafeHTMLView` bez JS, non‑persistent storage, kontrola nawigacji i schematów URL.
-- **Testy**: unit tests + UI smoke tests z deterministycznym stubowaniem sieci (`StubURLProtocol`, `UITestURLProtocol`).
+- **Testy**: unit tests + UI smoke tests z deterministycznym stubowaniem sieci (`StubURLProtocol`, `UITestURLProtocol`) + testy regresji dla cache/HTML/plainText.
+- **Higiena repo/CI**: SwiftFormat jako lint w CI zmniejsza ryzyko „rozjeżdżania się” stylu i ułatwia review.
 
 ## 1) Dobre praktyki, architektura i utrzymanie
 
@@ -33,17 +42,19 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 - **Lepsza odporność na awarie**: usunięcie `fatalError` z Core Data (`DataController`) — aplikacja nie wywraca się w runtime, tylko ma fallback.
 
 ### Rzeczy do dopracowania (bez zmiany „feature scope”, ale dla jakości kodu)
-- **Spójność stylu i formatowania**: kilka plików ma niekonsekwentne wcięcia i układ (np. `Tyflocentrum/TyfloAPI.swift`, `Tyflocentrum/Views/DetailedPodcastView.swift`, `Tyflocentrum/VoiceMessageRecorder.swift`, testy). To nie blokuje releasu, ale utrudnia dalszy rozwój i review.
-- **Martwy kod**: w repo są nieużywane/legacy komponenty HTML (`Tyflocentrum/Views/HTMLTextView.swift`, `Tyflocentrum/Views/HTMLRendererHelper.swift`). Warto usunąć, żeby nie mnożyć „fałszywych tropów”.
-- **Konwencja nawigacji**: cały projekt wciąż używa `NavigationView` (iOS 17 preferuje `NavigationStack`). Nie jest to krytyczne, ale przy kolejnych iteracjach warto migrować.
+- **Cache a semantyka `no-store`**: `TyfloAPI` ma in‑memory cache dla odpowiedzi z `Cache-Control: no-store` (TTL 5 min). To jest świadome obejście dla UX, ale warto upewnić się, że nie dotyczy endpointów, gdzie `no-store` jest wymogiem prywatności.
+- **Logowanie**: nadal są `print(...)` przy błędach sieci. Na produkcji zwykle lepszy jest `Logger`/`os_log` (kontrola poziomów i brak przypadkowego logowania treści).
+- **Drobne porządki**: w `Tyflocentrum.xcodeproj/project.pbxproj` widać jeszcze stare wartości (np. `IPHONEOS_DEPLOYMENT_TARGET = 16.1` w części konfiguracji) — dobrze utrzymać spójność, żeby nie wprowadzać zamieszania w przyszłości.
 
 ## 2) Optymalizacja (wydajność i responsywność)
 
 ### Potencjalne hot‑spoty
-- **HTML → plain text w modelach**: `Podcast.PodcastTitle.plainText` parsuje HTML przez `NSAttributedString` przy każdym odczycie. W listach (setki pozycji) to może kosztować CPU i powodować przycięcia.
-  - Minimalna optymalizacja (bez zmiany funkcji): cache plain‑text na etapie mapowania do view‑state (np. w `WPPostSummary`/VM) albo memoizacja w modelu.
-- **`cachePolicy = .reloadIgnoringLocalCacheData`** w większości requestów (`Tyflocentrum/TyfloAPI.swift`): wymusza brak cache i zwiększa koszt sieci + energii.
-  - Jeśli celem jest „zawsze świeże”, OK; jeśli chcesz płynność/offline‑friendly, rozważ `URLCache` i cache w pamięci (np. na czas sesji) dla list.
+- **HTML → plain text w modelach**: wcześniej było kosztowne; teraz jest **memoizacja + szybka ścieżka** w `Podcast.PodcastTitle.plainText`. Jeżeli dalej pojawią się przycięcia, kolejnym krokiem jest pre‑computing plain‑text w warstwie VM (dla list) zamiast w widoku.
+- **Cache / sieć**: obecnie:
+  - WordPress requesty: `.useProtocolCachePolicy`,
+  - endpointy „na żywo”: `reloadIgnoringLocalCacheData`,
+  - dodatkowo in‑memory TTL cache dla `no-store`.
+  Upewnij się, że to zachowanie jest OK dla oczekiwań „świeżości” w feedach (szczególnie jeśli serwer daje `no-store` na treści, które mają być zawsze live).
 
 ### Co już wygląda sensownie
 - Paginacja i ładowanie partiami w feedach (`NewsFeedViewModel`, `PagedFeedViewModel`) ograniczają jednorazowe „przebranie” 100+ elementów.
@@ -66,7 +77,7 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
   - absolutnie wymagane jest **rate limiting** na reverse proxy,
   - konieczne jest zabezpieczenie pliku stanu (`state.json`) i katalogu danych (dostęp tylko serwis/administrator),
   - docelowo rozważ trzymanie tokenów w storage z lepszym modelem (DB) + rotacja/TTL.
-- **Kluczowe**: brak wysyłki do APNs (obecnie tylko logi) → push nie działa.
+- **Kluczowe**: brak wysyłki do APNs (obecnie tylko logi) → push nie działa (i w tej wersji iOS jest to celowo „debug‑only”).
 
 ## 4) Prywatność i dane użytkownika
 
@@ -75,16 +86,16 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
   - imię/podpis (`ContactViewModel.name`),
   - treść wiadomości tekstowej (`ContactViewModel.message`),
   - plik audio głosówki + metadane (czas trwania).
-- **Powiadomienia push**:
-  - token APNs (na urządzeniach) lub identyfikator instalacji (fallback),
-  - preferencje kategorii powiadomień.
+- **Powiadomienia push (stan na dziś)**:
+  - w buildzie **Release** UI i rejestracja są wyłączone, więc aplikacja nie powinna zbierać/zgłaszać tokenów push,
+  - kod i preferencje nadal istnieją (debug‑only) pod przyszłe wdrożenie APNs.
 - **Lokalnie na urządzeniu**: ulubione i ustawienia (UserDefaults).
 
 ### Konsekwencje pod App Store
 - W App Store Connect przygotuj:
-  - **Privacy Policy URL** (wymóg) + spójny opis retencji i celu danych (kontakt z radiem, powiadomienia),
-  - „App Privacy” (kategorie danych i ich cel).
-- Rozważ, czy **rejestracja „installationID” na serwerze push** ma się dziać bez uzyskania zgody na powiadomienia i zanim użytkownik w ogóle wejdzie w ustawienia. To jest obszar ryzyka w kontekście zaufania i przejrzystości (nawet jeśli formalnie nie jest to tracking).
+  - **Privacy Policy URL** (wymóg) + spójny opis retencji i celu danych (kontakt z radiem, głosówki),
+  - „App Privacy” (kategorie danych i ich cel) — zgodnie z tym, co realnie wysyłasz na serwer.
+- Jeśli planujesz włączać push po 1.0, uwzględnij to w roadmapie prywatności (tokeny/prefsy + retencja).
 
 ## 5) Testowalność i testy
 
@@ -94,7 +105,8 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
   - `MultipartFormDataBuilder`,
   - modele i persystencję ustawień/ulubionych,
   - logikę feedów (paged/news),
-  - aspekty audio session dla nagrywania.
+  - aspekty audio session dla nagrywania,
+  - regresje: `plainText`, cache policy i cache dla `no-store`.
 - UI smoke testy mają sensowną strategię:
   - deterministyczne stubowanie sieci,
   - identyfikatory dostępności jako kontrakt testowy,
@@ -104,7 +116,7 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 - Testy regresji dla:
   - `ShowNotesParser` (różne formaty znaczników czasu/linków),
   - `SafeHTMLView` (czy linki nie nawigują w webview, tylko otwierają zewnętrznie),
-  - `PushNotificationsManager` (kiedy prosi o zgodę / kiedy rejestruje token / co robi po odmowie).
+  - jeśli push wróci: `PushNotificationsManager` (kiedy prosi o zgodę / kiedy rejestruje token / co robi po odmowie).
 
 ## 6) Dostępność (VoiceOver, Dynamic Type, ergonomia)
 
@@ -115,8 +127,8 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 - Player ma osobne opisy kontrolek i wartości (czas, prędkość).
 
 ### Rekomendacje (raczej „polish”, nie blokery)
-- Dopracować copy/hinty tam, gdzie UI jest „techniczne” (szczególnie push).
-- Na iPad rozważyć UX dla „trybu ucha” (to raczej funkcja „telefonowa”, a projekt targetuje iPad: `TARGETED_DEVICE_FAMILY = "1,2"`).
+- Dopracować copy/hinty tam, gdzie UI jest „techniczne” (na dziś dotyczy głównie debug‑only fragmentów).
+- Na iPad i Mac rozważyć UX dla „trybu ucha” (to funkcja „telefonowa”; na iPad/Mac warto ją ukryć/wyłączyć).
 
 ## 7) Wytyczne Apple / publikacja w App Store (checklista praktyczna)
 
@@ -133,12 +145,18 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
 
 ### 7.2 Punkty ryzyka specyficzne dla Tyflocentrum
 #### Powiadomienia push
-- Jeśli chcesz mieć push w tej wersji:
+- Status na dziś: push jest **wyłączone w Release** (debug‑only).
+- Jeśli chcesz je włączyć w kolejnej wersji:
   - włącz capability **Push Notifications** dla bundle ID i dodaj entitlements,
-  - backend musi faktycznie wysyłać do APNs,
-  - dopracuj moment pytania o zgodę (niekoniecznie na starcie) + komunikaty w UI.
-- Jeśli push ma być „wkrótce”:
-  - lepiej nie pokazywać użytkownikom przełączników, które nic nie robią.
+  - backend musi faktycznie wysyłać do APNs (a nie tylko logować),
+  - dopracuj moment pytania o zgodę + komunikaty w UI,
+  - zaktualizuj „App Privacy”.
+
+#### iPad i Mac
+- iPad jest włączony w projekcie — do App Store potrzebujesz iPad screenshots i testu UI na dużych szerokościach.
+- Jeśli chcesz, żeby aplikacja „dało się odpalić na Macu” bez blokowania:
+  - w praktyce oznacza nie opt‑outować „iPad app on Mac” w App Store Connect i wykonać sanity‑testy UX,
+  - unikaj eksponowania funkcji zależnych od sensorów iPhone’a (np. proximity/„tryb ucha”) na iPad/Mac.
 
 #### Mikrofon (głosówki)
 - `NSMicrophoneUsageDescription` jest — super.
@@ -162,14 +180,13 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
 ## 8) Rekomendowana lista działań przed wysyłką (priorytety)
 
 ### Blokery (jeśli dotyczy)
-- Push: zdecydować „w tej wersji tak/nie” i dopasować UI + backend + capabilities.
-- App Store Connect: Privacy Policy URL + poprawne App Privacy (na podstawie realnych danych).
+- App Store Connect: Privacy Policy URL + Support URL + poprawne „App Privacy” (na podstawie realnych danych).
+- iPad: odpowiednie zrzuty ekranu + sanity‑check UI.
 
 ### Wysoki priorytet (polish pod stabilność i wizerunek)
-- Usunąć/ukryć techniczne debug‑statusy w push UI (albo przepisać językiem użytkownika).
-- Spiąć spójność formatowania (SwiftFormat / SwiftLint) i usunąć martwe pliki HTML helperów.
+- (Opcjonalnie) dodać `PrivacyInfo.xcprivacy` (jeśli wymagane przez aktualne zasady publikacji i/lub używane API).
+- (Opcjonalnie) rozważyć `ITSAppUsesNonExemptEncryption` (jeśli kwalifikujesz się do wyjątku; i tak trzeba odpowiedzieć w App Store Connect).
+- (Produktowo) jeśli chcesz wspierać uruchamianie na Macu: sanity‑testy „iPad app on Mac” + ukrycie/wyłączenie iPhone‑only funkcji (np. proximity/„tryb ucha”) na iPad/Mac.
 
 ### Niski priorytet (po wydaniu 1.0)
-- `NavigationStack` zamiast `NavigationView`.
-- Cache (URLCache / in‑memory) dla list + optymalizacja HTML→plainText (memoizacja).
-
+- Doprecyzować strategię cache (np. per‑endpoint TTL, cache invalidation) jeśli użytkownicy zgłaszają „nieaktualne” treści.
