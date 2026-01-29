@@ -1201,7 +1201,7 @@ final class TyfloAPITests: XCTestCase {
 			XCTAssertEqual(request.httpMethod, "POST")
 			XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json; charset=utf-8")
 
-			let body = try extractBody(from: request)
+			let body = try Self.extractBody(from: request)
 			let parsed = try JSONSerialization.jsonObject(with: body) as? [String: Any]
 			XCTAssertEqual(parsed?["token"] as? String, "install-1234567890123456")
 			XCTAssertEqual(parsed?["env"] as? String, "ios-installation")
@@ -1233,7 +1233,7 @@ final class TyfloAPITests: XCTestCase {
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
 
-			let body = try extractBody(from: request)
+			let body = try Self.extractBody(from: request)
 			let parsed = try JSONSerialization.jsonObject(with: body) as? [String: Any]
 			XCTAssertEqual(parsed?["token"] as? String, "aabb")
 			XCTAssertEqual(parsed?["env"] as? String, "ios-apns")
@@ -1267,7 +1267,7 @@ final class TyfloAPITests: XCTestCase {
 			return defaults
 		}
 
-		private func extractBody(from request: URLRequest) throws -> Data {
+		private static func extractBody(from request: URLRequest) throws -> Data {
 			if let body = request.httpBody {
 				return body
 			}
@@ -1278,7 +1278,7 @@ final class TyfloAPITests: XCTestCase {
 			return Data()
 		}
 
-		private func readAll(from stream: InputStream) throws -> Data {
+		private static func readAll(from stream: InputStream) throws -> Data {
 			stream.open()
 			defer { stream.close() }
 
