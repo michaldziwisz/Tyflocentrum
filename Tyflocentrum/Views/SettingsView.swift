@@ -1,8 +1,27 @@
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
 	@EnvironmentObject private var settings: SettingsStore
 	@EnvironmentObject private var audioPlayer: AudioPlayer
+	@EnvironmentObject private var pushNotifications: PushNotificationsManager
+
+	private func pushAuthorizationTitle(_ status: UNAuthorizationStatus) -> String {
+		switch status {
+		case .notDetermined:
+			return "Nieustawione"
+		case .denied:
+			return "Odmowa"
+		case .authorized:
+			return "Dozwolone"
+		case .provisional:
+			return "Tymczasowe"
+		case .ephemeral:
+			return "Tymczasowe (ephemeral)"
+		@unknown default:
+			return "Nieznane"
+		}
+	}
 
 	var body: some View {
 		List {
@@ -64,6 +83,38 @@ struct SettingsView: View {
 				Toggle("Zmiana ramówki Tyfloradio", isOn: $settings.pushNotificationPreferences.schedule)
 					.accessibilityHint("Powiadamia o zmianach w ramówce Tyfloradia.")
 					.accessibilityIdentifier("settings.push.schedule")
+
+				Text("Zgoda systemu: \(pushAuthorizationTitle(pushNotifications.authorizationStatus))")
+					.accessibilityIdentifier("settings.push.status.permission")
+
+				Text(pushNotifications.deviceTokenHex == nil ? "Token (APNs): brak" : "Token (APNs): dostępny")
+					.accessibilityHint("Do prawdziwych pushy wymagany jest token z APNs.")
+					.accessibilityIdentifier("settings.push.status.token")
+
+				if let lastServerSyncAt = pushNotifications.lastServerSyncAt {
+					Text("Synchronizacja z serwerem: \(lastServerSyncAt.formatted(date: .numeric, time: .standard))")
+						.accessibilityIdentifier("settings.push.status.serverSyncAt")
+				}
+				else {
+					Text("Synchronizacja z serwerem: brak")
+						.accessibilityIdentifier("settings.push.status.serverSyncAt")
+				}
+
+				if let lastServerSyncError = pushNotifications.lastServerSyncError {
+					Text("Błąd synchronizacji: \(lastServerSyncError)")
+						.accessibilityIdentifier("settings.push.status.serverSyncError")
+				}
+
+				if let lastServerSyncTokenKind = pushNotifications.lastServerSyncTokenKind {
+					Text("Tryb rejestracji: \(lastServerSyncTokenKind)")
+						.accessibilityHint("Określa, czy aplikacja ma token APNs, czy działa w trybie testowym bez Apple Developer Program.")
+						.accessibilityIdentifier("settings.push.status.serverSyncTokenKind")
+				}
+
+				if let lastRegistrationError = pushNotifications.lastRegistrationError {
+					Text("Błąd rejestracji iOS: \(lastRegistrationError)")
+						.accessibilityIdentifier("settings.push.status.iosRegistrationError")
+				}
 			}
 		}
 		.onChange(of: settings.playbackRateRememberMode) { _ in

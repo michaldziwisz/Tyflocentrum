@@ -1179,3 +1179,91 @@ final class TyfloAPITests: XCTestCase {
 		)
 	}
 }
+
+@MainActor
+final class PushNotificationsManagerSyncTests: XCTestCase {
+	override func tearDown() {
+		StubURLProtocol.requestHandler = nil
+		super.tearDown()
+	}
+
+	func testSyncRegistrationUsesInstallationIDWhenAPNSTokenIsMissing() async throws {
+		let defaults = makeDefaults()
+		defaults.set("install-1234567890123456", forKey: "push.installationID.test")
+
+		let requestMade = expectation(description: "request made")
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+
+			let url = try XCTUnwrap(request.url)
+			XCTAssertEqual(url.host, "push.test")
+			XCTAssertEqual(url.path, "/api/v1/register")
+			XCTAssertEqual(request.httpMethod, "POST")
+			XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json; charset=utf-8")
+
+			let body = try XCTUnwrap(request.httpBody)
+			let parsed = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+			XCTAssertEqual(parsed?["token"] as? String, "install-1234567890123456")
+			XCTAssertEqual(parsed?["env"] as? String, "ios-installation")
+			let prefs = parsed?["prefs"] as? [String: Any]
+			XCTAssertEqual(prefs?["podcast"] as? Bool, true)
+			XCTAssertEqual(prefs?["article"] as? Bool, true)
+			XCTAssertEqual(prefs?["live"] as? Bool, true)
+			XCTAssertEqual(prefs?["schedule"] as? Bool, true)
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data(#"{"ok":true}"#.utf8))
+		}
+
+		let manager = PushNotificationsManager(
+			pushServiceBaseURL: try XCTUnwrap(URL(string: "https://push.test")),
+			session: makeSession(),
+			userDefaults: defaults,
+			installationIDKey: "push.installationID.test"
+		)
+
+		await manager.syncRegistrationIfPossible(prefs: PushNotificationPreferences())
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	func testSyncRegistrationUsesAPNSTokenWhenAvailable() async throws {
+		let defaults = makeDefaults()
+
+		let requestMade = expectation(description: "request made")
+		StubURLProtocol.requestHandler = { request in
+			requestMade.fulfill()
+
+			let body = try XCTUnwrap(request.httpBody)
+			let parsed = try JSONSerialization.jsonObject(with: body) as? [String: Any]
+			XCTAssertEqual(parsed?["token"] as? String, "aabb")
+			XCTAssertEqual(parsed?["env"] as? String, "ios-apns")
+
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data(#"{"ok":true}"#.utf8))
+		}
+
+		let manager = PushNotificationsManager(
+			pushServiceBaseURL: try XCTUnwrap(URL(string: "https://push.test")),
+			session: makeSession(),
+			userDefaults: defaults,
+			installationIDKey: "push.installationID.test"
+		)
+
+		manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA, 0xBB]))
+		await fulfillment(of: [requestMade], timeout: 1)
+	}
+
+	private func makeSession() -> URLSession {
+		let config = URLSessionConfiguration.ephemeral
+		config.protocolClasses = [StubURLProtocol.self]
+		return URLSession(configuration: config)
+	}
+
+	private func makeDefaults() -> UserDefaults {
+		let suiteName = "TyflocentrumTests.PushNotificationsManagerSync.\(UUID().uuidString)"
+		let defaults = UserDefaults(suiteName: suiteName)!
+		defaults.removePersistentDomain(forName: suiteName)
+		return defaults
+	}
+}

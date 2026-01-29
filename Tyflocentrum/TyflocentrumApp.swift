@@ -109,19 +109,55 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 @MainActor
 final class PushNotificationsManager: ObservableObject {
+	private static let defaultPushServiceBaseURL = URL(string: "https://tyflocentrum.tyflo.eu.org")!
+	private static let defaultRequestTimeoutSeconds: TimeInterval = 10
+
+	private let pushServiceBaseURL: URL
+	private let session: URLSession
+	private let userDefaults: UserDefaults
+	private let installationIDKey: String
+	private let installationID: String
+	private var lastKnownPrefs: PushNotificationPreferences = PushNotificationPreferences()
+
 	private(set) var hasRequestedSystemPermission = false
 
 	@Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
 	@Published private(set) var deviceTokenHex: String?
 	@Published private(set) var lastRegistrationError: String?
+	@Published private(set) var lastServerSyncAt: Date?
+	@Published private(set) var lastServerSyncError: String?
+	@Published private(set) var lastServerSyncTokenKind: String?
+
+	init(
+		pushServiceBaseURL: URL = PushNotificationsManager.defaultPushServiceBaseURL,
+		session: URLSession = PushNotificationsManager.makeSharedSession(),
+		userDefaults: UserDefaults = .standard,
+		installationIDKey: String = "push.installationID"
+	) {
+		self.pushServiceBaseURL = pushServiceBaseURL
+		self.session = session
+		self.userDefaults = userDefaults
+		self.installationIDKey = installationIDKey
+		if let existing = userDefaults.string(forKey: installationIDKey), !existing.isEmpty {
+			installationID = existing
+		} else {
+			let generated = UUID().uuidString
+			userDefaults.set(generated, forKey: installationIDKey)
+			installationID = generated
+		}
+	}
 
 	func onAppLaunch(prefs: PushNotificationPreferences) async {
+		lastKnownPrefs = prefs
 		await refreshAuthorizationStatus()
 		await requestSystemPermissionIfNeeded(prefs: prefs)
+		await syncRegistrationIfPossible(prefs: prefs)
 	}
 
 	func onPreferencesChanged(prefs: PushNotificationPreferences) async {
+		lastKnownPrefs = prefs
 		await requestSystemPermissionIfNeeded(prefs: prefs)
+		await syncRegistrationIfPossible(prefs: prefs)
 	}
 
 	func refreshAuthorizationStatus() async {
@@ -164,10 +200,104 @@ final class PushNotificationsManager: ObservableObject {
 	func didRegisterForRemoteNotifications(deviceToken: Data) {
 		deviceTokenHex = deviceToken.map { String(format: "%02x", $0) }.joined()
 		lastRegistrationError = nil
+		Task {
+			await syncRegistrationIfPossible(prefs: lastKnownPrefs)
+		}
 	}
 
 	func didFailToRegisterForRemoteNotifications(error: Error) {
 		lastRegistrationError = error.localizedDescription
+		Task {
+			await syncRegistrationIfPossible(prefs: lastKnownPrefs)
+		}
+	}
+
+	func syncRegistrationIfPossible(prefs: PushNotificationPreferences) async {
+		let anyEnabled = prefs.podcast || prefs.article || prefs.live || prefs.schedule
+		let token: String
+		let env: String
+		if let deviceTokenHex {
+			token = deviceTokenHex
+			env = "ios-apns"
+		} else {
+			// Without Apple Developer Program / proper entitlements we may not receive an APNs token.
+			// We still register an installation ID so we can validate end-to-end fan-out and server logic.
+			token = installationID
+			env = "ios-installation"
+		}
+
+		do {
+			if anyEnabled {
+				try await registerTokenOnServer(token: token, env: env, prefs: prefs)
+			} else {
+				try await unregisterTokenOnServer(token: token)
+			}
+			lastServerSyncAt = Date()
+			lastServerSyncError = nil
+			lastServerSyncTokenKind = env
+		} catch {
+			lastServerSyncError = error.localizedDescription
+		}
+	}
+
+	private static func makeSharedSession() -> URLSession {
+		let config = URLSessionConfiguration.default
+		config.waitsForConnectivity = true
+		config.timeoutIntervalForRequest = defaultRequestTimeoutSeconds
+		config.timeoutIntervalForResource = defaultRequestTimeoutSeconds
+		return URLSession(configuration: config)
+	}
+
+	private func registerTokenOnServer(token: String, env: String, prefs: PushNotificationPreferences) async throws {
+		let url = pushServiceBaseURL.appendingPathComponent("api/v1/register")
+
+		struct RegisterBody: Encodable {
+			let token: String
+			let env: String
+			let prefs: PushNotificationPreferences
+		}
+
+		let body = RegisterBody(token: token, env: env, prefs: prefs)
+		let encoder = JSONEncoder()
+		let data = try encoder.encode(body)
+
+		var request = URLRequest(url: url)
+		request.httpMethod = "POST"
+		request.cachePolicy = .reloadIgnoringLocalCacheData
+		request.timeoutInterval = Self.defaultRequestTimeoutSeconds
+		request.setValue("application/json", forHTTPHeaderField: "Accept")
+		request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+		request.httpBody = data
+
+		let (_, response) = try await session.data(for: request)
+		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+			throw URLError(.badServerResponse)
+		}
+	}
+
+	private func unregisterTokenOnServer(token: String) async throws {
+		let url = pushServiceBaseURL.appendingPathComponent("api/v1/unregister")
+
+		struct UnregisterBody: Encodable {
+			let token: String
+		}
+
+		let body = UnregisterBody(token: token)
+		let encoder = JSONEncoder()
+		let data = try encoder.encode(body)
+
+		var request = URLRequest(url: url)
+		request.httpMethod = "POST"
+		request.cachePolicy = .reloadIgnoringLocalCacheData
+		request.timeoutInterval = Self.defaultRequestTimeoutSeconds
+		request.setValue("application/json", forHTTPHeaderField: "Accept")
+		request.setValue("application/json; charset=utf-8", forHTTPHeaderField: "Content-Type")
+		request.httpBody = data
+
+		let (_, response) = try await session.data(for: request)
+		guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+			throw URLError(.badServerResponse)
+		}
 	}
 }
 
