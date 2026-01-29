@@ -181,53 +181,55 @@ final class TyfloAPI: ObservableObject {
 	private func fetch<T: Decodable>(
 		_ url: URL,
 		decoder: JSONDecoder = JSONDecoder(),
-			cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
-		) async throws -> T {
-			if cachePolicy == .useProtocolCachePolicy, let cached = await noStoreCache.get(url) {
-				if let decoded = try? decoder.decode(T.self, from: cached.data) {
-					return decoded
-				}
-				await noStoreCache.remove(url)
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> T {
+		if cachePolicy == .useProtocolCachePolicy, let cached = await noStoreCache.get(url) {
+			if let decoded = try? decoder.decode(T.self, from: cached.data) {
+				return decoded
 			}
+			await noStoreCache.remove(url)
+		}
 
-			var request = URLRequest(url: url)
-			request.cachePolicy = cachePolicy
-			request.timeoutInterval = Self.requestTimeoutSeconds
-			request.setValue("application/json", forHTTPHeaderField: "Accept")
+		var request = URLRequest(url: url)
+		request.cachePolicy = cachePolicy
+		request.timeoutInterval = Self.requestTimeoutSeconds
+		request.setValue("application/json", forHTTPHeaderField: "Accept")
+
 		return try await withRetry {
 			let (data, response) = try await self.session.data(for: request)
-				guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
-					throw URLError(.badServerResponse)
-				}
+			guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
+				throw URLError(.badServerResponse)
+			}
 
-				if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
-					await noStoreCache.set(url, data: data)
-				}
+			if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
+				await noStoreCache.set(url, data: data)
+			}
 
-				do {
-					return try decoder.decode(T.self, from: data)
-				} catch {
-					throw URLError(.cannotDecodeContentData)
+			do {
+				return try decoder.decode(T.self, from: data)
+			} catch {
+				throw URLError(.cannotDecodeContentData)
 			}
 		}
 	}
 
 	private func fetchWPPage<Item: Decodable>(
 		_ url: URL,
-			decoder: JSONDecoder = JSONDecoder(),
-			cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
-		) async throws -> WPPage<Item> {
-			if cachePolicy == .useProtocolCachePolicy, let cached = await noStoreCache.get(url) {
-				if let decodedItems = try? decoder.decode([Item].self, from: cached.data) {
-					return WPPage(items: decodedItems, total: cached.wpTotal, totalPages: cached.wpTotalPages)
-				}
-				await noStoreCache.remove(url)
+		decoder: JSONDecoder = JSONDecoder(),
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> WPPage<Item> {
+		if cachePolicy == .useProtocolCachePolicy, let cached = await noStoreCache.get(url) {
+			if let decodedItems = try? decoder.decode([Item].self, from: cached.data) {
+				return WPPage(items: decodedItems, total: cached.wpTotal, totalPages: cached.wpTotalPages)
 			}
+			await noStoreCache.remove(url)
+		}
 
-			var request = URLRequest(url: url)
-			request.cachePolicy = cachePolicy
-			request.timeoutInterval = Self.requestTimeoutSeconds
-			request.setValue("application/json", forHTTPHeaderField: "Accept")
+		var request = URLRequest(url: url)
+		request.cachePolicy = cachePolicy
+		request.timeoutInterval = Self.requestTimeoutSeconds
+		request.setValue("application/json", forHTTPHeaderField: "Accept")
+
 		return try await withRetry {
 			let (data, response) = try await self.session.data(for: request)
 			guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
@@ -240,16 +242,17 @@ final class TyfloAPI: ObservableObject {
 			} catch {
 				throw URLError(.cannotDecodeContentData)
 			}
-				let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
-				let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
 
-				if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
-					await noStoreCache.set(url, data: data, wpTotal: total, wpTotalPages: totalPages)
-				}
+			let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
+			let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
 
-				return WPPage(items: items, total: total, totalPages: totalPages)
+			if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
+				await noStoreCache.set(url, data: data, wpTotal: total, wpTotalPages: totalPages)
 			}
+
+			return WPPage(items: items, total: total, totalPages: totalPages)
 		}
+	}
 
 	func fetchLatestPodcasts() async throws -> [Podcast] {
 		guard let url = makeWPURL(
