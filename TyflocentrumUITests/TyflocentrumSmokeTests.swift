@@ -191,14 +191,18 @@ import XCTest
 			XCTAssertTrue(voiceMenuItem.waitForExistence(timeout: 5))
 			voiceMenuItem.tap()
 
-			let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
-			XCTAssertTrue(nameField.waitForExistence(timeout: 5))
-			nameField.tap()
-			nameField.typeText("UI")
+				let nameField = app.descendants(matching: .any).matching(identifier: "contact.name").firstMatch
+				XCTAssertTrue(nameField.waitForExistence(timeout: 5))
+				nameField.tap()
+				nameField.typeText("UI")
 
-			let previewButton = app.descendants(matching: .any).matching(identifier: "contact.voice.preview").firstMatch
-			let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
-			XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
+				let holdToTalkButton = app.descendants(matching: .any).matching(identifier: "contact.voice.holdToTalk").firstMatch
+				XCTAssertTrue(holdToTalkButton.waitForExistence(timeout: 5))
+				XCTAssertTrue(holdToTalkButton.isEnabled)
+
+				let previewButton = app.descendants(matching: .any).matching(identifier: "contact.voice.preview").firstMatch
+				let voiceForm = app.descendants(matching: .any).matching(identifier: "contactVoice.form").firstMatch
+				XCTAssertTrue(voiceForm.waitForExistence(timeout: 5))
 			for _ in 0..<8 {
 				if previewButton.exists { break }
 				voiceForm.swipeUp()

@@ -24,17 +24,18 @@ protocol AudioSessionProtocol: AnyObject {
 extension AVAudioSession: AudioSessionProtocol {}
 
 @MainActor
-final class VoiceMessageRecorder: NSObject, ObservableObject {
-	enum State: Equatable {
-		case idle
-		case recording
-		case recorded
-		case playingPreview
-	}
+	final class VoiceMessageRecorder: NSObject, ObservableObject {
+		enum State: Equatable {
+			case idle
+			case recording
+			case recorded
+			case playingPreview
+		}
 
-	@Published private(set) var state: State = .idle
-	@Published private(set) var elapsedTime: TimeInterval = 0
-	@Published private(set) var recordedDurationMs: Int = 0
+		@Published private(set) var state: State = .idle
+		@Published private(set) var isProcessing: Bool = false
+		@Published private(set) var elapsedTime: TimeInterval = 0
+		@Published private(set) var recordedDurationMs: Int = 0
 	@Published var shouldShowError = false
 	@Published var errorMessage = ""
 
@@ -42,12 +43,18 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	private var previewPlayer: AVAudioPlayer?
 	private var timer: Timer?
 	private(set) var recordedFileURL: URL?
+	private var activeRecordingFileURL: URL?
+	private var appendBaseFileURL: URL?
+	private var recordingElapsedTimeOffset: TimeInterval = 0
+	private var activeExportSession: AVAssetExportSession?
+	private var recordingTotalMaxDurationSeconds: TimeInterval = 20 * 60
 	private let audioSession: AudioSessionProtocol
 
 	var canSend: Bool {
+		guard !isProcessing else { return false }
 		guard state == .recorded || state == .playingPreview else { return false }
-		return recordedFileIsUsable()
-	}
+			return recordedFileIsUsable()
+		}
 
 	init(audioSession: AudioSessionProtocol = AVAudioSession.sharedInstance()) {
 		self.audioSession = audioSession
@@ -64,7 +71,9 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 
 	func startRecording(maxDurationSeconds: TimeInterval = 20 * 60, pausing audioPlayer: AudioPlayer? = nil) async {
 		guard state != .recording else { return }
+		guard !isProcessing else { return }
 
+		recordingTotalMaxDurationSeconds = maxDurationSeconds
 		stopPreviewIfNeeded()
 
 		let hasPermission = await requestMicrophonePermission()
@@ -77,12 +86,25 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			audioPlayer?.pause()
 		}
 
+		let shouldAppend = (state == .recorded || state == .playingPreview) && recordedFileIsUsable()
+		let baseDurationSeconds = shouldAppend ? TimeInterval(recordedDurationMs) / 1000.0 : 0
+		let remainingSeconds = maxDurationSeconds - baseDurationSeconds
+		guard remainingSeconds > 0.1 else {
+			showError("Osiągnięto limit długości nagrania.")
+			return
+		}
+
 		do {
 			try Self.configureAudioSessionForRecording(audioSession)
 
-			let previousFileURL = recordedFileURL
+			if !shouldAppend {
+				stopRecording()
+				cleanupRecordingFile()
+				recordedDurationMs = 0
+			}
+
 			let fileURL = FileManager.default.temporaryDirectory
-				.appendingPathComponent("voice-\(UUID().uuidString)")
+				.appendingPathComponent("voice-seg-\(UUID().uuidString)")
 				.appendingPathExtension("m4a")
 
 			let settings: [String: Any] = [
@@ -99,22 +121,20 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 			recorder.prepareToRecord()
 
 			self.recorder = recorder
-			self.recordedFileURL = fileURL
-			self.recordedDurationMs = 0
-			self.elapsedTime = 0
+			self.activeRecordingFileURL = fileURL
+			self.appendBaseFileURL = shouldAppend ? recordedFileURL : nil
+			self.recordingElapsedTimeOffset = baseDurationSeconds
+			self.elapsedTime = baseDurationSeconds
 			self.state = .recording
-			if let previousFileURL, previousFileURL != fileURL {
-				try? FileManager.default.removeItem(at: previousFileURL)
-			}
 
-			recorder.record(forDuration: maxDurationSeconds)
+			recorder.record(forDuration: remainingSeconds)
 			startTimer { [weak self] in
 				guard let self else { return }
 				guard let recorder = self.recorder else { return }
-				self.elapsedTime = recorder.currentTime
+				self.elapsedTime = self.recordingElapsedTimeOffset + recorder.currentTime
 			}
 		} catch {
-			cleanupRecordingFile()
+			cleanupActiveRecordingFile()
 			showError("Nie udało się rozpocząć nagrywania.")
 		}
 	}
@@ -125,9 +145,20 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		timer?.invalidate()
 		timer = nil
 
+		let baseFileURL = appendBaseFileURL
+		let baseDurationSeconds = recordingElapsedTimeOffset
+		let maxDurationSeconds = recordingTotalMaxDurationSeconds
+		appendBaseFileURL = nil
+		recordingElapsedTimeOffset = 0
+
+		defer {
+			deactivateAudioSession()
+		}
+
 		guard let recorder else {
-			cleanupRecordingFile()
-			state = .idle
+			cleanupActiveRecordingFile()
+			state = baseFileURL != nil ? .recorded : .idle
+			elapsedTime = baseDurationSeconds
 			return
 		}
 
@@ -135,20 +166,159 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		recorder.stop()
 		self.recorder = nil
 
-		var durationSeconds = max(durationSecondsSnapshot, elapsedTimeSnapshot)
-		if durationSeconds <= 0, let url = recordedFileURL {
-			let asset = AVURLAsset(url: url)
+		guard let segmentURL = activeRecordingFileURL else {
+			state = baseFileURL != nil ? .recorded : .idle
+			elapsedTime = baseDurationSeconds
+			return
+		}
+		activeRecordingFileURL = nil
+
+		let segmentElapsedTime = max(0, elapsedTimeSnapshot - baseDurationSeconds)
+		var segmentDurationSeconds = max(durationSecondsSnapshot, segmentElapsedTime)
+		if segmentDurationSeconds <= 0 {
+			let asset = AVURLAsset(url: segmentURL)
 			let assetSeconds = asset.duration.seconds
 			if assetSeconds.isFinite, assetSeconds > 0 {
-				durationSeconds = assetSeconds
+				segmentDurationSeconds = assetSeconds
 			}
 		}
 
-		let durationMs = Int((durationSeconds * 1000.0).rounded())
+		let segmentFileSize = (try? segmentURL.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+		guard segmentFileSize > 0, segmentDurationSeconds > 0 else {
+			try? FileManager.default.removeItem(at: segmentURL)
+			elapsedTime = baseDurationSeconds
+			state = baseFileURL != nil ? .recorded : .idle
+			return
+		}
+
+		if let baseFileURL {
+			beginMerging(baseURL: baseFileURL, segmentURL: segmentURL, totalMaxDurationSeconds: maxDurationSeconds)
+			return
+		}
+
+		recordedFileURL = segmentURL
+		let totalSeconds = segmentDurationSeconds
+		let durationMs = Int((totalSeconds * 1000.0).rounded())
 		recordedDurationMs = max(0, durationMs)
-		elapsedTime = durationSeconds
+		elapsedTime = totalSeconds
 		state = recordedFileIsUsable() ? .recorded : .idle
-		deactivateAudioSession()
+		if state == .idle {
+			cleanupRecordingFile()
+		}
+	}
+
+	private func beginMerging(baseURL: URL, segmentURL: URL, totalMaxDurationSeconds: TimeInterval) {
+		guard !isProcessing else { return }
+		isProcessing = true
+		state = .recorded
+		activeExportSession?.cancelExport()
+		activeExportSession = nil
+
+		Task.detached(priority: .userInitiated) { [weak self] in
+			guard let self else { return }
+			do {
+				let mergedURL = try await Self.mergeAudio(
+					baseURL: baseURL,
+					appendedURL: segmentURL,
+					exportSessionSetter: { exportSession in
+						Task { @MainActor in
+							self.activeExportSession = exportSession
+						}
+					}
+				)
+
+				let mergedSeconds = AVURLAsset(url: mergedURL).duration.seconds
+				let durationMs = Int((max(0, mergedSeconds) * 1000.0).rounded())
+
+				await MainActor.run {
+					self.activeExportSession = nil
+					self.isProcessing = false
+					if mergedSeconds > totalMaxDurationSeconds + 0.5 {
+						self.showError("Nagranie przekroczyło limit długości.")
+					}
+					self.recordedFileURL = mergedURL
+					self.recordedDurationMs = max(0, durationMs)
+					self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
+					self.state = self.recordedFileIsUsable() ? .recorded : .idle
+				}
+
+				try? FileManager.default.removeItem(at: baseURL)
+				try? FileManager.default.removeItem(at: segmentURL)
+			} catch {
+				try? FileManager.default.removeItem(at: segmentURL)
+				await MainActor.run {
+					self.activeExportSession = nil
+					self.isProcessing = false
+					self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
+					self.state = self.recordedFileIsUsable() ? .recorded : .idle
+					if !(error is CancellationError) {
+						self.showError("Nie udało się dograć nagrania.")
+					}
+				}
+			}
+		}
+	}
+
+	private enum MergeError: Error {
+		case missingAudioTrack
+		case exportFailed
+	}
+
+	private static func mergeAudio(
+		baseURL: URL,
+		appendedURL: URL,
+		exportSessionSetter: (AVAssetExportSession) -> Void
+	) async throws -> URL {
+		let baseAsset = AVURLAsset(url: baseURL)
+		let appendedAsset = AVURLAsset(url: appendedURL)
+
+		let composition = AVMutableComposition()
+		guard let compositionTrack = composition.addMutableTrack(
+			withMediaType: .audio,
+			preferredTrackID: kCMPersistentTrackID_Invalid
+		) else {
+			throw MergeError.missingAudioTrack
+		}
+
+		var cursor = CMTime.zero
+		for asset in [baseAsset, appendedAsset] {
+			guard let track = asset.tracks(withMediaType: .audio).first else {
+				throw MergeError.missingAudioTrack
+			}
+			let timeRange = CMTimeRange(start: .zero, duration: asset.duration)
+			try compositionTrack.insertTimeRange(timeRange, of: track, at: cursor)
+			cursor = cursor + asset.duration
+		}
+
+		let outputURL = FileManager.default.temporaryDirectory
+			.appendingPathComponent("voice-merged-\(UUID().uuidString)")
+			.appendingPathExtension("m4a")
+		if FileManager.default.fileExists(atPath: outputURL.path) {
+			try? FileManager.default.removeItem(at: outputURL)
+		}
+
+		guard let export = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetAppleM4A) else {
+			throw MergeError.exportFailed
+		}
+		export.outputURL = outputURL
+		export.outputFileType = .m4a
+		export.shouldOptimizeForNetworkUse = true
+		exportSessionSetter(export)
+
+		try await withCheckedThrowingContinuation { continuation in
+			export.exportAsynchronously {
+				switch export.status {
+				case .completed:
+					continuation.resume(returning: ())
+				case .cancelled:
+					continuation.resume(throwing: CancellationError())
+				default:
+					continuation.resume(throwing: export.error ?? MergeError.exportFailed)
+				}
+			}
+		}
+
+		return outputURL
 	}
 
 	private func recordedFileIsUsable() -> Bool {
@@ -158,6 +328,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	}
 
 	func togglePreview() {
+		guard !isProcessing else { return }
 		switch state {
 		case .playingPreview:
 			stopPreviewIfNeeded()
@@ -170,8 +341,19 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	}
 
 	func reset() {
+		activeExportSession?.cancelExport()
+		activeExportSession = nil
+		isProcessing = false
+
 		stopPreviewIfNeeded()
-		stopRecording()
+		timer?.invalidate()
+		timer = nil
+
+		recorder?.stop()
+		recorder = nil
+		appendBaseFileURL = nil
+		recordingElapsedTimeOffset = 0
+		cleanupActiveRecordingFile()
 		cleanupRecordingFile()
 		recordedDurationMs = 0
 		elapsedTime = 0
@@ -301,6 +483,13 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		recordedFileURL = nil
 	}
 
+	private func cleanupActiveRecordingFile() {
+		if let url = activeRecordingFileURL {
+			try? FileManager.default.removeItem(at: url)
+		}
+		activeRecordingFileURL = nil
+	}
+
 	private func deactivateAudioSession() {
 		try? audioSession.overrideOutputAudioPort(.none)
 		try? audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
@@ -340,22 +529,35 @@ private extension Data {
 }
 #endif
 
-extension VoiceMessageRecorder: AVAudioRecorderDelegate {
-	nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
-		Task { @MainActor in
-			guard self.recorder === recorder else { return }
-			if flag {
-				self.stopRecording()
-			} else {
-				self.cleanupRecordingFile()
-				self.recordedDurationMs = 0
-				self.elapsedTime = 0
-				self.state = .idle
+	extension VoiceMessageRecorder: AVAudioRecorderDelegate {
+		nonisolated func audioRecorderDidFinishRecording(_ recorder: AVAudioRecorder, successfully flag: Bool) {
+			Task { @MainActor in
+				guard self.recorder === recorder else { return }
+				if flag {
+					self.stopRecording()
+					return
+				}
+
+				let segmentURL = self.activeRecordingFileURL
+				let segmentFileSize = (try? segmentURL?.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0
+				if segmentFileSize > 0 {
+					self.stopRecording()
+					return
+				}
+
+				self.cleanupActiveRecordingFile()
+				self.appendBaseFileURL = nil
+				self.recordingElapsedTimeOffset = 0
+				self.timer?.invalidate()
+				self.timer = nil
+				self.recorder = nil
+
+				self.elapsedTime = TimeInterval(self.recordedDurationMs) / 1000.0
+				self.state = self.recordedFileIsUsable() ? .recorded : .idle
 				self.showError("Nagrywanie nie powiodło się.")
 			}
 		}
 	}
-}
 
 extension VoiceMessageRecorder: AVAudioPlayerDelegate {
 	nonisolated func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
