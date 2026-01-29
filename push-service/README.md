@@ -19,6 +19,8 @@ Minimalny backend do powiadomień push dla Tyflocentrum.
 ```bash
 PORT=9070 \
 DATA_DIR=./.data \
+TOKEN_TTL_DAYS=60 \
+MAX_TOKENS=50000 \
 WEBHOOK_SECRET=dev \
 node push-service/server.js
 ```
@@ -29,4 +31,3 @@ Docelowo:
 - nginx reverse proxy: `tyflocentrum.tyflo.eu.org` → `127.0.0.1:9070`
 - state: `/var/lib/tyflocentrum-push/state.json`
 - serwis systemd: `tyflocentrum-push.service`
-

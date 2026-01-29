@@ -12,6 +12,8 @@ const DATA_DIR = process.env.DATA_DIR || "/var/lib/tyflocentrum-push";
 const STATE_PATH = process.env.STATE_PATH || path.join(DATA_DIR, "state.json");
 const POLL_INTERVAL_SECONDS = parseInt(process.env.POLL_INTERVAL_SECONDS || "300", 10);
 const POLL_PER_PAGE = parseInt(process.env.POLL_PER_PAGE || "20", 10);
+const TOKEN_TTL_DAYS = parseInt(process.env.TOKEN_TTL_DAYS || "60", 10);
+const MAX_TOKENS = parseInt(process.env.MAX_TOKENS || "50000", 10);
 
 const WEBHOOK_SECRET = (process.env.WEBHOOK_SECRET || "").trim();
 
@@ -135,6 +137,64 @@ function boundedUnshift(list, item, max = 500) {
 	return next.slice(0, max);
 }
 
+function parseDateOrNull(value) {
+	if (!value || typeof value !== "string") return null;
+	const parsed = new Date(value);
+	return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function pruneTokens(state) {
+	if (!state.tokens || typeof state.tokens !== "object") return;
+
+	const now = Date.now();
+	const ttlDays = Number.isFinite(TOKEN_TTL_DAYS) ? TOKEN_TTL_DAYS : 0;
+	const ttlMs = ttlDays > 0 ? ttlDays * 24 * 60 * 60 * 1000 : 0;
+
+	let removed = 0;
+	const entries = Object.entries(state.tokens);
+
+	if (ttlMs > 0) {
+		const cutoff = now - ttlMs;
+		for (const [token, entry] of entries) {
+			const lastSeenAt =
+				parseDateOrNull(entry && entry.lastSeenAt) ??
+				parseDateOrNull(entry && entry.updatedAt) ??
+				parseDateOrNull(entry && entry.createdAt);
+			if (!lastSeenAt) continue;
+			if (lastSeenAt.getTime() < cutoff) {
+				delete state.tokens[token];
+				removed += 1;
+			}
+		}
+	}
+
+	if (Number.isFinite(MAX_TOKENS) && MAX_TOKENS > 0) {
+		const remaining = Object.entries(state.tokens);
+		if (remaining.length > MAX_TOKENS) {
+			const sortedByLastSeenOldestFirst = remaining
+				.map(([token, entry]) => {
+					const lastSeenAt =
+						parseDateOrNull(entry && entry.lastSeenAt) ??
+						parseDateOrNull(entry && entry.updatedAt) ??
+						parseDateOrNull(entry && entry.createdAt) ??
+						new Date(0);
+					return { token, lastSeenAtMs: lastSeenAt.getTime() };
+				})
+				.sort((a, b) => a.lastSeenAtMs - b.lastSeenAtMs);
+
+			const toRemove = sortedByLastSeenOldestFirst.slice(0, remaining.length - MAX_TOKENS);
+			for (const item of toRemove) {
+				delete state.tokens[item.token];
+				removed += 1;
+			}
+		}
+	}
+
+	if (removed > 0) {
+		console.log(`[prune] removedTokens=${removed} ttlDays=${TOKEN_TTL_DAYS} maxTokens=${MAX_TOKENS}`);
+	}
+}
+
 async function fetchLatestPosts(feedUrl, perPage) {
 	const url = new URL(feedUrl);
 	url.searchParams.set("context", "embed");
@@ -206,6 +266,7 @@ async function startPollLoop() {
 		try {
 			state = await loadState();
 			await pollWordPressAndNotify(state);
+			pruneTokens(state);
 			await saveState(state);
 		} catch (err) {
 			console.error(`[poll] error: ${err && err.message ? err.message : String(err)}`);
@@ -249,6 +310,7 @@ async function handleRequest(req, res) {
 			updatedAt: nowIso(),
 			lastSeenAt: nowIso(),
 		};
+		pruneTokens(state);
 		await saveState(state);
 		return jsonResponse(res, 200, { ok: true });
 	}
@@ -267,6 +329,7 @@ async function handleRequest(req, res) {
 		const state = await loadState();
 		if (!state.tokens[token]) return jsonResponse(res, 404, { ok: false, error: "Unknown token" });
 		state.tokens[token] = { ...state.tokens[token], prefs, updatedAt: nowIso(), lastSeenAt: nowIso() };
+		pruneTokens(state);
 		await saveState(state);
 		return jsonResponse(res, 200, { ok: true });
 	}
@@ -283,6 +346,7 @@ async function handleRequest(req, res) {
 
 		const state = await loadState();
 		delete state.tokens[token];
+		pruneTokens(state);
 		await saveState(state);
 		return jsonResponse(res, 200, { ok: true });
 	}
@@ -360,4 +424,3 @@ main().catch((err) => {
 	console.error(`[main] fatal: ${err && err.message ? err.message : String(err)}`);
 	process.exit(1);
 });
-

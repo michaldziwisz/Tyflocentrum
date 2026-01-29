@@ -82,6 +82,14 @@ Webhooki z panelu muszą mieć nagłówek:
 
 Sekret trzymamy poza repo (plik na serwerze).
 
+## Bezpieczeństwo / odporność na nadużycia (MVP)
+
+- Endpointy `POST /api/v1/events/*` są chronione sekretem (`Bearer`), więc nie da się ich wywołać bez znajomości klucza.
+- Endpointy rejestracji tokenów są publiczne (apka musi móc się zarejestrować), ale:
+  - są objęte limitami requestów po stronie nginx (rate limit),
+  - backend ma limit rozmiaru JSON body,
+  - backend usuwa „stare” tokeny (TTL) i ogranicza maksymalną liczbę zapisanych tokenów (pruning).
+
 ### Payload (dla deep linków)
 
 Wysyłamy w payload:
@@ -100,4 +108,3 @@ Bez Apple Developer Program nie uruchomimy prawdziwego push na urządzeniu, ale 
 - unit: mapowanie preferencji + kontrakt backendu (JSON),
 - unit/UI: nawigacja po otrzymaniu „symulowanego” payloadu (w UI_TESTING),
 - backend: testy kontraktów endpointów + smoke `/health`.
-
