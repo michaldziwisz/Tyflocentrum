@@ -9,4 +9,3 @@ enum DeviceCapabilities {
 		supportsProximityRecording(userInterfaceIdiom: UIDevice.current.userInterfaceIdiom)
 	}
 }
-
