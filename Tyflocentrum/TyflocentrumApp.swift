@@ -109,8 +109,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 
 @MainActor
 final class PushNotificationsManager: ObservableObject {
-	private static let defaultPushServiceBaseURL = URL(string: "https://tyflocentrum.tyflo.eu.org")!
-	private static let defaultRequestTimeoutSeconds: TimeInterval = 10
+	nonisolated private static let defaultPushServiceBaseURL = URL(string: "https://tyflocentrum.tyflo.eu.org")!
+	nonisolated private static let defaultRequestTimeoutSeconds: TimeInterval = 10
 
 	private let pushServiceBaseURL: URL
 	private let session: URLSession
@@ -240,7 +240,7 @@ final class PushNotificationsManager: ObservableObject {
 		}
 	}
 
-	private static func makeSharedSession() -> URLSession {
+	nonisolated private static func makeSharedSession() -> URLSession {
 		let config = URLSessionConfiguration.default
 		config.waitsForConnectivity = true
 		config.timeoutIntervalForRequest = defaultRequestTimeoutSeconds
