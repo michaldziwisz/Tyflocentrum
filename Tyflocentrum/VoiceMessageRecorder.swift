@@ -8,6 +8,21 @@
 import AVFoundation
 import Foundation
 
+protocol AudioSessionProtocol: AnyObject {
+	var category: AVAudioSession.Category { get }
+	var mode: AVAudioSession.Mode { get }
+
+	func setCategory(_ category: AVAudioSession.Category, mode: AVAudioSession.Mode, options: AVAudioSession.CategoryOptions) throws
+	func setActive(_ active: Bool, options: AVAudioSession.SetActiveOptions) throws
+	func overrideOutputAudioPort(_ portOverride: AVAudioSession.PortOverride) throws
+	func requestRecordPermission(_ response: @escaping (Bool) -> Void)
+
+	@available(iOS 13.0, *)
+	func setAllowHapticsAndSystemSoundsDuringRecording(_ inValue: Bool) throws
+}
+
+extension AVAudioSession: AudioSessionProtocol {}
+
 @MainActor
 final class VoiceMessageRecorder: NSObject, ObservableObject {
 	enum State: Equatable {
@@ -27,14 +42,24 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	private var previewPlayer: AVAudioPlayer?
 	private var timer: Timer?
 	private(set) var recordedFileURL: URL?
+	private let audioSession: AudioSessionProtocol
 
 	var canSend: Bool {
 		guard state == .recorded || state == .playingPreview else { return false }
 		return recordedFileIsUsable()
 	}
 
-	override init() {
+	init(audioSession: AudioSessionProtocol = AVAudioSession.sharedInstance()) {
+		self.audioSession = audioSession
 		super.init()
+	}
+
+	static func configureAudioSessionForRecording(_ session: AudioSessionProtocol) throws {
+		try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetooth])
+		if #available(iOS 13.0, *) {
+			try session.setAllowHapticsAndSystemSoundsDuringRecording(true)
+		}
+		try session.setActive(true, options: [])
 	}
 
 	func startRecording(maxDurationSeconds: TimeInterval = 20 * 60, pausing audioPlayer: AudioPlayer? = nil) async {
@@ -53,9 +78,7 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		}
 
 		do {
-			let session = AVAudioSession.sharedInstance()
-			try session.setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetooth])
-			try session.setActive(true, options: [])
+			try Self.configureAudioSessionForRecording(audioSession)
 
 			let previousFileURL = recordedFileURL
 			let fileURL = FileManager.default.temporaryDirectory
@@ -183,78 +206,77 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 		state = .recorded
 	}
 
-	private static func makeSilentWAVData(sampleRate: Int, durationSeconds: TimeInterval) -> Data {
-		let channels: UInt16 = 1
-		let bitsPerSample: UInt16 = 16
-		let blockAlign = channels * (bitsPerSample / 8)
-		let byteRate = UInt32(sampleRate) * UInt32(blockAlign)
-		let sampleCount = max(1, Int((Double(sampleRate) * durationSeconds).rounded(.up)))
-		let dataSize = UInt32(sampleCount) * UInt32(blockAlign)
-		let riffSize = 36 + dataSize
+		private static func makeSilentWAVData(sampleRate: Int, durationSeconds: TimeInterval) -> Data {
+			let channels: UInt16 = 1
+			let bitsPerSample: UInt16 = 16
+			let blockAlign = channels * (bitsPerSample / 8)
+			let byteRate = UInt32(sampleRate) * UInt32(blockAlign)
+			let sampleCount = max(1, Int((Double(sampleRate) * durationSeconds).rounded(.up)))
+			let dataSize = UInt32(sampleCount) * UInt32(blockAlign)
+			let riffSize = 36 + dataSize
 
-		var data = Data()
-		data.reserveCapacity(44 + Int(dataSize))
+			var data = Data()
+			data.reserveCapacity(44 + Int(dataSize))
 
-		data.appendASCII("RIFF")
-		data.appendUInt32LE(riffSize)
-		data.appendASCII("WAVE")
+			data.appendASCII("RIFF")
+			data.appendUInt32LE(riffSize)
+			data.appendASCII("WAVE")
 
-		data.appendASCII("fmt ")
-		data.appendUInt32LE(16) // PCM header size
-		data.appendUInt16LE(1) // PCM
-		data.appendUInt16LE(channels)
-		data.appendUInt32LE(UInt32(sampleRate))
-		data.appendUInt32LE(byteRate)
-		data.appendUInt16LE(blockAlign)
-		data.appendUInt16LE(bitsPerSample)
+			data.appendASCII("fmt ")
+			data.appendUInt32LE(16) // PCM header size
+			data.appendUInt16LE(1) // PCM
+			data.appendUInt16LE(channels)
+			data.appendUInt32LE(UInt32(sampleRate))
+			data.appendUInt32LE(byteRate)
+			data.appendUInt16LE(blockAlign)
+			data.appendUInt16LE(bitsPerSample)
 
-		data.appendASCII("data")
-		data.appendUInt32LE(dataSize)
+			data.appendASCII("data")
+			data.appendUInt32LE(dataSize)
 
-		data.append(contentsOf: repeatElement(0, count: Int(dataSize)))
-		return data
-	}
-	#endif
+			data.append(contentsOf: repeatElement(0, count: Int(dataSize)))
+			return data
+		}
+		#endif
 
-	private func startPreview() {
-		guard let url = recordedFileURL else { return }
-		DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-			do {
-				let player = try AVAudioPlayer(contentsOf: url)
-				player.prepareToPlay()
+		private func startPreview() {
+			guard let url = recordedFileURL else { return }
+			DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+				do {
+					let player = try AVAudioPlayer(contentsOf: url)
+					player.prepareToPlay()
 
-				DispatchQueue.main.async { [weak self] in
-					guard let self else { return }
-					guard self.recordedFileURL == url else { return }
-					guard self.state == .recorded else { return }
-					do {
-						let session = AVAudioSession.sharedInstance()
-						if session.category != .playback || session.mode != .default {
-							try session.setCategory(.playback, mode: .default)
+					DispatchQueue.main.async { [weak self] in
+						guard let self else { return }
+						guard self.recordedFileURL == url else { return }
+						guard self.state == .recorded else { return }
+						do {
+							if self.audioSession.category != .playback || self.audioSession.mode != .default {
+								try self.audioSession.setCategory(.playback, mode: .default, options: [])
+							}
+							try self.audioSession.setActive(true, options: [])
+						} catch {
+							self.showError("Nie udało się przygotować odsłuchu nagrania.")
+							return
 						}
-						try session.setActive(true, options: [])
-					} catch {
-						self.showError("Nie udało się przygotować odsłuchu nagrania.")
-						return
-					}
 
-					player.delegate = self
-					let didStart = player.play()
-					guard didStart else {
-						self.showError("Nie udało się rozpocząć odsłuchu nagrania.")
-						return
-					}
+						player.delegate = self
+						let didStart = player.play()
+						guard didStart else {
+							self.showError("Nie udało się rozpocząć odsłuchu nagrania.")
+							return
+						}
 
-					self.previewPlayer = player
-					self.state = .playingPreview
-				}
-			} catch {
-				DispatchQueue.main.async { [weak self] in
-					self?.showError("Nie udało się odtworzyć nagrania.")
+						self.previewPlayer = player
+						self.state = .playingPreview
+					}
+				} catch {
+					DispatchQueue.main.async { [weak self] in
+						self?.showError("Nie udało się odtworzyć nagrania.")
+					}
 				}
 			}
 		}
-	}
 
 	private func stopPreviewIfNeeded() {
 		timer?.invalidate()
@@ -280,15 +302,13 @@ final class VoiceMessageRecorder: NSObject, ObservableObject {
 	}
 
 	private func deactivateAudioSession() {
-		let session = AVAudioSession.sharedInstance()
-		try? session.overrideOutputAudioPort(.none)
-		try? session.setActive(false, options: [.notifyOthersOnDeactivation])
+		try? audioSession.overrideOutputAudioPort(.none)
+		try? audioSession.setActive(false, options: [.notifyOthersOnDeactivation])
 	}
 
 	private func requestMicrophonePermission() async -> Bool {
-		let session = AVAudioSession.sharedInstance()
 		return await withCheckedContinuation { continuation in
-			session.requestRecordPermission { granted in
+			audioSession.requestRecordPermission { granted in
 				continuation.resume(returning: granted)
 			}
 		}
