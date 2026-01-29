@@ -486,6 +486,66 @@ final class TyfloAPITests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
+	func testNoStoreInMemoryCacheEvictsOldestWhenOverMaxEntries() async throws {
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: [
+					"Cache-Control": "no-store, no-cache, must-revalidate",
+					"X-WP-Total": "10",
+					"X-WP-TotalPages": "2",
+				]
+			)!
+			return (response, Data("[]".utf8))
+		}
+
+		let config = TyfloAPI.NoStoreCacheConfig(ttlSeconds: 60, maxEntries: 2, maxTotalBytes: 1024 * 1024, maxEntryBytes: 1024 * 1024)
+		let api = TyfloAPI(session: makeSession(), noStoreCacheConfig: config)
+
+		_ = try await api.fetchArticleSummariesPage(page: 1, perPage: 10)
+		_ = try await api.fetchArticleSummariesPage(page: 2, perPage: 10)
+		_ = try await api.fetchArticleSummariesPage(page: 3, perPage: 10)
+
+		_ = try await api.fetchArticleSummariesPage(page: 1, perPage: 10)
+
+		XCTAssertEqual(requestCount, 4)
+	}
+
+	func testNoStoreInMemoryCacheEvictsWhenOverMaxTotalBytes() async throws {
+		var requestCount = 0
+		let paddedEmptyArray = "[\(String(repeating: " ", count: 400))]".data(using: .utf8)!
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: [
+					"Cache-Control": "no-store, no-cache, must-revalidate",
+				]
+			)!
+			return (response, paddedEmptyArray)
+		}
+
+		let config = TyfloAPI.NoStoreCacheConfig(ttlSeconds: 60, maxEntries: 10, maxTotalBytes: 500, maxEntryBytes: 1024 * 1024)
+		let api = TyfloAPI(session: makeSession(), noStoreCacheConfig: config)
+
+		_ = try await api.fetchArticleSummariesPage(page: 1, perPage: 10)
+		_ = try await api.fetchArticleSummariesPage(page: 2, perPage: 10)
+
+		_ = try await api.fetchArticleSummariesPage(page: 1, perPage: 10)
+
+		XCTAssertEqual(requestCount, 3)
+	}
+
 	func testGetArticleCategoriesUsesCorrectHost() async {
 		let requestMade = expectation(description: "request made")
 

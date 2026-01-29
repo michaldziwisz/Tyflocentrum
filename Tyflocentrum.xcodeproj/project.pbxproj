@@ -10,12 +10,13 @@
 		BC1D24D12C256E5D00FB25D3 /* readme.md in Resources */ = {isa = PBXBuildFile; fileRef = BC1D24D02C256E5D00FB25D3 /* readme.md */; };
 		89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA3121BCB26744CEAE67FDD /* AsyncTimeout.swift */; };
 		F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C0D1E2F3A4B5C6D7E8F901 /* MultipartFormDataBuilder.swift */; };
-		BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
-		A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */; };
-		BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
-		A6FE8102C0FA7A26774E22AF /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD18FC9FB6494384932AF3BD /* FavoritesStore.swift */; };
-		2C876D8EFB2A3FA670837B5A /* Favorites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3993A69E2CA7956518F22441 /* Favorites.swift */; };
-		D382729BD51E13C68BF56155 /* AppMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1347120363C2B310653F610 /* AppMenu.swift */; };
+			BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
+			A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */; };
+			A1B2C3D4E5F60718293A4B95 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B94 /* Logging.swift */; };
+			BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
+			A6FE8102C0FA7A26774E22AF /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD18FC9FB6494384932AF3BD /* FavoritesStore.swift */; };
+			2C876D8EFB2A3FA670837B5A /* Favorites.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3993A69E2CA7956518F22441 /* Favorites.swift */; };
+			D382729BD51E13C68BF56155 /* AppMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1347120363C2B310653F610 /* AppMenu.swift */; };
 		B49CD206A577ECD1CD15E285 /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A83E50FD9BC840E2A1847FB9 /* FavoritesView.swift */; };
 		69853FC208E384B34801168A /* FavoritesStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF01FA9E1D6240CDA0600363 /* FavoritesStoreTests.swift */; };
 		A1B2C3D4E5F60718293A4B92 /* DeviceCapabilitiesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B91 /* DeviceCapabilitiesTests.swift */; };
@@ -115,11 +116,12 @@
 		C0FFEE1234567890ABCDEF12 /* MultipartFormDataBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipartFormDataBuilderTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5E /* TyflocentrumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumSmokeTests.swift; sourceTree = "<group>"; };
-		BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
-		A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilities.swift; sourceTree = "<group>"; };
-		8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowNotesParser.swift; sourceTree = "<group>"; };
-		D0C1B2A3F4E5D6C7B8A9F001 /* VoiceMessageRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMessageRecorder.swift; sourceTree = "<group>"; };
-		BE1FDCD328F6DE7D00B9601B /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
+			BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
+			A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilities.swift; sourceTree = "<group>"; };
+			A1B2C3D4E5F60718293A4B94 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
+			8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowNotesParser.swift; sourceTree = "<group>"; };
+			D0C1B2A3F4E5D6C7B8A9F001 /* VoiceMessageRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMessageRecorder.swift; sourceTree = "<group>"; };
+			BE1FDCD328F6DE7D00B9601B /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
 		BE2ACFFB292B67C1001914EB /* Changelog.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Changelog.rtf; sourceTree = "<group>"; };
 		BE55421B28FD548300CC0128 /* NewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsView.swift; sourceTree = "<group>"; };
 		D5AFB1327CD2EA8E255044E9 /* LazyDetailedArticleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LazyDetailedArticleView.swift; sourceTree = "<group>"; };
@@ -341,6 +343,7 @@
 					BEEA97C628E9D6880073E5AB /* Info.plist */,
 					BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
 					A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */,
+					A1B2C3D4E5F60718293A4B94 /* Logging.swift */,
 					8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */,
 					A9C0D1E2F3A4B5C6D7E8F901 /* MultipartFormDataBuilder.swift */,
 					BEA9ECD129203FD700718254 /* Views */,
@@ -504,14 +507,15 @@
 		BEEA97B128E9D4BA0073E5AB /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
-				files = (
-					BE9381D228EAED6400ABB964 /* Tyflocentrum.xcdatamodeld in Sources */,
-					89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */,
-					A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */,
-					BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */,
-					BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
-					E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
-					C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */,
+					files = (
+						BE9381D228EAED6400ABB964 /* Tyflocentrum.xcdatamodeld in Sources */,
+						89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */,
+						A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */,
+						A1B2C3D4E5F60718293A4B95 /* Logging.swift in Sources */,
+						BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */,
+						BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
+						E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
+						C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */,
 					D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */,
 					F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */,
 					C47C765821AB1728150DA367 /* WPPostSummary.swift in Sources */,
@@ -635,7 +639,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -691,7 +695,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 16.1;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;

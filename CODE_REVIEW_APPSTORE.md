@@ -1,7 +1,7 @@
 # Tyflocentrum — code review + App Store readiness (iOS)
 
 Data przeglądu: **2026-01-29**  
-Stan repozytorium: `500b02d`  
+Stan repozytorium: `bcc6402`  
 Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITests/`) + komponent backendowy powiadomień (`push-service/`) w kontekście funkcji „push”.
 
 ## TL;DR (decyzje przed wysyłką do App Store)
@@ -13,6 +13,7 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 - Nawigacja: migracja `NavigationView` → `NavigationStack` + stabilniejsze menu aplikacji (`navigationDestination`).
 - Sieć: WordPress requesty domyślnie używają `.useProtocolCachePolicy`; endpointy „na żywo” nadal wymuszają `reloadIgnoringLocalCacheData`. Dodano też in‑memory TTL cache (5 min) dla odpowiedzi z `Cache-Control: no-store` + testy.
 - Repo: dodano SwiftFormat (`.swiftformat`, `.swift-version`) i lint w CI.
+- iPad/Mac: ukryto i wyłączono iPhone‑only „tryb ucha” (proximity) w ekranie głosówek + testy regresji.
 
 ### Najważniejsze ryzyka (w tej wersji)
 1. **App Store Connect**: przygotować i uzupełnić:
@@ -21,7 +22,7 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 2. **iPad**: projekt wspiera iPad (`TARGETED_DEVICE_FAMILY = "1,2"`), więc musisz przygotować **zrzuty ekranu iPad** i zrobić sanity‑check UI (czytelność na szerokich ekranach, orientacje, nawigacja).
 3. **Mac (uruchamianie na macOS)**:
    - najprostsza ścieżka to „**iPad app na Macu (Apple silicon)**” — zwykle bez zmian w kodzie, ale wymaga testu UX (okno, klawiatura/mysz/scroll) i upewnienia się, że nie polegasz na sprzętowych feature’ach iPhone’a,
-   - funkcje typu „tryb ucha” (proximity sensor) są **sensowne tylko na iPhone** — na iPad/Mac warto je ukryć/wyłączyć, żeby nie wyglądały na niedziałające.
+   - iPhone‑only funkcje sprzętowe: „tryb ucha” (proximity) jest już ukryty/wyłączony poza iPhone (✅); nadal warto sanity‑przejść inne miejsca, gdzie UI/UX mogłoby zakładać iPhone’a.
 4. **Powiadomienia push**:
    - w tej wersji **Release** push są wyłączone w UI i logice rejestracji (celowo, żeby nie dostarczać „pozornej” funkcji),
    - jeśli wrócą w kolejnej iteracji: wymagają APNs (capability/entitlements + klucze) i realnej wysyłki w `push-service`.
@@ -128,7 +129,7 @@ Zakres: aplikacja iOS (`Tyflocentrum/`, `TyflocentrumTests/`, `TyflocentrumUITes
 
 ### Rekomendacje (raczej „polish”, nie blokery)
 - Dopracować copy/hinty tam, gdzie UI jest „techniczne” (na dziś dotyczy głównie debug‑only fragmentów).
-- Na iPad i Mac rozważyć UX dla „trybu ucha” (to funkcja „telefonowa”; na iPad/Mac warto ją ukryć/wyłączyć).
+- Na iPad i Mac: „tryb ucha” (proximity) jest już ukryty/wyłączony (✅) — zostaje ogólny sanity‑check UX (układ, scroll, fokus, klawiatura).
 
 ## 7) Wytyczne Apple / publikacja w App Store (checklista praktyczna)
 
@@ -156,7 +157,7 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
 - iPad jest włączony w projekcie — do App Store potrzebujesz iPad screenshots i testu UI na dużych szerokościach.
 - Jeśli chcesz, żeby aplikacja „dało się odpalić na Macu” bez blokowania:
   - w praktyce oznacza nie opt‑outować „iPad app on Mac” w App Store Connect i wykonać sanity‑testy UX,
-  - unikaj eksponowania funkcji zależnych od sensorów iPhone’a (np. proximity/„tryb ucha”) na iPad/Mac.
+  - unikaj eksponowania funkcji zależnych od sensorów iPhone’a (np. proximity/„tryb ucha”) na iPad/Mac — w tej wersji to jest już ukryte/wyłączone (✅).
 
 #### Mikrofon (głosówki)
 - `NSMicrophoneUsageDescription` jest — super.
@@ -186,7 +187,14 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
 ### Wysoki priorytet (polish pod stabilność i wizerunek)
 - (Opcjonalnie) dodać `PrivacyInfo.xcprivacy` (jeśli wymagane przez aktualne zasady publikacji i/lub używane API).
 - (Opcjonalnie) rozważyć `ITSAppUsesNonExemptEncryption` (jeśli kwalifikujesz się do wyjątku; i tak trzeba odpowiedzieć w App Store Connect).
-- (Produktowo) jeśli chcesz wspierać uruchamianie na Macu: sanity‑testy „iPad app on Mac” + ukrycie/wyłączenie iPhone‑only funkcji (np. proximity/„tryb ucha”) na iPad/Mac.
+- (Produktowo) jeśli chcesz wspierać uruchamianie na Macu: sanity‑testy „iPad app on Mac” (okno, scroll, fokus, skróty klawiaturowe w formularzach).
+
+### Dodatkowe uwagi do kodu (do wdrożenia)
+- Zamienić `print(...)` na `Logger`/`os_log` i ograniczyć logowanie w `Release` (bez logowania treści wiadomości/głosówek i bez „wrażliwych” URL-i).
+- `SafeHTMLView`: dopilnować odświeżania font-size po zmianie Dynamic Type (żeby treść HTML reagowała na zmianę ustawień).
+- Cache: dopilnować limitów pamięci (np. limit wpisów/rozmiaru) dla in‑memory TTL cache oraz upewnić się, że obejście `no-store` nie dotyczy danych per‑user/wrażliwych.
+- Projekt: posprzątać pozostałości niespójnych build settings (np. `IPHONEOS_DEPLOYMENT_TARGET = 16.1` w części konfiguracji) dla jasności.
+- `DateFormatter`: jeśli formatowanie dat będzie wykonywane współbieżnie, rozważyć bezpieczniejsze podejście (uniknięcie współdzielenia `DateFormatter` poza main).
 
 ### Niski priorytet (po wydaniu 1.0)
 - Doprecyzować strategię cache (np. per‑endpoint TTL, cache invalidation) jeśli użytkownicy zgłaszają „nieaktualne” treści.

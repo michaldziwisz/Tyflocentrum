@@ -74,7 +74,12 @@ struct Podcast: Codable, Identifiable {
 		return formatter
 	}()
 
+	private static let dateFormatterLock = NSLock()
+
 	var formattedDate: String {
+		Self.dateFormatterLock.lock()
+		defer { Self.dateFormatterLock.unlock() }
+
 		guard let parsed = Self.dateParser.date(from: date) else { return date }
 		return Self.dateOutputFormatter.string(from: parsed)
 	}

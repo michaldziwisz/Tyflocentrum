@@ -8,6 +8,8 @@ import UIKit
 import WebKit
 
 struct SafeHTMLView: UIViewRepresentable {
+	@Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
 	let htmlBody: String
 	let baseURL: URL?
 	let accessibilityIdentifier: String?

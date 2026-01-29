@@ -21,46 +21,74 @@ private actor NoStoreInMemoryCache {
 
 	private let ttlSeconds: TimeInterval
 	private let maxEntries: Int
+	private let maxTotalBytes: Int
+	private let maxEntryBytes: Int
 	private var entries: [URL: Entry] = [:]
+	private var totalBytes: Int = 0
 
-	init(ttlSeconds: TimeInterval, maxEntries: Int = 256) {
+	init(ttlSeconds: TimeInterval, maxEntries: Int = 256, maxTotalBytes: Int = 5 * 1024 * 1024, maxEntryBytes: Int = 1024 * 1024) {
 		self.ttlSeconds = ttlSeconds
 		self.maxEntries = max(1, maxEntries)
+		self.maxTotalBytes = max(1, maxTotalBytes)
+		self.maxEntryBytes = max(1, maxEntryBytes)
 	}
 
 	func get(_ url: URL) -> Entry? {
 		guard let entry = entries[url] else { return nil }
 		if entry.isExpired {
-			entries[url] = nil
+			removeEntry(for: url)
 			return nil
 		}
 		return entry
 	}
 
 	func set(_ url: URL, data: Data, wpTotal: Int? = nil, wpTotalPages: Int? = nil) {
+		if data.count > maxEntryBytes {
+			removeEntry(for: url)
+			return
+		}
+
 		let expiresAt = Date().addingTimeInterval(ttlSeconds)
+		if let existing = entries[url] {
+			totalBytes = max(0, totalBytes - existing.data.count)
+		}
 		entries[url] = Entry(data: data, expiresAt: expiresAt, wpTotal: wpTotal, wpTotalPages: wpTotalPages)
+		totalBytes += data.count
 		pruneIfNeeded()
 	}
 
 	func remove(_ url: URL) {
-		entries[url] = nil
+		removeEntry(for: url)
 	}
 
 	private func pruneIfNeeded() {
-		guard entries.count > maxEntries else { return }
+		guard entries.count > maxEntries || totalBytes > maxTotalBytes else { return }
 
-		entries = entries.filter { !$0.value.isExpired }
+		let now = Date()
+		let expiredKeys = entries.compactMap { key, value in
+			value.expiresAt <= now ? key : nil
+		}
+		for key in expiredKeys {
+			removeEntry(for: key)
+		}
 
-		guard entries.count > maxEntries else { return }
+		guard entries.count > maxEntries || totalBytes > maxTotalBytes else { return }
 
 		let victims = entries
 			.sorted(by: { $0.value.expiresAt < $1.value.expiresAt })
-			.prefix(entries.count - maxEntries)
 			.map(\.key)
+
 		for key in victims {
-			entries[key] = nil
+			guard entries.count > maxEntries || totalBytes > maxTotalBytes else { return }
+			removeEntry(for: key)
 		}
+	}
+
+	private func removeEntry(for url: URL) {
+		if let existing = entries[url] {
+			totalBytes = max(0, totalBytes - existing.data.count)
+		}
+		entries[url] = nil
 	}
 }
 
@@ -74,7 +102,6 @@ final class TyfloAPI: ObservableObject {
 	private let wpCategoryFields = "id,name,count"
 
 	private static let requestTimeoutSeconds: TimeInterval = 30
-	private static let noStoreCacheTTLSeconds: TimeInterval = 5 * 60
 	private static let retryableErrorCodes: Set<URLError.Code> = [
 		.notConnectedToInternet,
 		.timedOut,
@@ -97,9 +124,22 @@ final class TyfloAPI: ObservableObject {
 
 	static let shared = TyfloAPI(session: makeSharedSession())
 
-	private let noStoreCache = NoStoreInMemoryCache(ttlSeconds: noStoreCacheTTLSeconds)
-	init(session: URLSession = .shared) {
+	struct NoStoreCacheConfig: Equatable {
+		var ttlSeconds: TimeInterval = 5 * 60
+		var maxEntries: Int = 256
+		var maxTotalBytes: Int = 5 * 1024 * 1024
+		var maxEntryBytes: Int = 1024 * 1024
+	}
+
+	private let noStoreCache: NoStoreInMemoryCache
+	init(session: URLSession = .shared, noStoreCacheConfig: NoStoreCacheConfig = .init()) {
 		self.session = session
+		self.noStoreCache = NoStoreInMemoryCache(
+			ttlSeconds: noStoreCacheConfig.ttlSeconds,
+			maxEntries: noStoreCacheConfig.maxEntries,
+			maxTotalBytes: noStoreCacheConfig.maxTotalBytes,
+			maxEntryBytes: noStoreCacheConfig.maxEntryBytes
+		)
 	}
 
 	struct WPPage<Item: Decodable> {
@@ -153,6 +193,15 @@ final class TyfloAPI: ObservableObject {
 			return false
 		}
 		return cacheControl.contains("no-store")
+	}
+
+	private static func safeLogURLString(_ url: URL) -> String {
+		guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
+			return "\(url.host ?? "")\(url.path)"
+		}
+		components.query = nil
+		components.fragment = nil
+		return components.url?.absoluteString ?? "\(url.host ?? "")\(url.path)"
 	}
 
 	private func withRetry<T>(
@@ -360,7 +409,7 @@ final class TyfloAPI: ObservableObject {
 		do {
 			return try await fetchLatestPodcasts()
 		} catch {
-			print("Failed to fetch latest podcasts.\n\(error.localizedDescription)")
+			AppLog.network.error("Failed to fetch latest podcasts. Error: \(error.localizedDescription, privacy: .public)")
 			return [Podcast]()
 		}
 	}
@@ -385,7 +434,7 @@ final class TyfloAPI: ObservableObject {
 		do {
 			return try await fetchCategories()
 		} catch {
-			print("Failed to fetch categories.\n\(error.localizedDescription)")
+			AppLog.network.error("Failed to fetch podcast categories. Error: \(error.localizedDescription, privacy: .public)")
 			return [Category]()
 		}
 	}
@@ -408,7 +457,9 @@ final class TyfloAPI: ObservableObject {
 		do {
 			return try await fetchPodcasts(for: category)
 		} catch {
-			print("Failed to fetch podcasts in category \(category.id).\n\(error.localizedDescription)")
+			AppLog.network.error(
+				"Failed to fetch podcasts for category id=\(category.id). Error: \(error.localizedDescription, privacy: .public)"
+			)
 			return [Podcast]()
 		}
 	}
@@ -475,7 +526,7 @@ final class TyfloAPI: ObservableObject {
 		do {
 			return try await fetchArticleCategories()
 		} catch {
-			print("Failed to fetch article categories.\n\(error.localizedDescription)")
+			AppLog.network.error("Failed to fetch article categories. Error: \(error.localizedDescription, privacy: .public)")
 			return [Category]()
 		}
 	}
@@ -498,7 +549,9 @@ final class TyfloAPI: ObservableObject {
 		do {
 			return try await fetchArticles(for: category)
 		} catch {
-			print("Failed to fetch articles in category \(category.id).\n\(error.localizedDescription)")
+			AppLog.network.error(
+				"Failed to fetch articles for category id=\(category.id). Error: \(error.localizedDescription, privacy: .public)"
+			)
 			return [Podcast]()
 		}
 	}
@@ -618,7 +671,7 @@ final class TyfloAPI: ObservableObject {
 		do {
 			return try await fetchPodcasts(matching: searchString)
 		} catch {
-			print("Failed to search podcasts.\n\(error.localizedDescription)")
+			AppLog.network.error("Failed to search podcasts. Error: \(error.localizedDescription, privacy: .public)")
 			return [Podcast]()
 		}
 	}
@@ -632,7 +685,7 @@ final class TyfloAPI: ObservableObject {
 				URLQueryItem(name: "per_page", value: "100"),
 			]
 		) else {
-			print("Failed to create URL for comments")
+			AppLog.network.error("Failed to create URL for comments. postID=\(postID)")
 			return [Comment]()
 		}
 		do {
@@ -640,7 +693,9 @@ final class TyfloAPI: ObservableObject {
 			decoder.keyDecodingStrategy = .convertFromSnakeCase
 			return try await fetch(url, decoder: decoder)
 		} catch {
-			print("Failed to fetch comments for post \(postID).\n\(error.localizedDescription)\n\(url.absoluteString)")
+			AppLog.network.error(
+				"Failed to fetch comments for post id=\(postID). Error: \(error.localizedDescription, privacy: .public) endpoint=\(Self.safeLogURLString(url), privacy: .public)"
+			)
 			return [Comment]()
 		}
 	}
@@ -663,7 +718,9 @@ final class TyfloAPI: ObservableObject {
 			let decodedResponse: Availability = try await fetch(url, decoder: decoder, cachePolicy: .reloadIgnoringLocalCacheData)
 			return (decodedResponse.available, decodedResponse)
 		} catch {
-			print("\(error.localizedDescription)\n\(url.absoluteString)")
+			AppLog.network.error(
+				"Failed to fetch TP availability. Error: \(error.localizedDescription, privacy: .public) endpoint=\(Self.safeLogURLString(url), privacy: .public)"
+			)
 			return (false, Availability(available: false, title: nil))
 		}
 	}
@@ -683,7 +740,9 @@ final class TyfloAPI: ObservableObject {
 			}
 			return (true, decodedResponse)
 		} catch {
-			print("\(error.localizedDescription)\n\(url.absoluteString)")
+			AppLog.network.error(
+				"Failed to fetch radio schedule. Error: \(error.localizedDescription, privacy: .public) endpoint=\(Self.safeLogURLString(url), privacy: .public)"
+			)
 			return (false, RadioSchedule(available: false, text: nil, error: "Nie udało się pobrać ramówki. Spróbuj ponownie."))
 		}
 	}
@@ -712,7 +771,9 @@ final class TyfloAPI: ObservableObject {
 			}
 			return (true, nil)
 		} catch {
-			print("\(error.localizedDescription)\n\(url.absoluteString)")
+			AppLog.network.error(
+				"Failed to send contact message. Error: \(error.localizedDescription, privacy: .public) endpoint=\(Self.safeLogURLString(url), privacy: .public)"
+			)
 			return (false, nil)
 		}
 	}
@@ -774,7 +835,9 @@ final class TyfloAPI: ObservableObject {
 			}
 			return (true, nil)
 		} catch {
-			print("\(error.localizedDescription)\n\(url.absoluteString)")
+			AppLog.network.error(
+				"Failed to send voice contact message. Error: \(error.localizedDescription, privacy: .public) endpoint=\(Self.safeLogURLString(url), privacy: .public)"
+			)
 			return (false, nil)
 		}
 	}

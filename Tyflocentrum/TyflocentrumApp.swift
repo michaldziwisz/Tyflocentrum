@@ -495,13 +495,13 @@ private final class UITestURLProtocol: URLProtocol {
 
 		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/pages") {
 			if let pageID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/pages/") {
-				let shouldFail = shouldFailOnce(&didFailTyfloswiatPageDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-					print("UITestURLProtocol: tyfloswiat page detail id=\(pageID) shouldFail=\(shouldFail)")
-				}
-				if shouldFail {
-					return (500, Data("{}".utf8))
-				}
+					let shouldFail = shouldFailOnce(&didFailTyfloswiatPageDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+						AppLog.uiTests.debug("tyfloswiat page detail id=\(pageID) shouldFail=\(shouldFail)")
+					}
+					if shouldFail {
+						return (500, Data("{}".utf8))
+					}
 				if pageID == 7772 {
 					return (
 						200,
@@ -557,13 +557,13 @@ private final class UITestURLProtocol: URLProtocol {
 
 		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/posts") {
 			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-				let shouldFail = shouldFailOnce(&didFailTyflopodcastPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-					print("UITestURLProtocol: tyflopodcast post detail id=\(postID) shouldFail=\(shouldFail)")
-				}
-				if shouldFail {
-					return (500, Data("{}".utf8))
-				}
+					let shouldFail = shouldFailOnce(&didFailTyflopodcastPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+						AppLog.uiTests.debug("tyflopodcast post detail id=\(postID) shouldFail=\(shouldFail)")
+					}
+					if shouldFail {
+						return (500, Data("{}".utf8))
+					}
 				return (
 					200,
 					#"""
@@ -623,13 +623,13 @@ private final class UITestURLProtocol: URLProtocol {
 
 		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
 			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
-				let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
-				if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
-					print("UITestURLProtocol: tyfloswiat post detail id=\(postID) shouldFail=\(shouldFail)")
-				}
-				if shouldFail {
-					return (500, Data("{}".utf8))
-				}
+					let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")
+					if isFlagEnabled("UI_TESTING_FAIL_FIRST_DETAIL_REQUEST") {
+						AppLog.uiTests.debug("tyfloswiat post detail id=\(postID) shouldFail=\(shouldFail)")
+					}
+					if shouldFail {
+						return (500, Data("{}".utf8))
+					}
 				return (
 					200,
 					#"""

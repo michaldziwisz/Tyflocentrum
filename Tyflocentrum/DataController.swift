@@ -23,14 +23,18 @@ final class DataController: ObservableObject {
 			guard let self else { return }
 			guard let error else { return }
 
-			print("Core Data store failed to load. Falling back to in-memory store.\n\(error.localizedDescription)")
+			AppLog.persistence.error(
+				"Core Data store failed to load; falling back to in-memory store. Error: \(error.localizedDescription, privacy: .public)"
+			)
 
 			let description = NSPersistentStoreDescription()
 			description.type = NSInMemoryStoreType
 			self.container.persistentStoreDescriptions = [description]
 			self.container.loadPersistentStores { _, error in
 				if let error {
-					print("In-memory Core Data store failed to load.\n\(error.localizedDescription)")
+					AppLog.persistence.error(
+						"In-memory Core Data store failed to load. Error: \(error.localizedDescription, privacy: .public)"
+					)
 				}
 			}
 		}
