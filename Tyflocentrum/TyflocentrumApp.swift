@@ -8,18 +8,24 @@
 import Foundation
 import SwiftUI
 import UIKit
+import UserNotifications
 
 @main
 struct TyflocentrumApp: App {
+	private let isUITesting: Bool
+
+	@UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+
 	@StateObject private var dataController: DataController
 	@StateObject private var api: TyfloAPI
 	@StateObject private var audioPlayer: AudioPlayer
 	@StateObject private var favoritesStore: FavoritesStore
 	@StateObject private var settingsStore: SettingsStore
 	@StateObject private var magicTapCoordinator = MagicTapCoordinator()
+	@StateObject private var pushNotifications = PushNotificationsManager()
 
 	init() {
-		let isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
+		isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
 		_dataController = StateObject(wrappedValue: DataController(inMemory: isUITesting))
 		_api = StateObject(wrappedValue: isUITesting ? TyfloAPI(session: Self.makeUITestSession()) : TyfloAPI.shared)
 		if isUITesting {
@@ -53,6 +59,7 @@ struct TyflocentrumApp: App {
 					.environmentObject(audioPlayer)
 					.environmentObject(favoritesStore)
 					.environmentObject(settingsStore)
+					.environmentObject(pushNotifications)
 					.environmentObject(magicTapCoordinator),
 				onMagicTap: {
 					magicTapCoordinator.perform {
@@ -60,6 +67,19 @@ struct TyflocentrumApp: App {
 					}
 				}
 			)
+			.onAppear {
+				appDelegate.pushNotifications = pushNotifications
+			}
+			.task {
+				guard !isUITesting else { return }
+				await pushNotifications.onAppLaunch(prefs: settingsStore.pushNotificationPreferences)
+			}
+			.onChange(of: settingsStore.pushNotificationPreferences) { prefs in
+				guard !isUITesting else { return }
+				Task {
+					await pushNotifications.onPreferencesChanged(prefs: prefs)
+				}
+			}
 		}
 	}
 
@@ -67,6 +87,86 @@ struct TyflocentrumApp: App {
 		let config = URLSessionConfiguration.ephemeral
 		config.protocolClasses = [UITestURLProtocol.self]
 		return URLSession(configuration: config)
+	}
+}
+
+final class AppDelegate: NSObject, UIApplicationDelegate {
+	weak var pushNotifications: PushNotificationsManager?
+
+	func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+		Task { @MainActor in
+			pushNotifications?.didRegisterForRemoteNotifications(deviceToken: deviceToken)
+		}
+	}
+
+	func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+		Task { @MainActor in
+			pushNotifications?.didFailToRegisterForRemoteNotifications(error: error)
+		}
+	}
+}
+
+@MainActor
+final class PushNotificationsManager: ObservableObject {
+	private(set) var hasRequestedSystemPermission = false
+
+	@Published private(set) var authorizationStatus: UNAuthorizationStatus = .notDetermined
+	@Published private(set) var deviceTokenHex: String?
+	@Published private(set) var lastRegistrationError: String?
+
+	func onAppLaunch(prefs: PushNotificationPreferences) async {
+		await refreshAuthorizationStatus()
+		await requestSystemPermissionIfNeeded(prefs: prefs)
+	}
+
+	func onPreferencesChanged(prefs: PushNotificationPreferences) async {
+		await requestSystemPermissionIfNeeded(prefs: prefs)
+	}
+
+	func refreshAuthorizationStatus() async {
+		let settings = await UNUserNotificationCenter.current().notificationSettings()
+		authorizationStatus = settings.authorizationStatus
+	}
+
+	private func requestSystemPermissionIfNeeded(prefs: PushNotificationPreferences) async {
+		guard prefs.podcast || prefs.article || prefs.live || prefs.schedule else { return }
+
+		let settings = await UNUserNotificationCenter.current().notificationSettings()
+		authorizationStatus = settings.authorizationStatus
+
+		switch settings.authorizationStatus {
+		case .notDetermined:
+			guard !hasRequestedSystemPermission else { return }
+			hasRequestedSystemPermission = true
+			do {
+				_ = try await UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound, .badge])
+			} catch {
+				lastRegistrationError = error.localizedDescription
+			}
+			await refreshAuthorizationStatus()
+			if authorizationStatus == .authorized || authorizationStatus == .provisional || authorizationStatus == .ephemeral {
+				registerForRemoteNotifications()
+			}
+		case .authorized, .provisional, .ephemeral:
+			registerForRemoteNotifications()
+		case .denied:
+			break
+		@unknown default:
+			break
+		}
+	}
+
+	private func registerForRemoteNotifications() {
+		UIApplication.shared.registerForRemoteNotifications()
+	}
+
+	func didRegisterForRemoteNotifications(deviceToken: Data) {
+		deviceTokenHex = deviceToken.map { String(format: "%02x", $0) }.joined()
+		lastRegistrationError = nil
+	}
+
+	func didFailToRegisterForRemoteNotifications(error: Error) {
+		lastRegistrationError = error.localizedDescription
 	}
 }
 
