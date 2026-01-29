@@ -202,7 +202,7 @@ final class TyfloAPI: ObservableObject {
 			}
 
 			if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
-				await noStoreCache.set(url, data: data)
+				await self.noStoreCache.set(url, data: data)
 			}
 
 			do {
@@ -247,7 +247,7 @@ final class TyfloAPI: ObservableObject {
 			let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
 
 			if cachePolicy == .useProtocolCachePolicy, Self.shouldUseNoStoreCache(for: http) {
-				await noStoreCache.set(url, data: data, wpTotal: total, wpTotalPages: totalPages)
+				await self.noStoreCache.set(url, data: data, wpTotal: total, wpTotalPages: totalPages)
 			}
 
 			return WPPage(items: items, total: total, totalPages: totalPages)
