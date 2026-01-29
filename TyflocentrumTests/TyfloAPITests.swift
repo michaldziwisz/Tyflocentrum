@@ -1181,13 +1181,13 @@ final class TyfloAPITests: XCTestCase {
 }
 
 @MainActor
-final class PushNotificationsManagerSyncTests: XCTestCase {
+	final class PushNotificationsManagerSyncTests: XCTestCase {
 	override func tearDown() {
 		StubURLProtocol.requestHandler = nil
 		super.tearDown()
 	}
 
-	func testSyncRegistrationUsesInstallationIDWhenAPNSTokenIsMissing() async throws {
+		func testSyncRegistrationUsesInstallationIDWhenAPNSTokenIsMissing() async throws {
 		let defaults = makeDefaults()
 		defaults.set("install-1234567890123456", forKey: "push.installationID.test")
 
@@ -1201,7 +1201,7 @@ final class PushNotificationsManagerSyncTests: XCTestCase {
 			XCTAssertEqual(request.httpMethod, "POST")
 			XCTAssertEqual(request.value(forHTTPHeaderField: "Content-Type"), "application/json; charset=utf-8")
 
-			let body = try XCTUnwrap(request.httpBody)
+			let body = try extractBody(from: request)
 			let parsed = try JSONSerialization.jsonObject(with: body) as? [String: Any]
 			XCTAssertEqual(parsed?["token"] as? String, "install-1234567890123456")
 			XCTAssertEqual(parsed?["env"] as? String, "ios-installation")
@@ -1226,14 +1226,14 @@ final class PushNotificationsManagerSyncTests: XCTestCase {
 		await fulfillment(of: [requestMade], timeout: 1)
 	}
 
-	func testSyncRegistrationUsesAPNSTokenWhenAvailable() async throws {
+		func testSyncRegistrationUsesAPNSTokenWhenAvailable() async throws {
 		let defaults = makeDefaults()
 
 		let requestMade = expectation(description: "request made")
 		StubURLProtocol.requestHandler = { request in
 			requestMade.fulfill()
 
-			let body = try XCTUnwrap(request.httpBody)
+			let body = try extractBody(from: request)
 			let parsed = try JSONSerialization.jsonObject(with: body) as? [String: Any]
 			XCTAssertEqual(parsed?["token"] as? String, "aabb")
 			XCTAssertEqual(parsed?["env"] as? String, "ios-apns")
@@ -1260,10 +1260,40 @@ final class PushNotificationsManagerSyncTests: XCTestCase {
 		return URLSession(configuration: config)
 	}
 
-	private func makeDefaults() -> UserDefaults {
-		let suiteName = "TyflocentrumTests.PushNotificationsManagerSync.\(UUID().uuidString)"
-		let defaults = UserDefaults(suiteName: suiteName)!
-		defaults.removePersistentDomain(forName: suiteName)
-		return defaults
+		private func makeDefaults() -> UserDefaults {
+			let suiteName = "TyflocentrumTests.PushNotificationsManagerSync.\(UUID().uuidString)"
+			let defaults = UserDefaults(suiteName: suiteName)!
+			defaults.removePersistentDomain(forName: suiteName)
+			return defaults
+		}
+
+		private func extractBody(from request: URLRequest) throws -> Data {
+			if let body = request.httpBody {
+				return body
+			}
+			if let stream = request.httpBodyStream {
+				return try readAll(from: stream)
+			}
+			XCTFail("Request body missing (httpBody and httpBodyStream are nil).")
+			return Data()
+		}
+
+		private func readAll(from stream: InputStream) throws -> Data {
+			stream.open()
+			defer { stream.close() }
+
+			var data = Data()
+			var buffer = [UInt8](repeating: 0, count: 1024)
+			while true {
+				let readBytes = stream.read(&buffer, maxLength: buffer.count)
+				if readBytes < 0 {
+					throw stream.streamError ?? URLError(.cannotLoadFromNetwork)
+				}
+				if readBytes == 0 {
+					break
+				}
+				data.append(buffer, count: readBytes)
+			}
+			return data
+		}
 	}
-}
