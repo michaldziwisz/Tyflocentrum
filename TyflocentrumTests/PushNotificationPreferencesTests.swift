@@ -1,5 +1,7 @@
 import XCTest
 
+@testable import Tyflocentrum
+
 @MainActor
 final class PushNotificationPreferencesTests: XCTestCase {
 	func testDefaultsEnableAllCategories() {
@@ -46,4 +48,3 @@ final class PushNotificationPreferencesTests: XCTestCase {
 		return defaults
 	}
 }
-

@@ -1,6 +1,8 @@
 import MediaPlayer
 import XCTest
 
+@testable import Tyflocentrum
+
 @MainActor
 final class PlaybackRatePersistenceTests: XCTestCase {
 	override func tearDown() {

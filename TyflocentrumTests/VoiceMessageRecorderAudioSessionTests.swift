@@ -3,6 +3,7 @@ import XCTest
 
 @testable import Tyflocentrum
 
+@MainActor
 final class VoiceMessageRecorderAudioSessionTests: XCTestCase {
 	private final class FakeAudioSession: AudioSessionProtocol {
 		enum Event: Equatable {
@@ -61,4 +62,3 @@ final class VoiceMessageRecorderAudioSessionTests: XCTestCase {
 		XCTAssertTrue(active)
 	}
 }
-
