@@ -7,10 +7,10 @@
 
 import Foundation
 
-	final class TyfloAPI: ObservableObject {
-		private let session: URLSession
-		private let tyfloPodcastBaseURL = URL(string: "https://tyflopodcast.net/wp-json")!
-		private let tyfloWorldBaseURL = URL(string: "https://tyfloswiat.pl/wp-json")!
+final class TyfloAPI: ObservableObject {
+	private let session: URLSession
+	private let tyfloPodcastBaseURL = URL(string: "https://tyflopodcast.net/wp-json")!
+	private let tyfloWorldBaseURL = URL(string: "https://tyfloswiat.pl/wp-json")!
 	private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
 	private let wpPostFields = "id,date,title,excerpt,content,guid"
 	private let wpEmbedPostFields = "id,date,link,title,excerpt"
@@ -42,23 +42,23 @@ import Foundation
 		self.session = session
 	}
 
-		struct WPPage<Item: Decodable> {
-			let items: [Item]
-			let total: Int?
-			let totalPages: Int?
-		}
+	struct WPPage<Item: Decodable> {
+		let items: [Item]
+		let total: Int?
+		let totalPages: Int?
+	}
 
-		struct RadioSchedule: Decodable, Equatable {
-			let available: Bool
-			let text: String?
-			let error: String?
+	struct RadioSchedule: Decodable, Equatable {
+		let available: Bool
+		let text: String?
+		let error: String?
 
-			init(available: Bool, text: String?, error: String? = nil) {
-				self.available = available
-				self.text = text
-				self.error = error
-			}
+		init(available: Bool, text: String?, error: String? = nil) {
+			self.available = available
+			self.text = text
+			self.error = error
 		}
+	}
 
 	private func makeWPURL(baseURL: URL, path: String, queryItems: [URLQueryItem]) -> URL? {
 		guard var components = URLComponents(url: baseURL.appendingPathComponent(path), resolvingAgainstBaseURL: false) else { return nil }
@@ -131,56 +131,56 @@ import Foundation
 				throw URLError(.cannotDecodeContentData)
 			}
 		}
-		}
+	}
 
-		private func fetchWPPage<Item: Decodable>(
-			_ url: URL,
-			decoder: JSONDecoder = JSONDecoder(),
-			cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
-		) async throws -> WPPage<Item> {
-			var request = URLRequest(url: url)
-			request.cachePolicy = cachePolicy
-			request.timeoutInterval = Self.requestTimeoutSeconds
-			request.setValue("application/json", forHTTPHeaderField: "Accept")
-			return try await withRetry {
-				let (data, response) = try await self.session.data(for: request)
-				guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
-					throw URLError(.badServerResponse)
-				}
-
-				let items: [Item]
-				do {
-					items = try decoder.decode([Item].self, from: data)
-				} catch {
-					throw URLError(.cannotDecodeContentData)
-				}
-				let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
-				let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
-				return WPPage(items: items, total: total, totalPages: totalPages)
+	private func fetchWPPage<Item: Decodable>(
+		_ url: URL,
+		decoder: JSONDecoder = JSONDecoder(),
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> WPPage<Item> {
+		var request = URLRequest(url: url)
+		request.cachePolicy = cachePolicy
+		request.timeoutInterval = Self.requestTimeoutSeconds
+		request.setValue("application/json", forHTTPHeaderField: "Accept")
+		return try await withRetry {
+			let (data, response) = try await self.session.data(for: request)
+			guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+				throw URLError(.badServerResponse)
 			}
-		}
 
-		func fetchLatestPodcasts() async throws -> [Podcast] {
-			guard let url = makeWPURL(
-				baseURL: tyfloPodcastBaseURL,
-				path: "wp/v2/posts",
-				queryItems: [URLQueryItem(name: "per_page", value: "100")]
-			) else {
-				throw URLError(.badURL)
+			let items: [Item]
+			do {
+				items = try decoder.decode([Item].self, from: data)
+			} catch {
+				throw URLError(.cannotDecodeContentData)
 			}
-			return try await fetch(url)
+			let total = http.value(forHTTPHeaderField: "X-WP-Total").flatMap(Int.init)
+			let totalPages = http.value(forHTTPHeaderField: "X-WP-TotalPages").flatMap(Int.init)
+			return WPPage(items: items, total: total, totalPages: totalPages)
 		}
+	}
 
-		func fetchLatestArticles() async throws -> [Podcast] {
-			guard let url = makeWPURL(
-				baseURL: tyfloWorldBaseURL,
-				path: "wp/v2/posts",
-				queryItems: [URLQueryItem(name: "per_page", value: "100")]
-			) else {
-				throw URLError(.badURL)
-			}
-			return try await fetch(url)
+	func fetchLatestPodcasts() async throws -> [Podcast] {
+		guard let url = makeWPURL(
+			baseURL: tyfloPodcastBaseURL,
+			path: "wp/v2/posts",
+			queryItems: [URLQueryItem(name: "per_page", value: "100")]
+		) else {
+			throw URLError(.badURL)
 		}
+		return try await fetch(url)
+	}
+
+	func fetchLatestArticles() async throws -> [Podcast] {
+		guard let url = makeWPURL(
+			baseURL: tyfloWorldBaseURL,
+			path: "wp/v2/posts",
+			queryItems: [URLQueryItem(name: "per_page", value: "100")]
+		) else {
+			throw URLError(.badURL)
+		}
+		return try await fetch(url)
+	}
 
 		func fetchPodcastSummariesPage(page: Int, perPage: Int, categoryID: Int? = nil) async throws -> WPPage<WPPostSummary> {
 			guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }

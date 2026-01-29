@@ -25,17 +25,17 @@ extension AVAudioSession: AudioSessionProtocol {}
 
 @MainActor
 	final class VoiceMessageRecorder: NSObject, ObservableObject {
-		enum State: Equatable {
-			case idle
-			case recording
-			case recorded
-			case playingPreview
-		}
+	enum State: Equatable {
+		case idle
+		case recording
+		case recorded
+		case playingPreview
+	}
 
-		@Published private(set) var state: State = .idle
-		@Published private(set) var isProcessing: Bool = false
-		@Published private(set) var elapsedTime: TimeInterval = 0
-		@Published private(set) var recordedDurationMs: Int = 0
+	@Published private(set) var state: State = .idle
+	@Published private(set) var isProcessing: Bool = false
+	@Published private(set) var elapsedTime: TimeInterval = 0
+	@Published private(set) var recordedDurationMs: Int = 0
 	@Published var shouldShowError = false
 	@Published var errorMessage = ""
 
@@ -53,8 +53,8 @@ extension AVAudioSession: AudioSessionProtocol {}
 	var canSend: Bool {
 		guard !isProcessing else { return false }
 		guard state == .recorded || state == .playingPreview else { return false }
-			return recordedFileIsUsable()
-		}
+		return recordedFileIsUsable()
+	}
 
 	init(audioSession: AudioSessionProtocol = AVAudioSession.sharedInstance()) {
 		self.audioSession = audioSession
