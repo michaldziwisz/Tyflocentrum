@@ -17,6 +17,15 @@ Ten dokument opisuje plan wdrożenia powiadomień push w Tyflocentrum:
 
 Bez tego da się przygotować całą architekturę, preferencje i testy logiki, ale nie da się wykonać pełnego E2E na urządzeniu.
 
+## Stan na dziś (App Store 1.0)
+
+Ponieważ w tej chwili nie mamy pełnej konfiguracji APNs (capabilities/entitlements + klucze), w buildzie **Release**:
+
+- sekcja „Powiadomienia push” jest ukryta w UI,
+- aplikacja nie prosi o zgodę na powiadomienia na starcie.
+
+W buildzie **Debug** sekcja może być widoczna do celów deweloperskich.
+
 ## Kategorie (preferencje użytkownika)
 
 W Ustawieniach aplikacji dodajemy sekcję „Powiadomienia push” z checkboxami (domyślnie wszystkie włączone):
