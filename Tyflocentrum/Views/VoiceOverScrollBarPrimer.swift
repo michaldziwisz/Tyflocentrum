@@ -37,6 +37,7 @@ struct VoiceOverScrollBarPrimer: UIViewRepresentable {
 			defer { lastShouldPrime = shouldPrime }
 			guard shouldPrime, !lastShouldPrime else { return }
 			guard UIAccessibility.isVoiceOverRunning else { return }
+			guard !ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
 
 			DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak uiView] in
 				guard let uiView else { return }
