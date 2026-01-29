@@ -25,7 +25,8 @@ struct TyflocentrumApp: App {
 	@StateObject private var pushNotifications = PushNotificationsManager()
 
 	init() {
-		isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
+		let isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
+		self.isUITesting = isUITesting
 		_dataController = StateObject(wrappedValue: DataController(inMemory: isUITesting))
 		_api = StateObject(wrappedValue: isUITesting ? TyfloAPI(session: Self.makeUITestSession()) : TyfloAPI.shared)
 		if isUITesting {
