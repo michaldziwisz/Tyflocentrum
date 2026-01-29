@@ -7,7 +7,7 @@ Ten plik jest „żywą” check‑listą wdrożeń pod wydanie **1.0** (App Sto
 ## Stan CI
 
 - Baseline (przed poprawkami z tej iteracji): workflow `iOS (unsigned IPA)` – **success** (run `21481970583`).
-- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21491076190`).
+- Po poprawkach z tej iteracji: workflow `iOS (unsigned IPA)` – **success** (run `21491855112`).
 
 ## Wdrożone (bez Apple Developer Program)
 
