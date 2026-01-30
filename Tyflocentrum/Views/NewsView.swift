@@ -585,67 +585,67 @@ struct NewsView: View {
 
 	var body: some View {
 		NavigationStack {
-			List {
-				AsyncListStatusSection(
-					errorMessage: viewModel.errorMessage,
-					isLoading: viewModel.isLoading,
-					hasLoaded: viewModel.hasLoaded,
-					isEmpty: viewModel.items.isEmpty,
-					emptyMessage: "Brak nowych treści.",
-					retryAction: { await viewModel.refresh(api: api) },
-					retryIdentifier: "news.retry",
-					isRetryDisabled: viewModel.isLoading
-				)
+			ScrollView {
+				LazyVStack(alignment: .leading, spacing: 0) {
+					NewsStatusView(
+						errorMessage: viewModel.errorMessage,
+						isLoading: viewModel.isLoading,
+						hasLoaded: viewModel.hasLoaded,
+						isEmpty: viewModel.items.isEmpty,
+						emptyMessage: "Brak nowych treści.",
+						retryAction: { await viewModel.refresh(api: api) },
+						retryIdentifier: "news.retry",
+						isRetryDisabled: viewModel.isLoading
+					)
 
-				ForEach(viewModel.items) { item in
-					let stubPodcast = item.post.asPodcastStub()
+					ForEach(viewModel.items) { item in
+						let stubPodcast = item.post.asPodcastStub()
 
-					NavigationLink {
-						switch item.kind {
-						case .podcast:
-							LazyDetailedPodcastView(summary: item.post)
-						case .article:
-							LazyDetailedArticleView(summary: item.post)
-						}
-					} label: {
-						ShortPodcastView(
-							podcast: stubPodcast,
-							showsListenAction: item.kind == .podcast,
-							onListen: item.kind == .podcast
-								? { playerPodcast = stubPodcast }
-								: nil,
-							leadingSystemImageName: item.kind.systemImageName,
-							accessibilityKindLabel: item.kind.label,
-							accessibilityIdentifierOverride: item.kind == .podcast
-								? nil
-								: "article.row.\(item.post.id)",
-							favoriteItem: item.kind == .podcast
-								? .podcast(item.post)
-								: .article(summary: item.post, origin: .post)
-						)
-					}
-					.accessibilityRemoveTraits(.isButton)
-					.onAppear {
-						guard item.id == viewModel.items.last?.id else { return }
-						Task { await viewModel.loadMore(api: api) }
-					}
-				}
-				if viewModel.errorMessage == nil, viewModel.hasLoaded {
-					if let loadMoreError = viewModel.loadMoreErrorMessage {
-						Section {
-							Text(loadMoreError)
-								.foregroundColor(.secondary)
-
-							Button("Spróbuj ponownie") {
-								Task { await viewModel.loadMore(api: api) }
+						NavigationLink {
+							switch item.kind {
+							case .podcast:
+								LazyDetailedPodcastView(summary: item.post)
+							case .article:
+								LazyDetailedArticleView(summary: item.post)
 							}
-							.disabled(viewModel.isLoadingMore)
-							.accessibilityHidden(viewModel.isLoadingMore)
+						} label: {
+							ShortPodcastView(
+								podcast: stubPodcast,
+								showsListenAction: item.kind == .podcast,
+								onListen: item.kind == .podcast
+									? { playerPodcast = stubPodcast }
+									: nil,
+								leadingSystemImageName: item.kind.systemImageName,
+								accessibilityKindLabel: item.kind.label,
+								accessibilityIdentifierOverride: item.kind == .podcast
+									? nil
+									: "article.row.\(item.post.id)",
+								favoriteItem: item.kind == .podcast
+									? .podcast(item.post)
+									: .article(summary: item.post, origin: .post)
+							)
+							.padding(.horizontal)
+							.padding(.vertical, 12)
+							.frame(maxWidth: .infinity, alignment: .leading)
 						}
-					} else if viewModel.isLoadingMore {
-						Section {
-							ProgressView("Ładowanie starszych treści…")
+						.buttonStyle(.plain)
+						.accessibilityRemoveTraits(.isButton)
+						.onAppear {
+							guard item.id == viewModel.items.last?.id else { return }
+							Task { await viewModel.loadMore(api: api) }
 						}
+
+						Divider()
+							.padding(.leading, 16)
+					}
+
+					if viewModel.errorMessage == nil, viewModel.hasLoaded {
+						NewsLoadMoreStatusView(
+							errorMessage: viewModel.loadMoreErrorMessage,
+							isLoadingMore: viewModel.isLoadingMore,
+							retryAction: { await viewModel.loadMore(api: api) },
+							isRetryDisabled: viewModel.isLoadingMore
+						)
 					}
 				}
 			}
@@ -683,6 +683,87 @@ struct NewsView: View {
 				}
 				.hidden()
 			)
+		}
+	}
+
+	private struct NewsStatusView: View {
+		let errorMessage: String?
+		let isLoading: Bool
+		let hasLoaded: Bool
+		let isEmpty: Bool
+		let emptyMessage: String
+		let retryAction: (() async -> Void)?
+		let retryIdentifier: String?
+		let isRetryDisabled: Bool
+
+		var body: some View {
+			if let errorMessage {
+				VStack(alignment: .leading, spacing: 12) {
+					Text(errorMessage)
+						.foregroundColor(.secondary)
+
+					if let retryAction {
+						if let retryIdentifier {
+							Button("Spróbuj ponownie") {
+								Task { await retryAction() }
+							}
+							.accessibilityHint("Ponawia pobieranie danych.")
+							.accessibilityIdentifier(retryIdentifier)
+							.disabled(isRetryDisabled)
+							.accessibilityHidden(isRetryDisabled)
+						} else {
+							Button("Spróbuj ponownie") {
+								Task { await retryAction() }
+							}
+							.accessibilityHint("Ponawia pobieranie danych.")
+							.disabled(isRetryDisabled)
+							.accessibilityHidden(isRetryDisabled)
+						}
+					}
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal)
+				.padding(.vertical, 16)
+			} else if isLoading, isEmpty {
+				ProgressView("Ładowanie…")
+					.frame(maxWidth: .infinity)
+					.padding(.vertical, 24)
+			} else if hasLoaded, isEmpty {
+				Text(emptyMessage)
+					.foregroundColor(.secondary)
+					.frame(maxWidth: .infinity)
+					.padding(.vertical, 24)
+			}
+		}
+	}
+
+	private struct NewsLoadMoreStatusView: View {
+		let errorMessage: String?
+		let isLoadingMore: Bool
+		let retryAction: (() async -> Void)?
+		let isRetryDisabled: Bool
+
+		var body: some View {
+			if let errorMessage {
+				VStack(alignment: .leading, spacing: 12) {
+					Text(errorMessage)
+						.foregroundColor(.secondary)
+
+					if let retryAction {
+						Button("Spróbuj ponownie") {
+							Task { await retryAction() }
+						}
+						.disabled(isRetryDisabled)
+					}
+				}
+				.frame(maxWidth: .infinity, alignment: .leading)
+				.padding(.horizontal)
+				.padding(.vertical, 16)
+			} else if isLoadingMore {
+				ProgressView("Ładowanie starszych treści…")
+					.frame(maxWidth: .infinity)
+					.padding(.vertical, 24)
+			}
 		}
 	}
 }
