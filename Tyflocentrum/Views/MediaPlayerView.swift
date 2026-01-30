@@ -5,8 +5,8 @@
 //  Created by Arkadiusz Świętnicki on 19/11/2022.
 //
 
-import Foundation
 import AVKit
+import Foundation
 import SwiftUI
 import UIKit
 

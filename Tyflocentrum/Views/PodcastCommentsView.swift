@@ -89,4 +89,3 @@ private struct PodcastCommentDetailView: View {
 		.navigationBarTitleDisplayMode(.inline)
 	}
 }
-
