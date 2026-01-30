@@ -80,7 +80,6 @@ struct DetailedPodcastView: View {
 				} label: {
 					HStack(spacing: 8) {
 						Text(commentsSummaryText)
-							.id(commentsSummaryText)
 							.foregroundColor(.secondary)
 						Spacer(minLength: 0)
 						Image(systemName: "chevron.right")
