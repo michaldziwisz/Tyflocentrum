@@ -104,9 +104,15 @@ struct DetailedPodcastView: View {
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.navigationDestination(isPresented: $shouldNavigateToComments) {
-			PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
-		}
+		.background(
+			NavigationLink(
+				destination: PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText),
+				isActive: $shouldNavigateToComments
+			) {
+				EmptyView()
+			}
+			.hidden()
+		)
 		.task(id: podcast.id) {
 			await loadCommentsCount()
 		}
