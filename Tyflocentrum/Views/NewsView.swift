@@ -166,6 +166,7 @@ final class NewsFeedViewModel: ObservableObject {
 	private let sourcePerPage: Int
 	private let initialBatchSize: Int
 	private let loadMoreBatchSize: Int
+	private var requestGeneration = UUID()
 
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
@@ -194,15 +195,17 @@ final class NewsFeedViewModel: ObservableObject {
 
 	func refresh(api: TyfloAPI) async {
 		guard !isLoading else { return }
-		reset()
+		resetForNewRequest()
+		let generation = requestGeneration
 
 		isLoading = true
-		defer { isLoading = false }
 
 		errorMessage = nil
 
-		await appendNextBatch(api: api, batchSize: initialBatchSize)
+		await appendNextBatch(api: api, batchSize: initialBatchSize, generation: generation)
+		guard requestGeneration == generation else { return }
 		hasLoaded = true
+		isLoading = false
 
 		if items.isEmpty {
 			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
@@ -216,27 +219,31 @@ final class NewsFeedViewModel: ObservableObject {
 		}
 		guard canLoadMore else { return }
 		guard !isLoadingMore else { return }
+		let generation = requestGeneration
 
 		isLoadingMore = true
-		defer { isLoadingMore = false }
 
 		loadMoreErrorMessage = nil
 
 		let initialCount = items.count
-		await appendNextBatch(api: api, batchSize: loadMoreBatchSize)
+		await appendNextBatch(api: api, batchSize: loadMoreBatchSize, generation: generation)
+		guard requestGeneration == generation else { return }
+		isLoadingMore = false
 
 		if items.count == initialCount, canLoadMore {
 			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
 		}
 	}
 
-	private func reset() {
+	private func resetForNewRequest() {
+		requestGeneration = UUID()
 		items.removeAll(keepingCapacity: true)
 		seenIDs.removeAll(keepingCapacity: true)
 		podcasts.reset()
 		articles.reset()
 		canLoadMore = false
 		hasLoaded = false
+		isLoadingMore = false
 		errorMessage = nil
 		loadMoreErrorMessage = nil
 	}
@@ -288,21 +295,26 @@ final class NewsFeedViewModel: ObservableObject {
 		}
 	}
 
-	private func fetchNextPodcastPage(api: TyfloAPI) async -> Bool {
+	private func fetchNextPodcastPage(api: TyfloAPI, generation: UUID) async -> Bool {
+		guard requestGeneration == generation else { return false }
 		var source = podcasts
 		let result = await fetchNextPage(api: api, source: &source)
+		guard requestGeneration == generation else { return false }
 		podcasts = source
 		return result
 	}
 
-	private func fetchNextArticlePage(api: TyfloAPI) async -> Bool {
+	private func fetchNextArticlePage(api: TyfloAPI, generation: UUID) async -> Bool {
+		guard requestGeneration == generation else { return false }
 		var source = articles
 		let result = await fetchNextPage(api: api, source: &source)
+		guard requestGeneration == generation else { return false }
 		articles = source
 		return result
 	}
 
-	private func appendNextBatch(api: TyfloAPI, batchSize: Int) async {
+	private func appendNextBatch(api: TyfloAPI, batchSize: Int, generation: UUID) async {
+		guard requestGeneration == generation else { return }
 		podcasts.didFailLastFetch = false
 		articles.didFailLastFetch = false
 
@@ -314,6 +326,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 		while added < batchSize {
 			guard !Task.isCancelled else { return }
+			guard requestGeneration == generation else { return }
 
 			iterations += 1
 			if iterations > maxIterations { break }
@@ -322,10 +335,10 @@ final class NewsFeedViewModel: ObservableObject {
 			let articleNext = articles.nextItem
 
 			if podcastNext == nil, podcasts.hasMore {
-				_ = await fetchNextPodcastPage(api: api)
+				_ = await fetchNextPodcastPage(api: api, generation: generation)
 			}
 			if articleNext == nil, articles.hasMore {
-				_ = await fetchNextArticlePage(api: api)
+				_ = await fetchNextArticlePage(api: api, generation: generation)
 			}
 
 			guard let selected = selectNextItem() else { break }
@@ -340,6 +353,7 @@ final class NewsFeedViewModel: ObservableObject {
 			articles.trimConsumedIfNeeded()
 		}
 
+		guard requestGeneration == generation else { return }
 		if !newItems.isEmpty {
 			items.append(contentsOf: newItems)
 		}

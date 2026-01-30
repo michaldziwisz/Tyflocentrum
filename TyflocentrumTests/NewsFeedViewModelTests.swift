@@ -145,6 +145,92 @@ final class NewsFeedViewModelTests: XCTestCase {
 		])
 	}
 
+	@MainActor
+	func testLoadMoreInFlightDoesNotPolluteRefreshResults() async {
+		let lock = NSLock()
+		var stage = 0
+		var shouldBlockFirstPage2Request = true
+		let page2Requested = expectation(description: "Page 2 request started")
+		let allowPage2ToFinish = DispatchSemaphore(value: 0)
+
+		StubURLProtocol.requestHandler = { request in
+			let url = try XCTUnwrap(request.url)
+			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+			let queryItems = components?.queryItems ?? []
+			let page = Int(queryItems.first(where: { $0.name == "page" })?.value ?? "1") ?? 1
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: ["X-WP-TotalPages": "2"])!
+
+			lock.lock()
+			let currentStage = stage
+			let shouldBlock = shouldBlockFirstPage2Request && page == 2
+			if shouldBlock {
+				shouldBlockFirstPage2Request = false
+			}
+			lock.unlock()
+
+			if shouldBlock {
+				page2Requested.fulfill()
+				_ = allowPage2ToFinish.wait(timeout: .now().addingTimeInterval(2))
+			}
+
+			let (podcastID, articleID): (Int, Int)
+			switch currentStage {
+			case 0:
+				podcastID = page == 1 ? 1 : 2
+				articleID = page == 1 ? 10 : 11
+			default:
+				podcastID = page == 1 ? 100 : 101
+				articleID = page == 1 ? 200 : 201
+			}
+
+			switch url.host {
+			case "tyflopodcast.net":
+				let date = page == 1 ? "2026-01-20T00:59:40" : "2026-01-18T00:59:40"
+				return (response, Self.postsResponseData(items: [
+					Self.postSummaryJSON(id: podcastID, date: date, title: "P\(podcastID)", link: "https://tyflopodcast.net/?p=\(podcastID)"),
+				]))
+			case "tyfloswiat.pl":
+				let date = page == 1 ? "2026-01-19T00:59:40" : "2026-01-17T00:59:40"
+				return (response, Self.postsResponseData(items: [
+					Self.postSummaryJSON(id: articleID, date: date, title: "A\(articleID)", link: "https://tyfloswiat.pl/?p=\(articleID)"),
+				]))
+			default:
+				return (response, Data("[]".utf8))
+			}
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let viewModel = NewsFeedViewModel(
+			requestTimeoutSeconds: 2,
+			sourcePerPage: 1,
+			initialBatchSize: 2,
+			loadMoreBatchSize: 1
+		)
+
+		await viewModel.refresh(api: api)
+		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.1", "article.10"])
+
+		let loadMoreTask = Task { @MainActor in
+			await viewModel.loadMore(api: api)
+		}
+
+		await fulfillment(of: [page2Requested], timeout: 1)
+
+		lock.lock()
+		stage = 1
+		lock.unlock()
+
+		await viewModel.refresh(api: api)
+		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.100", "article.200"])
+
+		allowPage2ToFinish.signal()
+		_ = await loadMoreTask.result
+
+		// The stale load-more result must not be appended to the refreshed feed.
+		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.100", "article.200"])
+	}
+
 	private func makeSession() -> URLSession {
 		let config = URLSessionConfiguration.ephemeral
 		config.protocolClasses = [StubURLProtocol.self]

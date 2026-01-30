@@ -92,6 +92,11 @@ struct DetailedPodcastView: View {
 				.buttonStyle(.plain)
 				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 				.accessibilityIdentifier("podcastDetail.commentsSummary")
+				.onAppear {
+					guard commentsCount == nil else { return }
+					guard !isCommentsCountLoading else { return }
+					Task { await loadCommentsCount() }
+				}
 			}
 			.padding()
 		}
@@ -150,7 +155,10 @@ struct DetailedPodcastView: View {
 			}
 			commentsCount = loaded
 		} catch {
-			guard !Task.isCancelled else { return }
+			if Task.isCancelled || error is CancellationError {
+				commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
+				return
+			}
 
 			if error is AsyncTimeoutError {
 				commentsCountErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
