@@ -154,7 +154,9 @@ final class NewsFeedViewModelTests: XCTestCase {
 		let allowPage2ToFinish = DispatchSemaphore(value: 0)
 
 		StubURLProtocol.requestHandler = { request in
-			let url = try XCTUnwrap(request.url)
+			guard let url = request.url else {
+				throw URLError(.badURL)
+			}
 			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
 			let queryItems = components?.queryItems ?? []
 			let page = Int(queryItems.first(where: { $0.name == "page" })?.value ?? "1") ?? 1
@@ -171,7 +173,7 @@ final class NewsFeedViewModelTests: XCTestCase {
 
 			if shouldBlock {
 				page2Requested.fulfill()
-				_ = allowPage2ToFinish.wait(timeout: .now().addingTimeInterval(2))
+				_ = allowPage2ToFinish.wait(timeout: DispatchTime.now() + .seconds(2))
 			}
 
 			let (podcastID, articleID): (Int, Int)
