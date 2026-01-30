@@ -676,7 +676,7 @@ final class TyfloAPI: ObservableObject {
 		}
 	}
 
-	func getComments(forPostID postID: Int) async -> [Comment] {
+	func fetchComments(forPostID postID: Int) async throws -> [Comment] {
 		guard let url = makeWPURL(
 			baseURL: tyfloPodcastBaseURL,
 			path: "wp/v2/comments",
@@ -685,16 +685,20 @@ final class TyfloAPI: ObservableObject {
 				URLQueryItem(name: "per_page", value: "100"),
 			]
 		) else {
-			AppLog.network.error("Failed to create URL for comments. postID=\(postID)")
-			return [Comment]()
+			throw URLError(.badURL)
 		}
+
+		let decoder = JSONDecoder()
+		decoder.keyDecodingStrategy = .convertFromSnakeCase
+		return try await fetch(url, decoder: decoder)
+	}
+
+	func getComments(forPostID postID: Int) async -> [Comment] {
 		do {
-			let decoder = JSONDecoder()
-			decoder.keyDecodingStrategy = .convertFromSnakeCase
-			return try await fetch(url, decoder: decoder)
+			return try await fetchComments(forPostID: postID)
 		} catch {
 			AppLog.network.error(
-				"Failed to fetch comments for post id=\(postID). Error: \(error.localizedDescription, privacy: .public) endpoint=\(Self.safeLogURLString(url), privacy: .public)"
+				"Failed to fetch comments for post id=\(postID). Error: \(error.localizedDescription, privacy: .public)"
 			)
 			return [Comment]()
 		}

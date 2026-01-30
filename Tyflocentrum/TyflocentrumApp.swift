@@ -621,6 +621,25 @@ private final class UITestURLProtocol: URLProtocol {
 			)
 		}
 
+		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/comments") {
+			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+			let postID = Int(components?.queryItems?.first(where: { $0.name == "post" })?.value ?? "")
+
+			guard postID == 1 else {
+				return (200, Data("[]".utf8))
+			}
+
+			return (
+				200,
+				#"""
+				[
+					{"id":1001,"post":1,"parent":0,"author_name":"TyfloPodcast","content":{"rendered":"Znaczniki czasu:\nIntro 00:00:00\nTemat 00:01:00\n\nA oto odnośniki uzupełniające audycję:\n- Link testowy: https://example.com\n"}},
+					{"id":1002,"post":1,"parent":0,"author_name":"Słuchacz","content":{"rendered":"Świetny odcinek!"}}
+				]
+				"""#.data(using: .utf8) ?? Data("[]".utf8)
+			)
+		}
+
 		if url.host == "tyfloswiat.pl", url.path.contains("/wp-json/wp/v2/posts") {
 			if let postID = Int(url.lastPathComponent), url.path.contains("/wp-json/wp/v2/posts/") {
 				let shouldFail = shouldFailOnce(&didFailTyfloswiatPostDetails, whenFlagEnabled: "UI_TESTING_FAIL_FIRST_DETAIL_REQUEST")

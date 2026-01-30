@@ -136,9 +136,8 @@ private struct FavoriteArticleRow: View {
 private struct FavoriteTopicRow: View {
 	let topic: FavoriteTopic
 
-	@EnvironmentObject private var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
-	@EnvironmentObject private var audioPlayer: AudioPlayer
+	@State private var shouldNavigateToPlayer = false
 
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
@@ -156,34 +155,15 @@ private struct FavoriteTopicRow: View {
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
-	private func playFromMarker() {
-		guard !ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
-		let url = api.getListenableURL(for: Podcast(
-			id: topic.podcastID,
-			date: "",
-			title: .init(rendered: topic.podcastTitle),
-			excerpt: .init(rendered: ""),
-			content: .init(rendered: ""),
-			guid: .init(rendered: "https://tyflopodcast.net/?p=\(topic.podcastID)")
-		))
-
-		audioPlayer.play(
-			url: url,
-			title: topic.podcastTitle,
-			subtitle: topic.podcastSubtitle,
-			isLiveStream: false,
-			seekTo: topic.seconds
-		)
-		announceIfVoiceOver("Odtwarzanie od \(Int(topic.seconds)) sekund.")
+	private func openPlayer() {
+		shouldNavigateToPlayer = true
 	}
 
 	var body: some View {
 		let item = favoriteItem()
 		let isFavorite = favorites.isFavorite(item)
 
-		NavigationLink {
-			FavoriteTopicPlayerView(topic: topic)
-		} label: {
+		NavigationLink(destination: FavoriteTopicPlayerView(topic: topic), isActive: $shouldNavigateToPlayer) {
 			VStack(alignment: .leading, spacing: 4) {
 				Text(topic.title)
 					.foregroundColor(.primary)
@@ -194,7 +174,7 @@ private struct FavoriteTopicRow: View {
 		}
 		.contextMenu {
 			Button("Odtwarzaj od tego miejsca") {
-				playFromMarker()
+				openPlayer()
 			}
 			Button(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
 				toggleFavorite()
@@ -205,11 +185,12 @@ private struct FavoriteTopicRow: View {
 		.accessibilityValue(topic.podcastTitle)
 		.accessibilityHint("Dwukrotnie stuknij, aby otworzyć odtwarzacz na tym fragmencie.")
 		.accessibilityAction(named: "Odtwarzaj od tego miejsca") {
-			playFromMarker()
+			openPlayer()
 		}
 		.accessibilityAction(named: isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
 			toggleFavorite()
 		}
+		.accessibilityIdentifier("favorites.topic.\(topic.podcastID).\(Int(topic.seconds))")
 	}
 }
 
@@ -217,7 +198,6 @@ private struct FavoriteTopicPlayerView: View {
 	let topic: FavoriteTopic
 
 	@EnvironmentObject private var api: TyfloAPI
-	@EnvironmentObject private var audioPlayer: AudioPlayer
 
 	private func makePodcastURL() -> URL {
 		let stub = Podcast(
@@ -237,18 +217,9 @@ private struct FavoriteTopicPlayerView: View {
 			title: topic.podcastTitle,
 			subtitle: topic.podcastSubtitle,
 			canBeLive: false,
-			podcastPostID: topic.podcastID
+			podcastPostID: topic.podcastID,
+			initialSeekTo: topic.seconds
 		)
-		.onAppear {
-			guard !ProcessInfo.processInfo.arguments.contains("UI_TESTING") else { return }
-			audioPlayer.play(
-				url: makePodcastURL(),
-				title: topic.podcastTitle,
-				subtitle: topic.podcastSubtitle,
-				isLiveStream: false,
-				seekTo: topic.seconds
-			)
-		}
 	}
 }
 

@@ -14,7 +14,7 @@ struct DetailedPodcastView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
-	@State private var comments = [Comment]()
+	@StateObject private var commentsViewModel = AsyncListViewModel<Comment>()
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -25,18 +25,6 @@ struct DetailedPodcastView: View {
 			link: podcast.guid.plainText
 		)
 		return .podcast(summary)
-	}
-
-	private var isFavorite: Bool {
-		favorites.isFavorite(favoriteItem)
-	}
-
-	private var favoriteIconName: String {
-		isFavorite ? "star.fill" : "star"
-	}
-
-	private var favoriteAccessibilityLabel: String {
-		isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"
 	}
 
 	private func announceIfVoiceOver(_ message: String) {
@@ -50,38 +38,15 @@ struct DetailedPodcastView: View {
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
-	@ToolbarContentBuilder
-	private var toolbarContent: some ToolbarContent {
-		ToolbarItemGroup(placement: .navigationBarTrailing) {
-			Button(action: toggleFavorite) {
-				Image(systemName: favoriteIconName)
-			}
-			.accessibilityLabel(favoriteAccessibilityLabel)
-			.accessibilityIdentifier("podcastDetail.favorite")
-
-			ShareLink(
-				"Udostępnij",
-				item: podcast.guid.plainText,
-				message: Text(
-					"Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"
-				)
-			)
-
-			NavigationLink {
-				MediaPlayerView(
-					podcast: api.getListenableURL(for: podcast),
-					title: podcast.title.plainText,
-					subtitle: podcast.formattedDate,
-					canBeLive: false,
-					podcastPostID: podcast.id
-				)
-			} label: {
-				Text("Słuchaj")
-					.accessibilityLabel("Słuchaj audycji")
-					.accessibilityHint("Otwiera odtwarzacz audycji.")
-					.accessibilityIdentifier("podcastDetail.listen")
-			}
+	private var commentsSummaryText: String {
+		if !commentsViewModel.hasLoaded {
+			return "Ładowanie komentarzy…"
 		}
+		if let errorMessage = commentsViewModel.errorMessage, commentsViewModel.items.isEmpty {
+			return errorMessage
+		}
+		let count = commentsViewModel.items.count
+		return count == 0 ? "Brak komentarzy" : "\(count) komentarzy"
 	}
 
 	var body: some View {
@@ -106,17 +71,68 @@ struct DetailedPodcastView: View {
 
 				Divider()
 
-				Text(comments.isEmpty ? "Brak komentarzy" : "\(comments.count) komentarzy")
-					.foregroundColor(.secondary)
-					.accessibilityIdentifier("podcastDetail.commentsSummary")
+				NavigationLink {
+					PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+				} label: {
+					HStack(spacing: 8) {
+						Text(commentsSummaryText)
+							.foregroundColor(.secondary)
+						Spacer(minLength: 0)
+						Image(systemName: "chevron.right")
+							.font(.caption.weight(.semibold))
+							.foregroundColor(.tertiary)
+							.accessibilityHidden(true)
+					}
+				}
+				.buttonStyle(.plain)
+				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
+				.accessibilityIdentifier("podcastDetail.commentsSummary")
 			}
 			.padding()
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.task {
-			comments = await api.getComments(for: podcast)
+		.task(id: podcast.id) {
+			await commentsViewModel.loadIfNeeded(
+				{
+					try await api.fetchComments(forPostID: podcast.id)
+				},
+				timeoutSeconds: 15
+			)
 		}
-		.toolbar { toolbarContent }
+		.toolbar {
+			ToolbarItemGroup(placement: .navigationBarTrailing) {
+				Button {
+					toggleFavorite()
+				} label: {
+					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
+				}
+				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+				.accessibilityIdentifier("podcastDetail.favorite")
+
+				ShareLink(
+					"Udostępnij",
+					item: podcast.guid.plainText,
+					message: Text(
+						"Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"
+					)
+				)
+
+				NavigationLink {
+					MediaPlayerView(
+						podcast: api.getListenableURL(for: podcast),
+						title: podcast.title.plainText,
+						subtitle: podcast.formattedDate,
+						canBeLive: false,
+						podcastPostID: podcast.id
+					)
+				} label: {
+					Text("Słuchaj")
+						.accessibilityLabel("Słuchaj audycji")
+						.accessibilityHint("Otwiera odtwarzacz audycji.")
+						.accessibilityIdentifier("podcastDetail.listen")
+				}
+			}
+		}
 	}
 }
