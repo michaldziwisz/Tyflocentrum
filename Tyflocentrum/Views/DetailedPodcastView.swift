@@ -88,10 +88,10 @@ struct DetailedPodcastView: View {
 							.foregroundColor(.secondary)
 							.accessibilityHidden(true)
 					}
+					.accessibilityElement(children: .ignore)
+					.accessibilityLabel(commentsSummaryText)
 				}
 				.buttonStyle(.plain)
-				.accessibilityElement(children: .ignore)
-				.accessibilityLabel(commentsSummaryText)
 				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 				.accessibilityIdentifier("podcastDetail.commentsSummary")
 				.onAppear {
