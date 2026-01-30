@@ -633,7 +633,7 @@ private final class UITestURLProtocol: URLProtocol {
 				200,
 				#"""
 				[
-					{"id":1001,"post":1,"parent":0,"author_name":"TyfloPodcast","content":{"rendered":"Znaczniki czasu:\nIntro 00:00:00\nTemat 00:01:00\n\nA oto odnośniki uzupełniające audycję:\n- Link testowy: https://example.com\n"}},
+					{"id":1001,"post":1,"parent":0,"author_name":"TyfloPodcast","content":{"rendered":"Znaczniki czasu:<br>Intro 00:00:00<br>Temat 00:01:00<br><br>A oto odnośniki uzupełniające audycję:<br>- Link testowy: https://example.com<br>"}},
 					{"id":1002,"post":1,"parent":0,"author_name":"Słuchacz","content":{"rendered":"Świetny odcinek!"}}
 				]
 				"""#.data(using: .utf8) ?? Data("[]".utf8)
