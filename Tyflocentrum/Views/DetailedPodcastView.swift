@@ -80,7 +80,7 @@ struct DetailedPodcastView: View {
 						Spacer(minLength: 0)
 						Image(systemName: "chevron.right")
 							.font(.caption.weight(.semibold))
-							.foregroundColor(.tertiary)
+							.foregroundColor(.secondary)
 							.accessibilityHidden(true)
 					}
 				}
