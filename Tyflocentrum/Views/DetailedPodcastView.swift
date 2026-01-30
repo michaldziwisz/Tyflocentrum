@@ -14,7 +14,9 @@ struct DetailedPodcastView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
-	@StateObject private var commentsViewModel = AsyncListViewModel<Comment>()
+	@State private var commentsCount: Int?
+	@State private var isCommentsCountLoading = false
+	@State private var commentsCountErrorMessage: String?
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -39,13 +41,13 @@ struct DetailedPodcastView: View {
 	}
 
 	private var commentsSummaryText: String {
-		if !commentsViewModel.hasLoaded {
+		if isCommentsCountLoading, commentsCount == nil {
 			return "Ładowanie komentarzy…"
 		}
-		if let errorMessage = commentsViewModel.errorMessage, commentsViewModel.items.isEmpty {
+		if let errorMessage = commentsCountErrorMessage, commentsCount == nil {
 			return errorMessage
 		}
-		let count = commentsViewModel.items.count
+		guard let count = commentsCount else { return "Komentarze" }
 		return count == 0 ? "Brak komentarzy" : "\(count) komentarzy"
 	}
 
@@ -93,12 +95,7 @@ struct DetailedPodcastView: View {
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
 		.task(id: podcast.id) {
-			await commentsViewModel.loadIfNeeded(
-				{
-					try await api.fetchComments(forPostID: podcast.id)
-				},
-				timeoutSeconds: 15
-			)
+			await loadCommentsCount()
 		}
 		.toolbar {
 			ToolbarItemGroup(placement: .navigationBarTrailing) {
@@ -132,6 +129,30 @@ struct DetailedPodcastView: View {
 						.accessibilityHint("Otwiera odtwarzacz audycji.")
 						.accessibilityIdentifier("podcastDetail.listen")
 				}
+			}
+		}
+	}
+
+	@MainActor
+	private func loadCommentsCount() async {
+		guard !isCommentsCountLoading else { return }
+
+		isCommentsCountLoading = true
+		commentsCountErrorMessage = nil
+		defer { isCommentsCountLoading = false }
+
+		do {
+			let loaded = try await withTimeout(15) {
+				try await api.fetchComments(forPostID: podcast.id)
+			}
+			commentsCount = loaded.count
+		} catch {
+			guard !Task.isCancelled else { return }
+
+			if error is AsyncTimeoutError {
+				commentsCountErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
+			} else {
+				commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
 			}
 		}
 	}
