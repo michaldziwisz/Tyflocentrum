@@ -24,6 +24,10 @@
 - Ulubione: `Tyflocentrum/FavoritesStore.swift`
 - Ustawienia: `Tyflocentrum/SettingsStore.swift`
 
+## UI i dostępność (VoiceOver)
+
+- Widok **Nowości** używa `ScrollView + LazyVStack` zamiast `List`, bo na niektórych urządzeniach `List` nie wystawia przewidywalnie systemowego paska przewijania VoiceOver na pierwszym ekranie (pojawiał się dopiero po kilku gestach przewijania).
+
 ## Sieć i cache
 
 - `TyfloAPI.fetch*` domyślnie używa `cachePolicy = .useProtocolCachePolicy` dla requestów do WordPress (listy/detale), żeby pozwolić `URLCache` obniżyć koszt sieci i energii (o ile serwery zwracają cache‑friendly nagłówki).
