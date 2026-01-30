@@ -171,6 +171,17 @@ private struct FavoriteTopicRow: View {
 					.font(.caption)
 					.foregroundColor(.secondary)
 			}
+			.accessibilityElement(children: .ignore)
+			.accessibilityLabel(topic.title)
+			.accessibilityValue(topic.podcastTitle)
+			.accessibilityHint("Dwukrotnie stuknij, aby otworzyć odtwarzacz na tym fragmencie.")
+			.accessibilityAction(named: "Odtwarzaj od tego miejsca") {
+				openPlayer()
+			}
+			.accessibilityAction(named: isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+				toggleFavorite()
+			}
+			.accessibilityIdentifier("favorites.topic.\(topic.podcastID).\(Int(topic.seconds))")
 		}
 		.contextMenu {
 			Button("Odtwarzaj od tego miejsca") {
@@ -180,17 +191,6 @@ private struct FavoriteTopicRow: View {
 				toggleFavorite()
 			}
 		}
-		.accessibilityElement(children: .ignore)
-		.accessibilityLabel(topic.title)
-		.accessibilityValue(topic.podcastTitle)
-		.accessibilityHint("Dwukrotnie stuknij, aby otworzyć odtwarzacz na tym fragmencie.")
-		.accessibilityAction(named: "Odtwarzaj od tego miejsca") {
-			openPlayer()
-		}
-		.accessibilityAction(named: isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
-			toggleFavorite()
-		}
-		.accessibilityIdentifier("favorites.topic.\(topic.podcastID).\(Int(topic.seconds))")
 	}
 }
 
