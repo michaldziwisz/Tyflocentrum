@@ -90,6 +90,8 @@ struct DetailedPodcastView: View {
 					}
 				}
 				.buttonStyle(.plain)
+				.accessibilityElement(children: .ignore)
+				.accessibilityLabel(commentsSummaryText)
 				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 				.accessibilityIdentifier("podcastDetail.commentsSummary")
 				.onAppear {
