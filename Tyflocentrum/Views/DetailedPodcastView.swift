@@ -48,7 +48,9 @@ struct DetailedPodcastView: View {
 			return errorMessage
 		}
 		guard let count = commentsCount else { return "Komentarze" }
-		return count == 0 ? "Brak komentarzy" : "\(count) komentarzy"
+		guard count > 0 else { return "Brak komentarzy" }
+		let noun = PolishPluralization.nounForm(for: count, singular: "komentarz", few: "komentarze", many: "komentarzy")
+		return "\(count) \(noun)"
 	}
 
 	var body: some View {
@@ -78,6 +80,7 @@ struct DetailedPodcastView: View {
 				} label: {
 					HStack(spacing: 8) {
 						Text(commentsSummaryText)
+							.id(commentsSummaryText)
 							.foregroundColor(.secondary)
 						Spacer(minLength: 0)
 						Image(systemName: "chevron.right")
@@ -143,9 +146,9 @@ struct DetailedPodcastView: View {
 
 		do {
 			let loaded = try await withTimeout(15) {
-				try await api.fetchComments(forPostID: podcast.id)
+				try await api.fetchCommentsCount(forPostID: podcast.id)
 			}
-			commentsCount = loaded.count
+			commentsCount = loaded
 		} catch {
 			guard !Task.isCancelled else { return }
 

@@ -13,6 +13,7 @@
 			BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
 			A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */; };
 			A1B2C3D4E5F60718293A4B95 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B94 /* Logging.swift */; };
+			A1B2C3D4E5F60718293A4B9A /* PolishPluralization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B98 /* PolishPluralization.swift */; };
 			A1B2C3D4E5F60718293A4B97 /* VoiceOverScrollBarPrimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */; };
 			BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
 			A6FE8102C0FA7A26774E22AF /* FavoritesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = CD18FC9FB6494384932AF3BD /* FavoritesStore.swift */; };
@@ -118,6 +119,7 @@
 		C0FFEE1234567890ABCDEF12 /* MultipartFormDataBuilderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MultipartFormDataBuilderTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5E /* TyflocentrumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumSmokeTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B98 /* PolishPluralization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PolishPluralization.swift; sourceTree = "<group>"; };
 			BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
 			A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilities.swift; sourceTree = "<group>"; };
 			A1B2C3D4E5F60718293A4B94 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
@@ -350,6 +352,7 @@
 					BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
 					A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */,
 					A1B2C3D4E5F60718293A4B94 /* Logging.swift */,
+					A1B2C3D4E5F60718293A4B98 /* PolishPluralization.swift */,
 					8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */,
 					A9C0D1E2F3A4B5C6D7E8F901 /* MultipartFormDataBuilder.swift */,
 					BEA9ECD129203FD700718254 /* Views */,
@@ -518,6 +521,7 @@
 						89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */,
 						A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */,
 						A1B2C3D4E5F60718293A4B95 /* Logging.swift in Sources */,
+						A1B2C3D4E5F60718293A4B9A /* PolishPluralization.swift in Sources */,
 						BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */,
 						BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
 						E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,

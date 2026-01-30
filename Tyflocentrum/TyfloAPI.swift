@@ -693,6 +693,36 @@ final class TyfloAPI: ObservableObject {
 		return try await fetch(url, decoder: decoder)
 	}
 
+	func fetchCommentsPage(forPostID postID: Int, page: Int, perPage: Int) async throws -> WPPage<Comment> {
+		guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+		guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
+
+		guard let url = makeWPURL(
+			baseURL: tyfloPodcastBaseURL,
+			path: "wp/v2/comments",
+			queryItems: [
+				URLQueryItem(name: "post", value: "\(postID)"),
+				URLQueryItem(name: "per_page", value: "\(perPage)"),
+				URLQueryItem(name: "page", value: "\(page)"),
+			]
+		) else {
+			throw URLError(.badURL)
+		}
+
+		let decoder = JSONDecoder()
+		decoder.keyDecodingStrategy = .convertFromSnakeCase
+		return try await fetchWPPage(url, decoder: decoder)
+	}
+
+	func fetchCommentsCount(forPostID postID: Int) async throws -> Int {
+		let firstPage = try await fetchCommentsPage(forPostID: postID, page: 1, perPage: 1)
+		if let total = firstPage.total {
+			return total
+		}
+		// Fallback for unexpected WP configurations that don't provide `X-WP-Total`.
+		return try await fetchComments(forPostID: postID).count
+	}
+
 	func getComments(forPostID postID: Int) async -> [Comment] {
 		do {
 			return try await fetchComments(forPostID: postID)
