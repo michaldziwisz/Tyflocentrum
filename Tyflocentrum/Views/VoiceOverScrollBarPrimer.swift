@@ -73,7 +73,7 @@ struct VoiceOverScrollBarPrimer: UIViewRepresentable {
 				let topOffsetY = -scrollView.adjustedContentInset.top
 				let bottomOffsetY = scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
 				let maxOffsetY = max(topOffsetY, bottomOffsetY)
-				guard maxOffsetY > topOffsetY else {
+				guard maxOffsetY > topOffsetY + 1 else {
 					self.attemptPrime(uiView: uiView, generation: generation, remainingAttempts: remainingAttempts - 1)
 					return
 				}
@@ -83,14 +83,28 @@ struct VoiceOverScrollBarPrimer: UIViewRepresentable {
 				let originalOffset = scrollView.contentOffset
 				guard originalOffset.y <= topOffsetY + 0.5 else { return }
 
-				let nudgedY = min(max(topOffsetY + 1, 1), maxOffsetY)
-				let nudgedOffset = CGPoint(x: originalOffset.x, y: nudgedY)
-				scrollView.setContentOffset(nudgedOffset, animated: false)
-				scrollView.flashScrollIndicators()
+				let available = maxOffsetY - topOffsetY
+				let step = min(max(available * 0.10, 24), 80)
+				let firstY = min(topOffsetY + step, maxOffsetY)
+				let secondY = min(topOffsetY + step * 2, maxOffsetY)
 
-				DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-					scrollView.setContentOffset(originalOffset, animated: false)
+				UIView.performWithoutAnimation {
+					scrollView.setContentOffset(CGPoint(x: originalOffset.x, y: firstY), animated: false)
 					scrollView.flashScrollIndicators()
+				}
+
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+					UIView.performWithoutAnimation {
+						scrollView.setContentOffset(CGPoint(x: originalOffset.x, y: secondY), animated: false)
+						scrollView.flashScrollIndicators()
+					}
+				}
+
+				DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+					UIView.performWithoutAnimation {
+						scrollView.setContentOffset(originalOffset, animated: false)
+						scrollView.flashScrollIndicators()
+					}
 				}
 			}
 		}
@@ -100,35 +114,38 @@ struct VoiceOverScrollBarPrimer: UIViewRepresentable {
 private extension UIView {
 	func findTargetScrollView() -> UIScrollView? {
 		let identifier = (self as? VoiceOverScrollBarPrimerHostView)?.targetIdentifier
-
-		var ancestor: UIView? = self
-		while let view = ancestor {
-			if let scrollView = view as? UIScrollView {
-				if let identifier, (scrollView.accessibilityIdentifier ?? "").isEmpty {
-					scrollView.accessibilityIdentifier = identifier
-				}
-				return scrollView
-			}
-			ancestor = view.superview
-		}
-
 		let rootView: UIView = window ?? self
 
 		let allScrollViews = rootView.allScrollViews()
+			.filter { scrollView in
+				guard scrollView.alpha > 0.01, !scrollView.isHidden else { return false }
+				guard scrollView.isScrollEnabled else { return false }
+				return true
+			}
+
 		if let identifier, let matched = allScrollViews.first(where: { $0.accessibilityIdentifier == identifier }) {
 			return matched
 		}
 
 		let hostRect = convert(bounds, to: rootView)
+
 		var bestScrollView: UIScrollView?
 		var bestScore: CGFloat = -1
-
 		for scrollView in allScrollViews {
-			guard scrollView.alpha > 0.01, !scrollView.isHidden else { continue }
 			let scrollRect = scrollView.convert(scrollView.bounds, to: rootView)
 			let intersection = hostRect.intersection(scrollRect)
 			guard !intersection.isNull else { continue }
-			let score = intersection.width * intersection.height
+
+			// Prefer scroll views that are actually vertically scrollable.
+			let topOffsetY = -scrollView.adjustedContentInset.top
+			let bottomOffsetY = scrollView.contentSize.height - scrollView.bounds.height + scrollView.adjustedContentInset.bottom
+			let canScroll = bottomOffsetY > topOffsetY + 1
+
+			var score = intersection.width * intersection.height
+			if canScroll {
+				score *= 2
+			}
+
 			if score > bestScore {
 				bestScore = score
 				bestScrollView = scrollView
