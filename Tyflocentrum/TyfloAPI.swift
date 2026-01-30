@@ -105,6 +105,7 @@ final class TyfloAPI: ObservableObject {
 	private static let retryableErrorCodes: Set<URLError.Code> = [
 		.notConnectedToInternet,
 		.timedOut,
+		.cancelled,
 		.cannotFindHost,
 		.cannotConnectToHost,
 		.networkConnectionLost,
