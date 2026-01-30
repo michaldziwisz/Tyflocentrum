@@ -17,6 +17,7 @@ struct DetailedPodcastView: View {
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
+	@State private var shouldNavigateToComments = false
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -75,8 +76,8 @@ struct DetailedPodcastView: View {
 
 				Divider()
 
-				NavigationLink {
-					PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+				Button {
+					shouldNavigateToComments = true
 				} label: {
 					HStack(spacing: 8) {
 						Text(commentsSummaryText)
@@ -103,6 +104,9 @@ struct DetailedPodcastView: View {
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
+		.navigationDestination(isPresented: $shouldNavigateToComments) {
+			PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+		}
 		.task(id: podcast.id) {
 			await loadCommentsCount()
 		}
