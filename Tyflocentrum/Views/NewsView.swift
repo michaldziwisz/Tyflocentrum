@@ -650,14 +650,7 @@ struct NewsView: View {
 				}
 			}
 			.accessibilityIdentifier("news.list")
-			.background(
-				VoiceOverScrollBarPrimer(
-					shouldPrime: viewModel.hasLoaded && !viewModel.items.isEmpty && viewModel.errorMessage == nil,
-					targetIdentifier: "news.list"
-				)
-				.frame(width: 0, height: 0)
-				.accessibilityHidden(true)
-			)
+			.scrollIndicators(.visible)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
