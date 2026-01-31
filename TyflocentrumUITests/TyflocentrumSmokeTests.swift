@@ -312,7 +312,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let commentsSummary = app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch
 		XCTAssertTrue(commentsSummary.waitForExistence(timeout: 5))
 
-		let predicate = NSPredicate(format: "label == %@", "2 komentarze")
+		let predicate = NSPredicate(format: "value == %@", "2 komentarze")
 		let waitExpectation = expectation(for: predicate, evaluatedWith: commentsSummary)
 		XCTAssertEqual(XCTWaiter().wait(for: [waitExpectation], timeout: 5), .completed)
 

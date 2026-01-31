@@ -42,6 +42,25 @@ struct DetailedPodcastView: View {
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
+	private var commentsCountValueText: String? {
+		if let count = commentsCount {
+			let noun = PolishPluralization.nounForm(
+				for: count,
+				singular: "komentarz",
+				few: "komentarze",
+				many: "komentarzy"
+			)
+			return "\(count) \(noun)"
+		}
+		if let errorMessage = commentsCountErrorMessage {
+			return errorMessage
+		}
+		if isCommentsCountLoading {
+			return "Ładowanie…"
+		}
+		return nil
+	}
+
 	private var commentsSummaryText: String {
 		if let errorMessage = commentsCountErrorMessage, commentsCount == nil {
 			return errorMessage
@@ -76,9 +95,13 @@ struct DetailedPodcastView: View {
 					PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
 				} label: {
 					HStack(spacing: 8) {
-						Text(commentsSummaryText)
+						Text("Komentarze")
 							.foregroundColor(.secondary)
 						Spacer(minLength: 0)
+						if let commentsCountValueText, commentsCount != nil {
+							Text(commentsCountValueText)
+								.foregroundColor(.secondary)
+						}
 						Image(systemName: "chevron.right")
 							.font(.caption.weight(.semibold))
 							.foregroundColor(.secondary)
@@ -86,7 +109,8 @@ struct DetailedPodcastView: View {
 					}
 				}
 				.buttonStyle(.plain)
-				.accessibilityLabel(commentsSummaryText)
+				.accessibilityLabel("Komentarze")
+				.accessibilityValue(commentsCountValueText)
 				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 				.accessibilityIdentifier("podcastDetail.commentsSummary")
 			}
@@ -135,11 +159,14 @@ struct DetailedPodcastView: View {
 				Button {
 					toggleFavorite()
 				} label: {
-					Image(systemName: isFavorite ? "star.fill" : "star")
+					Label(
+						isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych",
+						systemImage: isFavorite ? "star.fill" : "star"
+					)
+					.labelStyle(.iconOnly)
 				}
-				.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 				.accessibilityIdentifier("podcastDetail.favorite")
-				.id(isFavorite)
 			}
 		}
 	}
