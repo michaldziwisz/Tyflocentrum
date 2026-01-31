@@ -70,20 +70,52 @@ struct DetailedPodcastView: View {
 		return "\(count) \(noun)"
 	}
 
+	private var headerSection: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text(podcast.title.plainText)
+				.font(.title3.weight(.semibold))
+
+			Text(podcast.formattedDate)
+				.font(.subheadline)
+				.foregroundColor(.secondary)
+		}
+		.accessibilityElement(children: .combine)
+		.accessibilityAddTraits(.isHeader)
+		.accessibilityIdentifier("podcastDetail.header")
+	}
+
+	private var commentsSection: some View {
+		let valueText = commentsCountValueText
+		let shouldShowCount = commentsCount != nil
+
+		return NavigationLink {
+			PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+		} label: {
+			HStack(spacing: 8) {
+				Text("Komentarze")
+					.foregroundColor(.secondary)
+				Spacer(minLength: 0)
+				if shouldShowCount, let valueText {
+					Text(valueText)
+						.foregroundColor(.secondary)
+				}
+				Image(systemName: "chevron.right")
+					.font(.caption.weight(.semibold))
+					.foregroundColor(.secondary)
+					.accessibilityHidden(true)
+			}
+		}
+		.buttonStyle(.plain)
+		.accessibilityLabel("Komentarze")
+		.accessibilityValue(valueText)
+		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
+		.accessibilityIdentifier("podcastDetail.commentsSummary")
+	}
+
 	var body: some View {
 		ScrollView {
 			VStack(alignment: .leading, spacing: 16) {
-				VStack(alignment: .leading, spacing: 6) {
-					Text(podcast.title.plainText)
-						.font(.title3.weight(.semibold))
-
-					Text(podcast.formattedDate)
-						.font(.subheadline)
-						.foregroundColor(.secondary)
-				}
-				.accessibilityElement(children: .combine)
-				.accessibilityAddTraits(.isHeader)
-				.accessibilityIdentifier("podcastDetail.header")
+				headerSection
 
 				Text(podcast.content.plainText)
 					.font(.body)
@@ -91,28 +123,7 @@ struct DetailedPodcastView: View {
 
 				Divider()
 
-				NavigationLink {
-					PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
-				} label: {
-					HStack(spacing: 8) {
-						Text("Komentarze")
-							.foregroundColor(.secondary)
-						Spacer(minLength: 0)
-						if let commentsCountValueText, commentsCount != nil {
-							Text(commentsCountValueText)
-								.foregroundColor(.secondary)
-						}
-						Image(systemName: "chevron.right")
-							.font(.caption.weight(.semibold))
-							.foregroundColor(.secondary)
-							.accessibilityHidden(true)
-					}
-				}
-				.buttonStyle(.plain)
-				.accessibilityLabel("Komentarze")
-				.accessibilityValue(commentsCountValueText)
-				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
-				.accessibilityIdentifier("podcastDetail.commentsSummary")
+				commentsSection
 			}
 			.padding()
 		}
