@@ -14,7 +14,6 @@ struct DetailedPodcastView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
-	@State private var isFavorite = false
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
@@ -88,13 +87,15 @@ struct DetailedPodcastView: View {
 		.accessibilityLabel(commentsSummaryText)
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
-		.id(commentsSummaryText)
+	}
+
+	private var isFavorite: Bool {
+		favorites.isFavorite(favoriteItem)
 	}
 
 	private func toggleFavorite() {
-		let willAdd = !isFavorite
+		let willAdd = !favorites.isFavorite(favoriteItem)
 		favorites.toggle(favoriteItem)
-		isFavorite = favorites.isFavorite(favoriteItem)
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
@@ -124,13 +125,9 @@ struct DetailedPodcastView: View {
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
 		.task(id: podcast.id) { @MainActor in
-			isFavorite = favorites.isFavorite(favoriteItem)
 			commentsCount = nil
 			commentsCountErrorMessage = nil
 			await loadCommentsCount()
-		}
-		.onChange(of: favorites.items) { _, _ in
-			isFavorite = favorites.isFavorite(favoriteItem)
 		}
 		.toolbar {
 			ToolbarItem(placement: .navigationBarTrailing) {
@@ -162,16 +159,13 @@ struct DetailedPodcastView: View {
 
 			ToolbarItem(placement: .navigationBarTrailing) {
 				Button {
-					Task { @MainActor in
-						toggleFavorite()
-					}
+					toggleFavorite()
 				} label: {
 					Image(systemName: isFavorite ? "star.fill" : "star")
 				}
 				.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 				.accessibilityIdentifier("podcastDetail.favorite")
-				.id(isFavorite)
 			}
 		}
 	}
