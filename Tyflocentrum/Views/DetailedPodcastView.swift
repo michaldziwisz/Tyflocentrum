@@ -12,18 +12,11 @@ import UIKit
 struct DetailedPodcastView: View {
 	let podcast: Podcast
 
-	private enum FocusTarget: Hashable {
-		case comments
-		case favorite
-	}
-
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
-	@State private var isFavorite = false
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
-	@AccessibilityFocusState private var focusedElement: FocusTarget?
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -44,6 +37,9 @@ struct DetailedPodcastView: View {
 	private var commentsCountValueText: String {
 		if let errorMessage = commentsCountErrorMessage {
 			return errorMessage
+		}
+		if isCommentsCountLoading, commentsCount == nil {
+			return "Ładowanie…"
 		}
 		guard let count = commentsCount else {
 			return "Ładowanie…"
@@ -95,20 +91,12 @@ struct DetailedPodcastView: View {
 		.accessibilityLabel(commentsSummaryText)
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
-		.accessibilityFocused($focusedElement, equals: .comments)
 		.id(commentsSummaryText)
 	}
 
 	private func toggleFavorite() {
-		let willAdd = !isFavorite
+		let willAdd = !favorites.isFavorite(favoriteItem)
 		favorites.toggle(favoriteItem)
-		isFavorite = favorites.isFavorite(favoriteItem)
-		if UIAccessibility.isVoiceOverRunning, focusedElement == .favorite {
-			focusedElement = nil
-			DispatchQueue.main.async {
-				focusedElement = .favorite
-			}
-		}
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
@@ -129,17 +117,10 @@ struct DetailedPodcastView: View {
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.onAppear {
-			isFavorite = favorites.isFavorite(favoriteItem)
-		}
 		.task(id: podcast.id) { @MainActor in
-			isFavorite = favorites.isFavorite(favoriteItem)
 			commentsCount = nil
 			commentsCountErrorMessage = nil
 			await loadCommentsCount()
-		}
-		.onChange(of: favorites.items) { _, _ in
-			isFavorite = favorites.isFavorite(favoriteItem)
 		}
 		.toolbar {
 			ToolbarItem(placement: .navigationBarTrailing) {
@@ -173,12 +154,11 @@ struct DetailedPodcastView: View {
 				Button {
 					toggleFavorite()
 				} label: {
-					Image(systemName: isFavorite ? "star.fill" : "star")
+					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
 				}
-				.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 				.accessibilityIdentifier("podcastDetail.favorite")
-				.accessibilityFocused($focusedElement, equals: .favorite)
 			}
 		}
 	}
@@ -200,12 +180,6 @@ struct DetailedPodcastView: View {
 					try await api.fetchCommentsCount(forPostID: podcast.id)
 				}
 				commentsCount = loaded
-				if UIAccessibility.isVoiceOverRunning, focusedElement == .comments {
-					focusedElement = nil
-					DispatchQueue.main.async {
-						focusedElement = .comments
-					}
-				}
 				return
 			} catch {
 				if Task.isCancelled || error is CancellationError {
