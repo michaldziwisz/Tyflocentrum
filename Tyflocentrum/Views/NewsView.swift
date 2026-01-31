@@ -202,12 +202,13 @@ final class NewsFeedViewModel: ObservableObject {
 
 		errorMessage = nil
 		defer {
-			guard requestGeneration == generation else { return }
-			hasLoaded = true
-			isLoading = false
+			if requestGeneration == generation {
+				hasLoaded = true
+				isLoading = false
 
-			if items.isEmpty, !Task.isCancelled {
-				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+				if items.isEmpty, !Task.isCancelled {
+					errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+				}
 			}
 		}
 
