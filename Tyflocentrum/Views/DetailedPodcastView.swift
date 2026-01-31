@@ -44,7 +44,7 @@ struct DetailedPodcastView: View {
 		if let errorMessage = commentsCountErrorMessage, commentsCount == nil {
 			return errorMessage
 		}
-		guard let count = commentsCount else { return "Ładowanie komentarzy…" }
+		guard let count = commentsCount else { return "Komentarze" }
 		let noun = PolishPluralization.nounForm(for: count, singular: "komentarz", few: "komentarze", many: "komentarzy")
 		return "\(count) \(noun)"
 	}
@@ -83,13 +83,14 @@ struct DetailedPodcastView: View {
 							.accessibilityHidden(true)
 					}
 				}
-				.buttonStyle(.plain)
-				.accessibilityLabel(commentsSummaryText)
-				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
-				.accessibilityIdentifier("podcastDetail.commentsSummary")
-				.onAppear {
-					guard commentsCount == nil else { return }
-					guard !isCommentsCountLoading else { return }
+					.buttonStyle(.plain)
+					.accessibilityLabel(commentsSummaryText)
+					.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
+					.accessibilityLiveRegion(.polite)
+					.accessibilityIdentifier("podcastDetail.commentsSummary")
+					.onAppear {
+						guard commentsCount == nil else { return }
+						guard !isCommentsCountLoading else { return }
 					Task { await loadCommentsCount() }
 				}
 			}

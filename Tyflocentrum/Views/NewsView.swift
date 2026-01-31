@@ -167,6 +167,7 @@ final class NewsFeedViewModel: ObservableObject {
 	private let initialBatchSize: Int
 	private let loadMoreBatchSize: Int
 	private var requestGeneration = UUID()
+	private var pendingLoadMoreAfterRefresh = false
 
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
@@ -195,6 +196,97 @@ final class NewsFeedViewModel: ObservableObject {
 
 	func refresh(api: TyfloAPI) async {
 		guard !isLoading else { return }
+
+		let generation = UUID()
+		requestGeneration = generation
+
+		isLoading = true
+		isLoadingMore = false
+		errorMessage = nil
+		loadMoreErrorMessage = nil
+
+		let previousHasLoaded = hasLoaded
+		let hadItemsBeforeRefresh = !items.isEmpty
+		defer {
+			guard requestGeneration == generation else { return }
+			hasLoaded = previousHasLoaded || hasLoaded
+			isLoading = false
+
+			// Never leave the user on an empty state without a retry path – in practice, the feed should never
+			// be truly empty, and cancellations/errors would otherwise surface as “Brak nowych treści.”
+			if items.isEmpty, errorMessage == nil, hasLoaded, !Task.isCancelled {
+				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			}
+		}
+
+		let scratch = NewsFeedViewModel(
+			requestTimeoutSeconds: requestTimeoutSeconds,
+			sourcePerPage: sourcePerPage,
+			initialBatchSize: initialBatchSize,
+			loadMoreBatchSize: loadMoreBatchSize
+		)
+		await scratch.performRefreshInPlace(api: api)
+
+		guard requestGeneration == generation else { return }
+		if Task.isCancelled {
+			if !hadItemsBeforeRefresh {
+				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+				hasLoaded = true
+			}
+			return
+		}
+
+		if scratch.items.isEmpty {
+			errorMessage = scratch.errorMessage ?? "Nie udało się pobrać danych. Spróbuj ponownie."
+			hasLoaded = true
+		} else {
+			items = scratch.items
+			hasLoaded = true
+			canLoadMore = scratch.canLoadMore
+			loadMoreErrorMessage = scratch.loadMoreErrorMessage
+
+			podcasts = scratch.podcasts
+			articles = scratch.articles
+			seenIDs = scratch.seenIDs
+		}
+
+		if pendingLoadMoreAfterRefresh, canLoadMore {
+			pendingLoadMoreAfterRefresh = false
+			Task { await loadMore(api: api) }
+		} else {
+			pendingLoadMoreAfterRefresh = false
+		}
+	}
+
+	func loadMore(api: TyfloAPI) async {
+		guard !isLoading else {
+			pendingLoadMoreAfterRefresh = true
+			return
+		}
+		guard hasLoaded else {
+			await loadIfNeeded(api: api)
+			return
+		}
+		guard canLoadMore else { return }
+		guard !isLoadingMore else { return }
+		let generation = requestGeneration
+
+		isLoadingMore = true
+		defer { isLoadingMore = false }
+
+		loadMoreErrorMessage = nil
+
+		let initialCount = items.count
+		await appendNextBatch(api: api, batchSize: loadMoreBatchSize, generation: generation)
+		guard requestGeneration == generation else { return }
+
+		if items.count == initialCount, canLoadMore {
+			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
+		}
+	}
+
+	private func performRefreshInPlace(api: TyfloAPI) async {
+		guard !isLoading else { return }
 		resetForNewRequest()
 		let generation = requestGeneration
 
@@ -221,29 +313,6 @@ final class NewsFeedViewModel: ObservableObject {
 			try? await Task.sleep(nanoseconds: 250_000_000)
 			guard requestGeneration == generation else { return }
 			await appendNextBatch(api: api, batchSize: initialBatchSize, generation: generation)
-		}
-	}
-
-	func loadMore(api: TyfloAPI) async {
-		guard hasLoaded else {
-			await loadIfNeeded(api: api)
-			return
-		}
-		guard canLoadMore else { return }
-		guard !isLoadingMore else { return }
-		let generation = requestGeneration
-
-		isLoadingMore = true
-
-		loadMoreErrorMessage = nil
-
-		let initialCount = items.count
-		await appendNextBatch(api: api, batchSize: loadMoreBatchSize, generation: generation)
-		guard requestGeneration == generation else { return }
-		isLoadingMore = false
-
-		if items.count == initialCount, canLoadMore {
-			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
 		}
 	}
 

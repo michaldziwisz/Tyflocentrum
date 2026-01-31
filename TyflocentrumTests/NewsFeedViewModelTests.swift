@@ -93,6 +93,51 @@ final class NewsFeedViewModelTests: XCTestCase {
 	}
 
 	@MainActor
+	func testRefreshKeepsExistingItemsWhenRefreshFails() async {
+		var stage = 0
+
+		StubURLProtocol.requestHandler = { request in
+			let url = try XCTUnwrap(request.url)
+			if stage == 1 {
+				let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+				return (response, Data("[]".utf8))
+			}
+
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			switch url.host {
+			case "tyflopodcast.net":
+				return (
+					response,
+					Self.postsResponseData(items: [
+						Self.postSummaryJSON(id: 1, date: "2026-01-20T00:59:40", title: "P1", link: "https://tyflopodcast.net/?p=1"),
+					])
+				)
+			case "tyfloswiat.pl":
+				return (
+					response,
+					Self.postsResponseData(items: [
+						Self.postSummaryJSON(id: 10, date: "2026-01-19T00:59:40", title: "A1", link: "https://tyfloswiat.pl/?p=10"),
+					])
+				)
+			default:
+				return (response, Data("[]".utf8))
+			}
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let viewModel = NewsFeedViewModel(requestTimeoutSeconds: 2)
+
+		await viewModel.refresh(api: api)
+		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.1", "article.10"])
+		XCTAssertNil(viewModel.errorMessage)
+
+		stage = 1
+		await viewModel.refresh(api: api)
+		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.1", "article.10"])
+		XCTAssertEqual(viewModel.errorMessage, "Nie udało się pobrać danych. Spróbuj ponownie.")
+	}
+
+	@MainActor
 	func testRefreshRetriesOnceWhenBothSourcesFailTransiently() async {
 		var podcastRequests = 0
 		var articleRequests = 0
@@ -285,6 +330,7 @@ final class NewsFeedViewModelTests: XCTestCase {
 
 		// The stale load-more result must not be appended to the refreshed feed.
 		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.100", "article.200"])
+		XCTAssertFalse(viewModel.isLoadingMore)
 	}
 
 	private func makeSession() -> URLSession {
