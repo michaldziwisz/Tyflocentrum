@@ -201,9 +201,9 @@ final class NewsFeedViewModel: ObservableObject {
 		requestGeneration = generation
 
 		isLoading = true
-		isLoadingMore = false
-		errorMessage = nil
-		loadMoreErrorMessage = nil
+			isLoadingMore = false
+			errorMessage = nil
+			loadMoreErrorMessage = nil
 
 			let previousHasLoaded = hasLoaded
 			let hadItemsBeforeRefresh = !items.isEmpty
@@ -220,9 +220,9 @@ final class NewsFeedViewModel: ObservableObject {
 				}
 			}
 
-		let scratch = NewsFeedViewModel(
-			requestTimeoutSeconds: requestTimeoutSeconds,
-			sourcePerPage: sourcePerPage,
+			let scratch = NewsFeedViewModel(
+				requestTimeoutSeconds: requestTimeoutSeconds,
+				sourcePerPage: sourcePerPage,
 			initialBatchSize: initialBatchSize,
 			loadMoreBatchSize: loadMoreBatchSize
 		)
