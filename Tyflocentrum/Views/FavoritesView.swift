@@ -182,13 +182,13 @@ private struct FavoriteTopicRow: View {
 				toggleFavorite()
 			}
 			.accessibilityIdentifier("favorites.topic.\(topic.podcastID).\(Int(topic.seconds))")
-		}
-		.contextMenu {
-			Button("Odtwarzaj od tego miejsca") {
-				openPlayer()
-			}
-			Button(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
-				toggleFavorite()
+			.contextMenu {
+				Button("Odtwarzaj od tego miejsca") {
+					openPlayer()
+				}
+				Button(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
+					toggleFavorite()
+				}
 			}
 		}
 	}
