@@ -93,9 +93,9 @@ struct DetailedPodcastView: View {
 					guard !isCommentsCountLoading else { return }
 					Task { await loadCommentsCount() }
 				}
-				}
-				.padding()
 			}
+			.padding()
+		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
 		.task(id: podcast.id) {
