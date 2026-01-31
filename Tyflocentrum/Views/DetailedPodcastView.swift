@@ -126,6 +126,9 @@ struct DetailedPodcastView: View {
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
+		.onAppear {
+			isFavorite = favorites.isFavorite(favoriteItem)
+		}
 		.task(id: podcast.id) { @MainActor in
 			isFavorite = favorites.isFavorite(favoriteItem)
 			commentsCount = nil
