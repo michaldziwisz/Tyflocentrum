@@ -107,7 +107,7 @@ struct DetailedPodcastView: View {
 		}
 		.buttonStyle(.plain)
 		.accessibilityLabel("Komentarze")
-		.accessibilityValue(valueText)
+		.accessibilityValue(valueText ?? "")
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
 	}
