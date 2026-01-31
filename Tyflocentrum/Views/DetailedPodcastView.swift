@@ -70,29 +70,29 @@ struct DetailedPodcastView: View {
 
 				Divider()
 
-					NavigationLink {
-						PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
-					} label: {
-						HStack(spacing: 8) {
-							Text(commentsSummaryText)
-								.foregroundColor(.secondary)
-							Spacer(minLength: 0)
-							Image(systemName: "chevron.right")
-								.font(.caption.weight(.semibold))
-								.foregroundColor(.secondary)
-								.accessibilityHidden(true)
-						}
+				NavigationLink {
+					PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+				} label: {
+					HStack(spacing: 8) {
+						Text(commentsSummaryText)
+							.foregroundColor(.secondary)
+						Spacer(minLength: 0)
+						Image(systemName: "chevron.right")
+							.font(.caption.weight(.semibold))
+							.foregroundColor(.secondary)
+							.accessibilityHidden(true)
 					}
-					.buttonStyle(.plain)
-					.accessibilityLabel(commentsSummaryText)
-					.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
-					.accessibilityLiveRegion(.polite)
-					.accessibilityIdentifier("podcastDetail.commentsSummary")
-					.onAppear {
-						guard commentsCount == nil else { return }
-						guard !isCommentsCountLoading else { return }
-						Task { await loadCommentsCount() }
-					}
+				}
+				.buttonStyle(.plain)
+				.accessibilityLabel(commentsSummaryText)
+				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
+				.accessibilityLiveRegion(.polite)
+				.accessibilityIdentifier("podcastDetail.commentsSummary")
+				.onAppear {
+					guard commentsCount == nil else { return }
+					guard !isCommentsCountLoading else { return }
+					Task { await loadCommentsCount() }
+				}
 				}
 				.padding()
 			}
