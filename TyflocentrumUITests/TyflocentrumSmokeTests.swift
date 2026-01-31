@@ -350,7 +350,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let commentsSummary = app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch
 		XCTAssertTrue(commentsSummary.waitForExistence(timeout: 5))
 
-		let predicate = NSPredicate(format: "label == %@", "Komentarze: 2 komentarze")
+		let predicate = NSPredicate(format: "value == %@", "2 komentarze")
 		let waitExpectation = expectation(for: predicate, evaluatedWith: commentsSummary)
 		XCTAssertEqual(XCTWaiter().wait(for: [waitExpectation], timeout: 5), .completed)
 
@@ -406,9 +406,14 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(topicRow.waitForExistence(timeout: 5))
 		topicRow.press(forDuration: 1.0)
 
-		let playAction = app.buttons["Odtwarzaj od tego miejsca"].firstMatch
-		XCTAssertTrue(playAction.waitForExistence(timeout: 5))
-		playAction.tap()
+		let playButton = app.buttons["Odtwarzaj od tego miejsca"].firstMatch
+		let playMenuItem = app.menuItems["Odtwarzaj od tego miejsca"].firstMatch
+		if playButton.waitForExistence(timeout: 2) {
+			playButton.tap()
+		} else {
+			XCTAssertTrue(playMenuItem.waitForExistence(timeout: 2))
+			playMenuItem.tap()
+		}
 
 		let playPauseButton = app.descendants(matching: .any).matching(identifier: "player.playPause").firstMatch
 		XCTAssertTrue(playPauseButton.waitForExistence(timeout: 5))
