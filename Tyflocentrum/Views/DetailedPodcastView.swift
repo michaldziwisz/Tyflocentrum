@@ -196,12 +196,10 @@ struct DetailedPodcastView: View {
 					try await api.fetchCommentsCount(forPostID: podcast.id)
 				}
 				commentsCount = loaded
-				announceIfVoiceOver(commentsSummaryText)
 				return
 			} catch {
 				if Task.isCancelled || error is CancellationError {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
-					announceIfVoiceOver(commentsSummaryText)
 					return
 				}
 
@@ -215,7 +213,6 @@ struct DetailedPodcastView: View {
 				} else {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
 				}
-				announceIfVoiceOver(commentsSummaryText)
 			}
 		}
 	}
