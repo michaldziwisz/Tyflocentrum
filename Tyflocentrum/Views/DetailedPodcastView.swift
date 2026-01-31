@@ -118,14 +118,19 @@ struct DetailedPodcastView: View {
 				Divider()
 
 				commentsSection
+
+				NavigationLink(isActive: $isShowingComments) {
+					PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+				} label: {
+					EmptyView()
+				}
+				.hidden()
+				.accessibilityHidden(true)
 			}
 			.padding()
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.navigationDestination(isPresented: $isShowingComments) {
-			PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
-		}
 		.task(id: podcast.id) { @MainActor in
 			commentsCount = nil
 			commentsCountErrorMessage = nil
