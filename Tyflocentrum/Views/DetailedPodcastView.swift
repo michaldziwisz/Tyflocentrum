@@ -17,6 +17,12 @@ struct DetailedPodcastView: View {
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
+	@AccessibilityFocusState private var focusedElement: FocusedElement?
+
+	private enum FocusedElement: Hashable {
+		case favorite
+		case commentsSummary
+	}
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -32,6 +38,16 @@ struct DetailedPodcastView: View {
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
 		UIAccessibility.post(notification: .announcement, argument: message)
+	}
+
+	private func refreshVoiceOverFocusIfNeeded(_ element: FocusedElement) {
+		guard UIAccessibility.isVoiceOverRunning else { return }
+		guard focusedElement == element else { return }
+		Task { @MainActor in
+			focusedElement = nil
+			await Task.yield()
+			focusedElement = element
+		}
 	}
 
 	private var commentsCountValueText: String {
@@ -91,6 +107,7 @@ struct DetailedPodcastView: View {
 		.accessibilityLabel(commentsSummaryText)
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
+		.accessibilityFocused($focusedElement, equals: .commentsSummary)
 		.id(commentsSummaryText)
 	}
 
@@ -98,6 +115,7 @@ struct DetailedPodcastView: View {
 		let willAdd = !favorites.isFavorite(favoriteItem)
 		favorites.toggle(favoriteItem)
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
+		refreshVoiceOverFocusIfNeeded(.favorite)
 	}
 
 	var body: some View {
@@ -159,6 +177,7 @@ struct DetailedPodcastView: View {
 				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 				.accessibilityIdentifier("podcastDetail.favorite")
+				.accessibilityFocused($focusedElement, equals: .favorite)
 			}
 		}
 	}
@@ -180,10 +199,12 @@ struct DetailedPodcastView: View {
 					try await api.fetchCommentsCount(forPostID: podcast.id)
 				}
 				commentsCount = loaded
+				refreshVoiceOverFocusIfNeeded(.commentsSummary)
 				return
 			} catch {
 				if Task.isCancelled || error is CancellationError {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
+					refreshVoiceOverFocusIfNeeded(.commentsSummary)
 					return
 				}
 
@@ -197,6 +218,7 @@ struct DetailedPodcastView: View {
 				} else {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
 				}
+				refreshVoiceOverFocusIfNeeded(.commentsSummary)
 			}
 		}
 	}
