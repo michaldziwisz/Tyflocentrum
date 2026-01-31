@@ -86,7 +86,6 @@ struct DetailedPodcastView: View {
 				.buttonStyle(.plain)
 				.accessibilityLabel(commentsSummaryText)
 				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
-				.accessibilityLiveRegion(.polite)
 				.accessibilityIdentifier("podcastDetail.commentsSummary")
 				.onAppear {
 					guard commentsCount == nil else { return }

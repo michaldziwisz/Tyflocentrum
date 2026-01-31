@@ -205,19 +205,20 @@ final class NewsFeedViewModel: ObservableObject {
 		errorMessage = nil
 		loadMoreErrorMessage = nil
 
-		let previousHasLoaded = hasLoaded
-		let hadItemsBeforeRefresh = !items.isEmpty
-		defer {
-			guard requestGeneration == generation else { return }
-			hasLoaded = previousHasLoaded || hasLoaded
-			isLoading = false
+			let previousHasLoaded = hasLoaded
+			let hadItemsBeforeRefresh = !items.isEmpty
+			defer {
+				if requestGeneration == generation {
+					hasLoaded = previousHasLoaded || hasLoaded
+					isLoading = false
 
-			// Never leave the user on an empty state without a retry path – in practice, the feed should never
-			// be truly empty, and cancellations/errors would otherwise surface as “Brak nowych treści.”
-			if items.isEmpty, errorMessage == nil, hasLoaded, !Task.isCancelled {
-				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+					// Never leave the user on an empty state without a retry path – in practice, the feed should never
+					// be truly empty, and cancellations/errors would otherwise surface as “Brak nowych treści.”
+					if items.isEmpty, errorMessage == nil, hasLoaded, !Task.isCancelled {
+						errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+					}
+				}
 			}
-		}
 
 		let scratch = NewsFeedViewModel(
 			requestTimeoutSeconds: requestTimeoutSeconds,
