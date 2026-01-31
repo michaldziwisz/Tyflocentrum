@@ -36,30 +36,22 @@ struct DetailedPodcastView: View {
 		UIAccessibility.post(notification: .announcement, argument: message)
 	}
 
-	private var commentsCountValueText: String? {
-		if let count = commentsCount {
-			let noun = PolishPluralization.nounForm(
-				for: count,
-				singular: "komentarz",
-				few: "komentarze",
-				many: "komentarzy"
-			)
-			return "\(count) \(noun)"
-		}
+	private var commentsCountValueText: String {
 		if let errorMessage = commentsCountErrorMessage {
 			return errorMessage
 		}
-		if isCommentsCountLoading {
-			return "Ładowanie…"
-		}
-		return nil
+		let count = commentsCount ?? 0
+		let noun = PolishPluralization.nounForm(
+			for: count,
+			singular: "komentarz",
+			few: "komentarze",
+			many: "komentarzy"
+		)
+		return "\(count) \(noun)"
 	}
 
 	private var commentsSummaryText: String {
-		if let countText = commentsCountValueText {
-			return "Komentarze: \(countText)"
-		}
-		return "Komentarze: Ładowanie…"
+		"Komentarze: \(commentsCountValueText)"
 	}
 
 	private var headerSection: some View {
@@ -96,6 +88,7 @@ struct DetailedPodcastView: View {
 		.accessibilityLabel(commentsSummaryText)
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
+		.id(commentsSummaryText)
 	}
 
 	private func toggleFavorite() {
@@ -169,13 +162,16 @@ struct DetailedPodcastView: View {
 
 			ToolbarItem(placement: .navigationBarTrailing) {
 				Button {
-					toggleFavorite()
+					Task { @MainActor in
+						toggleFavorite()
+					}
 				} label: {
 					Image(systemName: isFavorite ? "star.fill" : "star")
 				}
 				.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 				.accessibilityIdentifier("podcastDetail.favorite")
+				.id(isFavorite)
 			}
 		}
 	}
