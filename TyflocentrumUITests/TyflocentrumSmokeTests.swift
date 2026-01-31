@@ -299,6 +299,44 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapBackButton(in: app)
 	}
 
+	func testPodcastFavoritedFromRowCanBeUnfavoritedInDetail() {
+		let app = makeApp()
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+
+		podcastRow.press(forDuration: 1.0)
+
+		let addFavoriteButton = app.buttons["Dodaj do ulubionych"].firstMatch
+		let addFavoriteMenuItem = app.menuItems["Dodaj do ulubionych"].firstMatch
+		if addFavoriteButton.waitForExistence(timeout: 2) {
+			addFavoriteButton.tap()
+		} else {
+			XCTAssertTrue(addFavoriteMenuItem.waitForExistence(timeout: 2))
+			addFavoriteMenuItem.tap()
+		}
+
+		podcastRow.tap()
+
+		let favoriteButton = app.descendants(matching: .any).matching(identifier: "podcastDetail.favorite").firstMatch
+		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
+		XCTAssertEqual(favoriteButton.label, "Usuń z ulubionych")
+		favoriteButton.tap()
+
+		let predicate = NSPredicate(format: "label == %@", "Dodaj do ulubionych")
+		let waitExpectation = expectation(for: predicate, evaluatedWith: favoriteButton)
+		XCTAssertEqual(XCTWaiter().wait(for: [waitExpectation], timeout: 5), .completed)
+
+		openFavoritesFromMenu(in: app)
+
+		let favoritesPodcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertFalse(favoritesPodcastRow.waitForExistence(timeout: 2))
+		tapBackButton(in: app)
+	}
+
 	func testPodcastDetailShowsCommentsAndCanOpenThem() {
 		let app = makeApp()
 		app.launch()

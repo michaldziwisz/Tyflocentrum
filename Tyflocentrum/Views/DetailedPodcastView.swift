@@ -14,6 +14,7 @@ struct DetailedPodcastView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
+	@State private var isFavorite = false
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
@@ -55,8 +56,10 @@ struct DetailedPodcastView: View {
 	}
 
 	private var commentsSummaryText: String {
-		guard let valueText = commentsCountValueText else { return "Komentarze" }
-		return "Komentarze: \(valueText)"
+		if let countText = commentsCountValueText {
+			return "Komentarze: \(countText)"
+		}
+		return "Komentarze: Ładowanie…"
 	}
 
 	private var headerSection: some View {
@@ -74,20 +77,13 @@ struct DetailedPodcastView: View {
 	}
 
 	private var commentsSection: some View {
-		let valueText = commentsCountValueText
-		let shouldShowCount = commentsCount != nil
-
 		return Button {
 			isShowingComments = true
 		} label: {
 			HStack(spacing: 8) {
-				Text("Komentarze")
+				Text(commentsSummaryText)
 					.foregroundColor(.secondary)
 				Spacer(minLength: 0)
-				if shouldShowCount, let valueText {
-					Text(valueText)
-						.foregroundColor(.secondary)
-				}
 				Image(systemName: "chevron.right")
 					.font(.caption.weight(.semibold))
 					.foregroundColor(.secondary)
@@ -103,8 +99,9 @@ struct DetailedPodcastView: View {
 	}
 
 	private func toggleFavorite() {
-		let willAdd = !favorites.isFavorite(favoriteItem)
+		let willAdd = !isFavorite
 		favorites.toggle(favoriteItem)
+		isFavorite = favorites.isFavorite(favoriteItem)
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
@@ -134,9 +131,13 @@ struct DetailedPodcastView: View {
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
 		.task(id: podcast.id) { @MainActor in
+			isFavorite = favorites.isFavorite(favoriteItem)
 			commentsCount = nil
 			commentsCountErrorMessage = nil
 			await loadCommentsCount()
+		}
+		.onChange(of: favorites.items) { _, _ in
+			isFavorite = favorites.isFavorite(favoriteItem)
 		}
 		.toolbar {
 			ToolbarItem(placement: .navigationBarTrailing) {
@@ -170,9 +171,9 @@ struct DetailedPodcastView: View {
 				Button {
 					toggleFavorite()
 				} label: {
-					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
+					Image(systemName: isFavorite ? "star.fill" : "star")
 				}
-				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+				.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 				.accessibilityIdentifier("podcastDetail.favorite")
 			}
