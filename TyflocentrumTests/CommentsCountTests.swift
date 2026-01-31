@@ -44,4 +44,3 @@ final class CommentsCountTests: XCTestCase {
 		return URLSession(configuration: config)
 	}
 }
-
