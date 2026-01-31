@@ -348,11 +348,14 @@ final class NewsFeedViewModel: ObservableObject {
 
 			if podcastNext == nil, podcasts.hasMore {
 				_ = await fetchNextPodcastPage(api: api, generation: generation)
+				guard requestGeneration == generation else { return }
 			}
 			if articleNext == nil, articles.hasMore {
 				_ = await fetchNextArticlePage(api: api, generation: generation)
+				guard requestGeneration == generation else { return }
 			}
 
+			guard requestGeneration == generation else { return }
 			guard let selected = selectNextItem() else { break }
 
 			let item = NewsItem(kind: selected.kind, post: selected.post)
@@ -361,6 +364,7 @@ final class NewsFeedViewModel: ObservableObject {
 				added += 1
 			}
 
+			guard requestGeneration == generation else { return }
 			podcasts.trimConsumedIfNeeded()
 			articles.trimConsumedIfNeeded()
 		}
