@@ -101,23 +101,7 @@ struct DetailedPodcastView: View {
 			await loadCommentsCount()
 		}
 		.toolbar {
-			ToolbarItemGroup(placement: .navigationBarTrailing) {
-				Button {
-					toggleFavorite()
-				} label: {
-					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
-				}
-				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
-				.accessibilityIdentifier("podcastDetail.favorite")
-
-				ShareLink(
-					"Udostępnij",
-					item: podcast.guid.plainText,
-					message: Text(
-						"Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"
-					)
-				)
-
+			ToolbarItem(placement: .navigationBarTrailing) {
 				NavigationLink {
 					MediaPlayerView(
 						podcast: api.getListenableURL(for: podcast),
@@ -132,6 +116,26 @@ struct DetailedPodcastView: View {
 						.accessibilityHint("Otwiera odtwarzacz audycji.")
 						.accessibilityIdentifier("podcastDetail.listen")
 				}
+			}
+
+			ToolbarItem(placement: .navigationBarTrailing) {
+				ShareLink(
+					"Udostępnij",
+					item: podcast.guid.plainText,
+					message: Text(
+						"Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"
+					)
+				)
+			}
+
+			ToolbarItem(placement: .navigationBarTrailing) {
+				Button {
+					toggleFavorite()
+				} label: {
+					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
+				}
+				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+				.accessibilityIdentifier("podcastDetail.favorite")
 			}
 		}
 	}
@@ -154,10 +158,12 @@ struct DetailedPodcastView: View {
 					try await api.fetchCommentsCount(forPostID: podcast.id)
 				}
 				commentsCount = loaded
+				announceIfVoiceOver(commentsSummaryText)
 				return
 			} catch {
 				if Task.isCancelled || error is CancellationError {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
+					announceIfVoiceOver(commentsSummaryText)
 					return
 				}
 
@@ -171,6 +177,7 @@ struct DetailedPodcastView: View {
 				} else {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
 				}
+				announceIfVoiceOver(commentsSummaryText)
 			}
 		}
 	}
