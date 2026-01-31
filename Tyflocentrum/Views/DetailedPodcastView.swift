@@ -14,10 +14,10 @@ struct DetailedPodcastView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
-	@State private var isFavorite = false
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
+	@State private var isShowingComments = false
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -33,13 +33,6 @@ struct DetailedPodcastView: View {
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
 		UIAccessibility.post(notification: .announcement, argument: message)
-	}
-
-	private func toggleFavorite() {
-		let willAdd = !isFavorite
-		favorites.toggle(favoriteItem)
-		isFavorite = favorites.isFavorite(favoriteItem)
-		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	private var commentsCountValueText: String? {
@@ -62,12 +55,8 @@ struct DetailedPodcastView: View {
 	}
 
 	private var commentsSummaryText: String {
-		if let errorMessage = commentsCountErrorMessage, commentsCount == nil {
-			return errorMessage
-		}
-		guard let count = commentsCount else { return "Komentarze" }
-		let noun = PolishPluralization.nounForm(for: count, singular: "komentarz", few: "komentarze", many: "komentarzy")
-		return "\(count) \(noun)"
+		guard let valueText = commentsCountValueText else { return "Komentarze" }
+		return "Komentarze: \(valueText)"
 	}
 
 	private var headerSection: some View {
@@ -88,8 +77,8 @@ struct DetailedPodcastView: View {
 		let valueText = commentsCountValueText
 		let shouldShowCount = commentsCount != nil
 
-		return NavigationLink {
-			PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+		return Button {
+			isShowingComments = true
 		} label: {
 			HStack(spacing: 8) {
 				Text("Komentarze")
@@ -106,10 +95,15 @@ struct DetailedPodcastView: View {
 			}
 		}
 		.buttonStyle(.plain)
-		.accessibilityLabel("Komentarze")
-		.accessibilityValue(valueText ?? "")
+		.accessibilityLabel(commentsSummaryText)
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
+	}
+
+	private func toggleFavorite() {
+		let willAdd = !favorites.isFavorite(favoriteItem)
+		favorites.toggle(favoriteItem)
+		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	var body: some View {
@@ -129,14 +123,13 @@ struct DetailedPodcastView: View {
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
+		.navigationDestination(isPresented: $isShowingComments) {
+			PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
+		}
 		.task(id: podcast.id) { @MainActor in
-			isFavorite = favorites.isFavorite(favoriteItem)
 			commentsCount = nil
 			commentsCountErrorMessage = nil
 			await loadCommentsCount()
-		}
-		.onChange(of: favorites.items) { _, _ in
-			isFavorite = favorites.isFavorite(favoriteItem)
 		}
 		.toolbar {
 			ToolbarItem(placement: .navigationBarTrailing) {
@@ -170,12 +163,9 @@ struct DetailedPodcastView: View {
 				Button {
 					toggleFavorite()
 				} label: {
-					Label(
-						isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych",
-						systemImage: isFavorite ? "star.fill" : "star"
-					)
-					.labelStyle(.iconOnly)
+					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
 				}
+				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 				.accessibilityIdentifier("podcastDetail.favorite")
 			}
