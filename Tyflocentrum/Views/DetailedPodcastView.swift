@@ -17,7 +17,6 @@ struct DetailedPodcastView: View {
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
-	@State private var shouldNavigateToComments = false
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -75,8 +74,8 @@ struct DetailedPodcastView: View {
 
 				Divider()
 
-				Button {
-					shouldNavigateToComments = true
+				NavigationLink {
+					PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
 				} label: {
 					HStack(spacing: 8) {
 						Text(commentsSummaryText)
@@ -89,7 +88,6 @@ struct DetailedPodcastView: View {
 					}
 				}
 				.buttonStyle(.plain)
-				.accessibilityElement(children: .ignore)
 				.accessibilityLabel(commentsSummaryText)
 				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 				.accessibilityIdentifier("podcastDetail.commentsSummary")
@@ -103,15 +101,6 @@ struct DetailedPodcastView: View {
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.background(
-			NavigationLink(
-				destination: PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText),
-				isActive: $shouldNavigateToComments
-			) {
-				EmptyView()
-			}
-			.hidden()
-		)
 		.task(id: podcast.id) {
 			await loadCommentsCount()
 		}
