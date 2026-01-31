@@ -14,6 +14,7 @@ struct DetailedPodcastView: View {
 
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var favorites: FavoritesStore
+	@State private var isFavorite = false
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
@@ -35,8 +36,9 @@ struct DetailedPodcastView: View {
 	}
 
 	private func toggleFavorite() {
-		let willAdd = !favorites.isFavorite(favoriteItem)
+		let willAdd = !isFavorite
 		favorites.toggle(favoriteItem)
+		isFavorite = favorites.isFavorite(favoriteItem)
 		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
@@ -87,18 +89,19 @@ struct DetailedPodcastView: View {
 				.accessibilityLabel(commentsSummaryText)
 				.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 				.accessibilityIdentifier("podcastDetail.commentsSummary")
-				.onAppear {
-					guard commentsCount == nil else { return }
-					guard !isCommentsCountLoading else { return }
-					Task { await loadCommentsCount() }
-				}
 			}
 			.padding()
 		}
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.task(id: podcast.id) {
+		.task(id: podcast.id) { @MainActor in
+			isFavorite = favorites.isFavorite(favoriteItem)
+			commentsCount = nil
+			commentsCountErrorMessage = nil
 			await loadCommentsCount()
+		}
+		.onChange(of: favorites.items) { _, _ in
+			isFavorite = favorites.isFavorite(favoriteItem)
 		}
 		.toolbar {
 			ToolbarItem(placement: .navigationBarTrailing) {
@@ -132,10 +135,11 @@ struct DetailedPodcastView: View {
 				Button {
 					toggleFavorite()
 				} label: {
-					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
+					Image(systemName: isFavorite ? "star.fill" : "star")
 				}
-				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+				.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 				.accessibilityIdentifier("podcastDetail.favorite")
+				.id(isFavorite)
 			}
 		}
 	}
@@ -143,7 +147,6 @@ struct DetailedPodcastView: View {
 	@MainActor
 	private func loadCommentsCount() async {
 		guard !isCommentsCountLoading else { return }
-		guard commentsCount == nil else { return }
 
 		isCommentsCountLoading = true
 		commentsCountErrorMessage = nil
