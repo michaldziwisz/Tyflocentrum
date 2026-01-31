@@ -93,6 +93,60 @@ final class NewsFeedViewModelTests: XCTestCase {
 	}
 
 	@MainActor
+	func testRefreshRetriesOnceWhenBothSourcesFailTransiently() async {
+		var podcastRequests = 0
+		var articleRequests = 0
+
+		StubURLProtocol.requestHandler = { request in
+			let url = try XCTUnwrap(request.url)
+
+			switch url.host {
+			case "tyflopodcast.net":
+				podcastRequests += 1
+				if podcastRequests <= 2 {
+					let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+					return (response, Data("[]".utf8))
+				}
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				return (
+					response,
+					Self.postsResponseData(items: [
+						Self.postSummaryJSON(id: 1, date: "2026-01-20T00:59:40", title: "P1", link: "https://tyflopodcast.net/?p=1"),
+					])
+				)
+			case "tyfloswiat.pl":
+				articleRequests += 1
+				if articleRequests <= 2 {
+					let response = HTTPURLResponse(url: url, statusCode: 500, httpVersion: nil, headerFields: nil)!
+					return (response, Data("[]".utf8))
+				}
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				return (
+					response,
+					Self.postsResponseData(items: [
+						Self.postSummaryJSON(id: 10, date: "2026-01-19T00:59:40", title: "A1", link: "https://tyfloswiat.pl/?p=10"),
+					])
+				)
+			default:
+				let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+				return (response, Data("[]".utf8))
+			}
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let viewModel = NewsFeedViewModel(requestTimeoutSeconds: 2)
+
+		await viewModel.refresh(api: api)
+
+		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.1", "article.10"])
+		XCTAssertNil(viewModel.errorMessage)
+		XCTAssertTrue(viewModel.hasLoaded)
+		XCTAssertFalse(viewModel.isLoading)
+		XCTAssertGreaterThanOrEqual(podcastRequests, 3)
+		XCTAssertGreaterThanOrEqual(articleRequests, 3)
+	}
+
+	@MainActor
 	func testRefreshKeepsChronologicalOrderWhenOneSourcePageContainsVeryOldItems() async {
 		StubURLProtocol.requestHandler = { request in
 			let url = try XCTUnwrap(request.url)

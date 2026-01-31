@@ -201,14 +201,25 @@ final class NewsFeedViewModel: ObservableObject {
 		isLoading = true
 
 		errorMessage = nil
+		defer {
+			guard requestGeneration == generation else { return }
+			hasLoaded = true
+			isLoading = false
+
+			if items.isEmpty, !Task.isCancelled {
+				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			}
+		}
 
 		await appendNextBatch(api: api, batchSize: initialBatchSize, generation: generation)
 		guard requestGeneration == generation else { return }
-		hasLoaded = true
-		isLoading = false
 
 		if items.isEmpty {
-			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			// The initial merge fetch may fail transiently (e.g. timeouts/cancelled requests). Retry once to
+			// avoid forcing the user to hit “Spróbuj ponownie” in common cases.
+			try? await Task.sleep(nanoseconds: 250_000_000)
+			guard requestGeneration == generation else { return }
+			await appendNextBatch(api: api, batchSize: initialBatchSize, generation: generation)
 		}
 	}
 

@@ -41,14 +41,10 @@ struct DetailedPodcastView: View {
 	}
 
 	private var commentsSummaryText: String {
-		if isCommentsCountLoading, commentsCount == nil {
-			return "Ładowanie komentarzy…"
-		}
 		if let errorMessage = commentsCountErrorMessage, commentsCount == nil {
 			return errorMessage
 		}
-		guard let count = commentsCount else { return "Komentarze" }
-		guard count > 0 else { return "Brak komentarzy" }
+		guard let count = commentsCount else { return "Ładowanie komentarzy…" }
 		let noun = PolishPluralization.nounForm(for: count, singular: "komentarz", few: "komentarze", many: "komentarzy")
 		return "\(count) \(noun)"
 	}
@@ -143,26 +139,38 @@ struct DetailedPodcastView: View {
 	@MainActor
 	private func loadCommentsCount() async {
 		guard !isCommentsCountLoading else { return }
+		guard commentsCount == nil else { return }
 
 		isCommentsCountLoading = true
 		commentsCountErrorMessage = nil
 		defer { isCommentsCountLoading = false }
 
-		do {
-			let loaded = try await withTimeout(15) {
-				try await api.fetchCommentsCount(forPostID: podcast.id)
-			}
-			commentsCount = loaded
-		} catch {
-			if Task.isCancelled || error is CancellationError {
-				commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
-				return
-			}
+		let timeoutSeconds: TimeInterval = 15
+		let maxAttempts = 2
 
-			if error is AsyncTimeoutError {
-				commentsCountErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
-			} else {
-				commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
+		for attempt in 1 ... maxAttempts {
+			do {
+				let loaded = try await withTimeout(timeoutSeconds) {
+					try await api.fetchCommentsCount(forPostID: podcast.id)
+				}
+				commentsCount = loaded
+				return
+			} catch {
+				if Task.isCancelled || error is CancellationError {
+					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
+					return
+				}
+
+				if attempt < maxAttempts {
+					try? await Task.sleep(nanoseconds: 250_000_000)
+					continue
+				}
+
+				if error is AsyncTimeoutError {
+					commentsCountErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
+				} else {
+					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
+				}
 			}
 		}
 	}
