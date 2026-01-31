@@ -118,9 +118,8 @@ final class AsyncListViewModel<Item>: ObservableObject {
 	}
 }
 
-@MainActor
-@MainActor
-final class NewsFeedViewModel: ObservableObject {
+	@MainActor
+	final class NewsFeedViewModel: ObservableObject {
 	private struct SourceState {
 		let kind: NewsItemKind
 		var nextPage: Int = 1
