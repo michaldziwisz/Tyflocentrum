@@ -24,8 +24,6 @@ jobs:
     name: Build (self-hosted)
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.force_github_hosted) }}
     runs-on: [self-hosted, macOS, tyflocentrum]
-    env:
-      DERIVED_DATA_PATH: ${{ format('{0}/DerivedData-{1}', runner.temp, github.run_id) }}
     outputs:
       succeeded: ${{ steps.build.outcome == 'success' }}
     steps:
@@ -47,8 +45,6 @@ jobs:
     needs: build-self-hosted
     if: always() && needs.build-self-hosted.outputs.succeeded != 'true'
     runs-on: macos-14
-    env:
-      DERIVED_DATA_PATH: ${{ format('{0}/DerivedData-{1}', runner.temp, github.run_id) }}
     steps:
       - uses: actions/checkout@v4
 
