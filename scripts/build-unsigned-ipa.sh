@@ -6,6 +6,7 @@ SCHEME="${SCHEME:-Tyflocentrum}"
 SWIFTFORMAT_VERSION="${SWIFTFORMAT_VERSION:-0.58.7}"
 SIM_DESTINATION="${SIM_DESTINATION:-}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.derived-data}"
+RUN_TESTS="${RUN_TESTS:-true}"
 
 ensure_swiftformat() {
 	if command -v swiftformat >/dev/null 2>&1; then
@@ -110,20 +111,23 @@ ensure_swiftformat
 swiftformat --config .swiftformat --lint .
 echo "::endgroup::"
 
-echo "::group::Test (Simulator)"
-resolve_sim_destination
 rm -rf "$DERIVED_DATA_PATH"
-xcodebuild \
-	-project "$PROJECT_PATH" \
-	-scheme "$SCHEME" \
-	-configuration Debug \
-	-sdk iphonesimulator \
-	-destination "$SIM_DESTINATION" \
-	-derivedDataPath "$DERIVED_DATA_PATH" \
-	-parallel-testing-enabled NO \
-	-parallel-testing-worker-count 1 \
-	test
-echo "::endgroup::"
+
+if [[ "$RUN_TESTS" == "true" ]]; then
+	echo "::group::Test (Simulator)"
+	resolve_sim_destination
+	xcodebuild \
+		-project "$PROJECT_PATH" \
+		-scheme "$SCHEME" \
+		-configuration Debug \
+		-sdk iphonesimulator \
+		-destination "$SIM_DESTINATION" \
+		-derivedDataPath "$DERIVED_DATA_PATH" \
+		-parallel-testing-enabled NO \
+		-parallel-testing-worker-count 1 \
+		test
+	echo "::endgroup::"
+fi
 
 echo "::group::Archive (no codesign)"
 rm -rf build

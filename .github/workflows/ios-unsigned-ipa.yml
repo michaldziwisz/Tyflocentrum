@@ -11,6 +11,10 @@ on:
         type: boolean
         default: false
 
+concurrency:
+  group: ios-unsigned-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   actions: read
   contents: read
@@ -20,6 +24,8 @@ jobs:
     name: Build (self-hosted)
     if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.force_github_hosted) }}
     runs-on: [self-hosted, macOS, tyflocentrum]
+    env:
+      RUN_TESTS: "false"
     outputs:
       succeeded: ${{ steps.build.outcome == 'success' }}
     steps:
@@ -41,6 +47,8 @@ jobs:
     needs: build-self-hosted
     if: always() && needs.build-self-hosted.outputs.succeeded != 'true'
     runs-on: macos-14
+    env:
+      RUN_TESTS: "false"
     steps:
       - uses: actions/checkout@v4
 
