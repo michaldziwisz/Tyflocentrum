@@ -541,54 +541,65 @@ private struct RelatedLinksView: View {
 	var body: some View {
 		List(links) { link in
 			let item = favoriteItem(for: link)
-			Button {
-				openURL(link.url)
-			} label: {
-				VStack(alignment: .leading, spacing: 4) {
-					Text(link.title)
-						.foregroundColor(.primary)
-
-					if let host = hostLabel(for: link.url) {
-						Text(host)
-							.font(.caption)
-							.foregroundColor(.secondary)
-					}
-				}
-			}
-			.buttonStyle(.plain)
-			.tint(.primary)
-			.contextMenu {
-				Button("Skopiuj link") {
-					copyLink(link)
-				}
-				Button("Udostępnij link") {
-					sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
-				}
-				Button(favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
-					toggleFavorite(item)
-				}
-			}
-			.accessibilityElement(children: .ignore)
-			.accessibilityLabel(link.title)
-			.accessibilityValue(hostLabel(for: link.url) ?? "")
-			.accessibilityAddTraits(.isLink)
-			.accessibilityRemoveTraits(.isButton)
-			.accessibilityHint("Otwiera odnośnik.")
-			.accessibilityAction(named: "Skopiuj link") {
-				copyLink(link)
-			}
-			.accessibilityAction(named: "Udostępnij link") {
-				sharePayload = SharePayload(activityItems: [activityItem(for: link.url)])
-			}
-			.accessibilityAction(named: favorites.isFavorite(item) ? "Usuń z ulubionych" : "Dodaj do ulubionych") {
-				toggleFavorite(item)
-			}
+			RelatedLinkRowView(
+				title: link.title,
+				host: hostLabel(for: link.url),
+				isFavorite: favorites.isFavorite(item),
+				onOpen: { openURL(link.url) },
+				onCopy: { copyLink(link) },
+				onShare: { sharePayload = SharePayload(activityItems: [activityItem(for: link.url)]) },
+				onToggleFavorite: { toggleFavorite(item) }
+			)
 		}
 		.navigationTitle("Odnośniki")
 		.navigationBarTitleDisplayMode(.inline)
 		.sheet(item: $sharePayload) { payload in
 			ActivityView(activityItems: payload.activityItems)
 		}
+	}
+}
+
+private struct RelatedLinkRowView: View {
+	let title: String
+	let host: String?
+	let isFavorite: Bool
+	let onOpen: () -> Void
+	let onCopy: () -> Void
+	let onShare: () -> Void
+	let onToggleFavorite: () -> Void
+
+	var body: some View {
+		let hostValue = host ?? ""
+		let favoriteTitle = isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych"
+
+		return Button(action: onOpen) {
+			VStack(alignment: .leading, spacing: 4) {
+				Text(title)
+					.foregroundColor(.primary)
+
+				if !hostValue.isEmpty {
+					Text(hostValue)
+						.font(.caption)
+						.foregroundColor(.secondary)
+				}
+			}
+		}
+		.buttonStyle(.plain)
+		.tint(.primary)
+		.contextMenu {
+			Button("Skopiuj link", action: onCopy)
+			Button("Udostępnij link", action: onShare)
+			Button(favoriteTitle, action: onToggleFavorite)
+		}
+		.accessibilityElement(children: .ignore)
+		.accessibilityLabel(title)
+		.accessibilityValue(hostValue)
+		.accessibilityAddTraits(.isLink)
+		.accessibilityRemoveTraits(.isButton)
+		.accessibilityHint("Otwiera odnośnik.")
+		.accessibilityAction(named: "Skopiuj link", onCopy)
+		.accessibilityAction(named: "Udostępnij link", onShare)
+		.accessibilityAction(named: favoriteTitle, onToggleFavorite)
 	}
 }
 
