@@ -47,7 +47,7 @@ resolve_sim_destination() {
 	fi
 
 	local device_name
-	device_name="$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\\(iPhone[^()]*\\) (.*$/\\1/p' | head -n 1)"
+	device_name="$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\(iPhone[^()]*\) (.*$/\1/p' | head -n 1)"
 	if [[ -z "$device_name" ]]; then
 		echo "No available iPhone simulators found. Set SIM_DESTINATION env var (e.g. platform=iOS Simulator,name=iPhone 15)." >&2
 		xcrun simctl list devices available || true
