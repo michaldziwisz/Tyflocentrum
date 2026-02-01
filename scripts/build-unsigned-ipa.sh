@@ -60,9 +60,9 @@ resolve_sim_destination() {
 					sub(/^[ \t]+/, "", line)
 
 					name = line
-					sub(/ \\(.*/, "", name)
+					sub(/ [(].*/, "", name)
 
-					if (!match(line, /\([0-9A-Fa-f-]+\)/)) {
+					if (!match(line, /[(][0-9A-Fa-f-]+[)]/)) {
 						next
 					}
 					id = substr(line, RSTART + 1, RLENGTH - 2)
