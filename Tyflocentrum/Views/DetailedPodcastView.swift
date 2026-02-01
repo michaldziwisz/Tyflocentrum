@@ -40,9 +40,8 @@ struct DetailedPodcastView: View {
 		UIAccessibility.post(notification: .announcement, argument: message)
 	}
 
-	private func refreshVoiceOverFocusIfNeeded(_ element: FocusedElement) {
+	private func refreshVoiceOverFocus(_ element: FocusedElement) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
-		guard focusedElement == element else { return }
 		Task { @MainActor in
 			focusedElement = nil
 			await Task.yield()
@@ -153,10 +152,12 @@ struct DetailedPodcastView: View {
 	}
 
 	private func toggleFavorite() {
-		let willAdd = !favorites.isFavorite(favoriteItem)
 		favorites.toggle(favoriteItem)
-		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
-		refreshVoiceOverFocusIfNeeded(.favorite)
+		if UIAccessibility.isVoiceOverRunning {
+			refreshVoiceOverFocus(.favorite)
+		} else {
+			announceIfVoiceOver(favorites.isFavorite(favoriteItem) ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
+		}
 	}
 
 	var body: some View {
@@ -200,12 +201,10 @@ struct DetailedPodcastView: View {
 					try await api.fetchCommentsCount(forPostID: podcast.id)
 				}
 				commentsCount = loaded
-				refreshVoiceOverFocusIfNeeded(.commentsSummary)
 				return
 			} catch {
 				if Task.isCancelled || error is CancellationError {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
-					refreshVoiceOverFocusIfNeeded(.commentsSummary)
 					return
 				}
 
@@ -219,7 +218,6 @@ struct DetailedPodcastView: View {
 				} else {
 					commentsCountErrorMessage = "Nie udało się pobrać komentarzy. Spróbuj ponownie."
 				}
-				refreshVoiceOverFocusIfNeeded(.commentsSummary)
 			}
 		}
 	}
