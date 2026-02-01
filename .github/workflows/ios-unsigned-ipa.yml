@@ -40,9 +40,9 @@ jobs:
           fi
 
           available="$(
-            python3 -c 'import json,sys; data=json.load(sys.stdin); print(sum(1 for r in data.get("runners", []) if str(r.get("status", "")).lower()=="online" and r.get("busy") is False and "macOS" in [l.get("name") for l in r.get("labels", []) if isinstance(l, dict)]))' < runners.json
+            python3 -c 'import json,sys; data=json.load(sys.stdin); print(sum(1 for r in data.get("runners", []) if str(r.get("status", "")).lower()=="online" and r.get("busy") is False and all(label in [l.get("name") for l in r.get("labels", []) if isinstance(l, dict)] for label in ["macOS", "tyflocentrum"])))' < runners.json
           )"
-          echo "Available self-hosted macOS runners: $available"
+          echo "Available self-hosted macOS tyflocentrum runners: $available"
 
           if [[ "$available" -gt 0 ]]; then
             echo "try_self_hosted=true" >> "$GITHUB_OUTPUT"
@@ -54,7 +54,7 @@ jobs:
     name: Build (self-hosted)
     needs: runner-health
     if: needs.runner-health.outputs.try_self_hosted == 'true'
-    runs-on: [self-hosted, macOS]
+    runs-on: [self-hosted, macOS, tyflocentrum]
     outputs:
       succeeded: ${{ steps.build.outcome == 'success' }}
     steps:
