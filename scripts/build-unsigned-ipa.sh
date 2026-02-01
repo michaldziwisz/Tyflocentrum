@@ -71,14 +71,47 @@ resolve_sim_destination() {
 					if (first_id[ios] == "") {
 						first_id[ios] = id
 						first_name[ios] = name
-						last_ios_with_iphone = ios
 					}
 				}
 				END {
-					if (last_ios_with_iphone == "" || first_id[last_ios_with_iphone] == "") {
+					best_any = ""
+					best_any_weight = -1
+					best_stable = ""
+					best_stable_weight = -1
+
+					for (v in first_id) {
+						w = ver_weight(v)
+						if (w > best_any_weight) {
+							best_any_weight = w
+							best_any = v
+						}
+
+						split(v, parts, ".")
+						major = parts[1] + 0
+						if (major < 20 && w > best_stable_weight) {
+							best_stable_weight = w
+							best_stable = v
+						}
+					}
+
+					if (best_stable != "") {
+						best = best_stable
+					} else {
+						best = best_any
+					}
+
+					if (best == "" || first_id[best] == "") {
 						exit 1
 					}
-					printf "%s\t%s\t%s\n", last_ios_with_iphone, first_id[last_ios_with_iphone], first_name[last_ios_with_iphone]
+
+					printf "%s\t%s\t%s\n", best, first_id[best], first_name[best]
+				}
+				function ver_weight(v, parts, n, major, minor, patch) {
+					n = split(v, parts, ".")
+					major = parts[1] + 0
+					minor = (n >= 2 ? parts[2] + 0 : 0)
+					patch = (n >= 3 ? parts[3] + 0 : 0)
+					return major * 1000000 + minor * 1000 + patch
 				}
 			' || true
 		)"
