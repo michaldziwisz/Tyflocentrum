@@ -5,6 +5,7 @@ PROJECT_PATH="${PROJECT_PATH:-Tyflocentrum.xcodeproj}"
 SCHEME="${SCHEME:-Tyflocentrum}"
 SWIFTFORMAT_VERSION="${SWIFTFORMAT_VERSION:-0.58.7}"
 SIM_DESTINATION="${SIM_DESTINATION:-}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$PWD/.derived-data}"
 
 ensure_swiftformat() {
 	if command -v swiftformat >/dev/null 2>&1; then
@@ -111,12 +112,14 @@ echo "::endgroup::"
 
 echo "::group::Test (Simulator)"
 resolve_sim_destination
+rm -rf "$DERIVED_DATA_PATH"
 xcodebuild \
 	-project "$PROJECT_PATH" \
 	-scheme "$SCHEME" \
 	-configuration Debug \
 	-sdk iphonesimulator \
 	-destination "$SIM_DESTINATION" \
+	-derivedDataPath "$DERIVED_DATA_PATH" \
 	-parallel-testing-enabled NO \
 	-parallel-testing-worker-count 1 \
 	test
@@ -131,6 +134,7 @@ xcodebuild \
 	-sdk iphoneos \
 	-destination 'generic/platform=iOS' \
 	-archivePath build/Tyflocentrum.xcarchive \
+	-derivedDataPath "$DERIVED_DATA_PATH" \
 	archive \
 	CODE_SIGNING_ALLOWED=NO \
 	CODE_SIGNING_REQUIRED=NO \
