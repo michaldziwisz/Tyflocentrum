@@ -41,19 +41,61 @@ resolve_sim_destination() {
 		return
 	fi
 
-	if xcrun simctl list devices available | grep -q "iPhone 15 ("; then
-		SIM_DESTINATION="platform=iOS Simulator,name=iPhone 15"
-		return
-	fi
+	local sim_info
+	sim_info="$(
+		xcrun simctl list devices available | awk '
+			$1 == "--" && $2 == "iOS" {
+				ios = $3
+				next
+			}
+			$1 == "--" {
+				ios = ""
+				next
+			}
+			ios == "" {
+				next
+			}
+				$1 == "iPhone" {
+					line = $0
+					sub(/^[ \t]+/, "", line)
+					split(line, parts, " \\(")
+					name = parts[1]
+					if (!match(line, /\(([0-9A-Fa-f-]+)\)/, m)) {
+						next
+					}
+					id = m[1]
+					if (first_id[ios] == "") {
+						first_id[ios] = id
+						first_name[ios] = name
+						last_ios_with_iphone = ios
+					}
+				}
+				END {
+					if (last_ios_with_iphone == "" || first_id[last_ios_with_iphone] == "") {
+						exit 1
+					}
+					printf "%s\t%s\t%s\n", last_ios_with_iphone, first_id[last_ios_with_iphone], first_name[last_ios_with_iphone]
+				}
+			' || true
+		)"
 
-	local device_name
-	device_name="$(xcrun simctl list devices available | sed -n 's/^[[:space:]]*\(iPhone[^()]*\) (.*$/\1/p' | head -n 1)"
-	if [[ -z "$device_name" ]]; then
+	if [[ -z "$sim_info" ]]; then
 		echo "No available iPhone simulators found. Set SIM_DESTINATION env var (e.g. platform=iOS Simulator,name=iPhone 15)." >&2
 		xcrun simctl list devices available || true
 		exit 1
 	fi
-	SIM_DESTINATION="platform=iOS Simulator,name=$device_name"
+
+	local sim_os sim_id sim_name
+	IFS=$'\t' read -r sim_os sim_id sim_name <<<"$sim_info"
+
+	if [[ -z "${sim_id:-}" ]]; then
+		echo "Failed to parse a simulator device ID from simctl output. Set SIM_DESTINATION env var." >&2
+		xcrun simctl list devices available || true
+		exit 1
+	fi
+
+	echo "Using simulator: $sim_name (iOS $sim_os) [$sim_id]"
+	SIM_DESTINATION="platform=iOS Simulator,id=$sim_id"
 }
 
 echo "::group::Xcode version"
