@@ -56,6 +56,16 @@ struct DetailedArticleView: View {
 			.accessibilityIdentifier("articleDetail.header")
 			.padding([.horizontal, .top])
 
+			ShareLink(
+				item: article.guid.plainText,
+				subject: Text(article.title.plainText),
+				message: Text("Udostępnione przy pomocy aplikacji Tyflocentrum")
+			) {
+				Label("Udostępnij", systemImage: "square.and.arrow.up")
+			}
+			.padding(.horizontal)
+			.accessibilityIdentifier("articleDetail.share")
+
 			SafeHTMLView(
 				htmlBody: article.content.rendered,
 				baseURL: URL(string: "https://tyfloswiat.pl"),

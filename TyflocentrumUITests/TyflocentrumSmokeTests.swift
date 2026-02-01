@@ -432,6 +432,9 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
 		XCTAssertTrue(content.waitForExistence(timeout: 5))
 
+		let shareButton = app.descendants(matching: .any).matching(identifier: "articleDetail.share").firstMatch
+		XCTAssertTrue(shareButton.waitForExistence(timeout: 5))
+
 		let favoriteButton = app.descendants(matching: .any).matching(identifier: "articleDetail.favorite").firstMatch
 		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
 		favoriteButton.tap()

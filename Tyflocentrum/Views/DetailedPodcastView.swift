@@ -69,10 +69,6 @@ struct DetailedPodcastView: View {
 		return "\(count) \(noun)"
 	}
 
-	private var commentsSummaryText: String {
-		"Komentarze: \(commentsCountValueText)"
-	}
-
 	private var headerSection: some View {
 		VStack(alignment: .leading, spacing: 6) {
 			Text(podcast.title.plainText)
@@ -87,14 +83,58 @@ struct DetailedPodcastView: View {
 		.accessibilityIdentifier("podcastDetail.header")
 	}
 
+	private var actionsSection: some View {
+		VStack(alignment: .leading, spacing: 12) {
+			NavigationLink {
+				MediaPlayerView(
+					podcast: api.getListenableURL(for: podcast),
+					title: podcast.title.plainText,
+					subtitle: podcast.formattedDate,
+					canBeLive: false,
+					podcastPostID: podcast.id
+				)
+			} label: {
+				Label("Słuchaj", systemImage: "play.circle.fill")
+			}
+			.accessibilityLabel("Słuchaj audycji")
+			.accessibilityHint("Otwiera odtwarzacz audycji.")
+			.accessibilityIdentifier("podcastDetail.listen")
+
+			ShareLink(
+				item: podcast.guid.plainText,
+				subject: Text(podcast.title.plainText),
+				message: Text(
+					"Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"
+				)
+			) {
+				Label("Udostępnij", systemImage: "square.and.arrow.up")
+			}
+
+			Button {
+				toggleFavorite()
+			} label: {
+				Label(
+					favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych",
+					systemImage: favorites.isFavorite(favoriteItem) ? "star.fill" : "star"
+				)
+			}
+			.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+			.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
+			.accessibilityIdentifier("podcastDetail.favorite")
+			.accessibilityFocused($focusedElement, equals: .favorite)
+		}
+	}
+
 	private var commentsSection: some View {
 		return NavigationLink {
 			PodcastCommentsView(postID: podcast.id, postTitle: podcast.title.plainText)
 		} label: {
 			HStack(spacing: 8) {
-				Text(commentsSummaryText)
+				Text("Komentarze")
 					.foregroundColor(.secondary)
 				Spacer(minLength: 0)
+				Text(commentsCountValueText)
+					.foregroundColor(.secondary)
 				Image(systemName: "chevron.right")
 					.font(.caption.weight(.semibold))
 					.foregroundColor(.secondary)
@@ -109,7 +149,7 @@ struct DetailedPodcastView: View {
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
 		.accessibilityFocused($focusedElement, equals: .commentsSummary)
-		.id(commentsSummaryText)
+		.id(commentsCountValueText)
 	}
 
 	private func toggleFavorite() {
@@ -123,14 +163,14 @@ struct DetailedPodcastView: View {
 		ScrollView {
 			VStack(alignment: .leading, spacing: 16) {
 				headerSection
+				actionsSection
+				commentsSection
+
+				Divider()
 
 				Text(podcast.content.plainText)
 					.font(.body)
 					.accessibilityIdentifier("podcastDetail.content")
-
-				Divider()
-
-				commentsSection
 			}
 			.padding()
 		}
@@ -140,46 +180,6 @@ struct DetailedPodcastView: View {
 			commentsCount = nil
 			commentsCountErrorMessage = nil
 			await loadCommentsCount()
-		}
-		.toolbar {
-			ToolbarItem(placement: .navigationBarTrailing) {
-				NavigationLink {
-					MediaPlayerView(
-						podcast: api.getListenableURL(for: podcast),
-						title: podcast.title.plainText,
-						subtitle: podcast.formattedDate,
-						canBeLive: false,
-						podcastPostID: podcast.id
-					)
-				} label: {
-					Text("Słuchaj")
-						.accessibilityLabel("Słuchaj audycji")
-						.accessibilityHint("Otwiera odtwarzacz audycji.")
-						.accessibilityIdentifier("podcastDetail.listen")
-				}
-			}
-
-			ToolbarItem(placement: .navigationBarTrailing) {
-				ShareLink(
-					"Udostępnij",
-					item: podcast.guid.plainText,
-					message: Text(
-						"Posłuchaj audycji \(podcast.title.plainText) w serwisie Tyflopodcast!\nUdostępnione przy pomocy aplikacji Tyflocentrum"
-					)
-				)
-			}
-
-			ToolbarItem(placement: .navigationBarTrailing) {
-				Button {
-					toggleFavorite()
-				} label: {
-					Image(systemName: favorites.isFavorite(favoriteItem) ? "star.fill" : "star")
-				}
-				.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
-				.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
-				.accessibilityIdentifier("podcastDetail.favorite")
-				.accessibilityFocused($focusedElement, equals: .favorite)
-			}
 		}
 	}
 
