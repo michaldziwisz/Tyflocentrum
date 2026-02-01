@@ -52,18 +52,20 @@ resolve_sim_destination() {
 				ios = ""
 				next
 			}
-			ios == "" {
-				next
-			}
+				ios == "" {
+					next
+				}
 				$1 == "iPhone" {
 					line = $0
 					sub(/^[ \t]+/, "", line)
-					split(line, parts, " \\(")
-					name = parts[1]
-					if (!match(line, /\(([0-9A-Fa-f-]+)\)/, m)) {
+
+					name = line
+					sub(/ \\(.*/, "", name)
+
+					if (!match(line, /\([0-9A-Fa-f-]+\)/)) {
 						next
 					}
-					id = m[1]
+					id = substr(line, RSTART + 1, RLENGTH - 2)
 					if (first_id[ios] == "") {
 						first_id[ios] = id
 						first_name[ios] = name
