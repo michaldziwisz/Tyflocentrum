@@ -8,6 +8,10 @@
 - `docs/` — dokumentacja (README jest celowo krótkie)
 - `scripts/` — skrypty pomocnicze (np. pobieranie `.ipa` z CI)
 
+## CI (build IPA)
+
+- `docs/ci-self-hosted-mac.md` — opisuje jak skonfigurować self-hosted Mac runner z fallbackiem na GitHub macOS oraz jak pobierać artefakty IPA.
+
 ## Najważniejsze entrypointy
 
 - Start appki: `Tyflocentrum/TyflocentrumApp.swift`

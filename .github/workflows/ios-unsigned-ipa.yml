@@ -6,50 +6,66 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  runner-health:
+    name: Runner health
+    runs-on: ubuntu-latest
+    outputs:
+      try_self_hosted: ${{ steps.decide.outputs.try_self_hosted }}
+    steps:
+      - name: Decide if self-hosted macOS runner is available
+        id: decide
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          if ! gh api repos/${{ github.repository }}/actions/runners >/dev/null 2>&1; then
+            echo "try_self_hosted=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          available="$(
+            gh api repos/${{ github.repository }}/actions/runners \
+              --jq '[.runners[] | select(.status=="online" and .busy==false and .os=="macos")] | length'
+          )"
+
+          if [[ "$available" -gt 0 ]]; then
+            echo "try_self_hosted=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "try_self_hosted=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build-self-hosted:
+    name: Build (self-hosted)
+    needs: runner-health
+    if: needs.runner-health.outputs.try_self_hosted == 'true'
+    runs-on: [self-hosted, macOS]
+    outputs:
+      succeeded: ${{ steps.build.outcome == 'success' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build unsigned IPA
+        id: build
+        continue-on-error: true
+        run: bash scripts/build-unsigned-ipa.sh
+
+      - uses: actions/upload-artifact@v4
+        if: steps.build.outcome == 'success'
+        with:
+          name: Tyflocentrum-unsigned-ipa
+          path: tyflocentrum.ipa
+
+  build-github:
+    name: Build (GitHub-hosted)
+    needs: [runner-health, build-self-hosted]
+    if: always() && needs.build-self-hosted.outputs.succeeded != 'true'
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
 
-      - name: Xcode version
-        run: xcodebuild -version
-
-      - name: SwiftFormat (lint)
-        run: |
-          brew install swiftformat
-          swiftformat --config .swiftformat --lint .
-
-      - name: Test (Simulator)
-        run: |
-          xcodebuild \
-            -project Tyflocentrum.xcodeproj \
-            -scheme Tyflocentrum \
-            -configuration Debug \
-            -sdk iphonesimulator \
-            -destination 'platform=iOS Simulator,name=iPhone 15' \
-            -parallel-testing-enabled NO \
-            -parallel-testing-worker-count 1 \
-            test
-
-      - name: Archive (no codesign)
-        run: |
-          xcodebuild \
-            -project Tyflocentrum.xcodeproj \
-            -scheme Tyflocentrum \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination 'generic/platform=iOS' \
-            -archivePath build/Tyflocentrum.xcarchive \
-            archive \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
-
-      - name: Create unsigned IPA
-        run: |
-          mkdir -p Payload
-          cp -R build/Tyflocentrum.xcarchive/Products/Applications/*.app Payload/
-          /usr/bin/zip -r tyflocentrum.ipa Payload
+      - name: Build unsigned IPA
+        run: bash scripts/build-unsigned-ipa.sh
 
       - uses: actions/upload-artifact@v4
         with:
