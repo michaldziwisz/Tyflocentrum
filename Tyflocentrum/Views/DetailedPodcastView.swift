@@ -17,6 +17,7 @@ struct DetailedPodcastView: View {
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
+	@State private var isFavorite = false
 	@AccessibilityFocusState private var focusedElement: FocusedElement?
 
 	private enum FocusedElement: Hashable {
@@ -47,6 +48,10 @@ struct DetailedPodcastView: View {
 			await Task.yield()
 			focusedElement = element
 		}
+	}
+
+	private func syncFavoriteState() {
+		isFavorite = favorites.isFavorite(favoriteItem)
 	}
 
 	private var commentsCountValueText: String {
@@ -113,14 +118,16 @@ struct DetailedPodcastView: View {
 				toggleFavorite()
 			} label: {
 				Label(
-					favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych",
-					systemImage: favorites.isFavorite(favoriteItem) ? "star.fill" : "star"
+					isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych",
+					systemImage: isFavorite ? "star.fill" : "star"
 				)
 			}
-			.accessibilityLabel(favorites.isFavorite(favoriteItem) ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+			.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
+			.accessibilityValue(isFavorite ? "W ulubionych" : "Poza ulubionymi")
 			.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 			.accessibilityIdentifier("podcastDetail.favorite")
 			.accessibilityFocused($focusedElement, equals: .favorite)
+			.id(isFavorite)
 		}
 	}
 
@@ -153,11 +160,9 @@ struct DetailedPodcastView: View {
 
 	private func toggleFavorite() {
 		favorites.toggle(favoriteItem)
-		if UIAccessibility.isVoiceOverRunning {
-			refreshVoiceOverFocus(.favorite)
-		} else {
-			announceIfVoiceOver(favorites.isFavorite(favoriteItem) ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
-		}
+		syncFavoriteState()
+		announceIfVoiceOver(isFavorite ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
+		refreshVoiceOverFocus(.favorite)
 	}
 
 	var body: some View {
@@ -178,9 +183,13 @@ struct DetailedPodcastView: View {
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
 		.task(id: podcast.id) { @MainActor in
+			syncFavoriteState()
 			commentsCount = nil
 			commentsCountErrorMessage = nil
 			await loadCommentsCount()
+		}
+		.onReceive(favorites.$items) { _ in
+			syncFavoriteState()
 		}
 	}
 
