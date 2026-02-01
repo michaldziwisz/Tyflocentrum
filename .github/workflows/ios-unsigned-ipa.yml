@@ -30,7 +30,7 @@ jobs:
 
           available="$(
             gh api repos/${{ github.repository }}/actions/runners \
-              --jq '[.runners[] | select(.status=="online" and .busy==false and ((.os | ascii_downcase) == "macos"))] | length'
+              --jq '[.runners[] | select((.status | ascii_downcase) == "online" and .busy == false and (any(.labels[].name; . == "macOS")))] | length'
           )"
 
           if [[ "$available" -gt 0 ]]; then
