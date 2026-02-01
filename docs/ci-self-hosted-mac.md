@@ -2,8 +2,10 @@
 
 Workflow `iOS (unsigned IPA)` jest skonfigurowany tak, żeby:
 
-1) **Najpierw spróbować** zbudować aplikację na **self-hosted runnerze macOS** (jeśli jest online i nie jest busy),
-2) jeśli się nie uda (albo runnera nie ma), zrobić **fallback na GitHub-hosted `macos-14`**.
+1) **Domyślnie zbudować** aplikację na **self-hosted runnerze macOS** z etykietą `tyflocentrum`,
+2) jeśli build na self-hosted się nie uda, zrobić **fallback na GitHub-hosted `macos-14`**.
+
+Dodatkowo workflow ma opcję `workflow_dispatch` z parametrem `force_github_hosted=true`, żeby ręcznie wymusić build na GitHub-hosted (np. gdy Mac jest offline).
 
 Artefakt jest zawsze pod tą samą nazwą: `Tyflocentrum-unsigned-ipa`.
 
