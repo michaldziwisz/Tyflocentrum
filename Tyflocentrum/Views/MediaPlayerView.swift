@@ -387,11 +387,13 @@ private struct AirPlayRoutePickerButton: UIViewRepresentable {
 		picker.accessibilityIdentifier = identifier
 		picker.accessibilityLabel = "AirPlay"
 		picker.accessibilityHint = "Wybierz urządzenie do odtwarzania."
+		picker.accessibilityTraits.insert(.button)
 
 		if let button = findFirstButton(in: picker) {
 			button.accessibilityIdentifier = identifier
 			button.accessibilityLabel = "AirPlay"
 			button.accessibilityHint = "Wybierz urządzenie do odtwarzania."
+			button.accessibilityTraits.insert(.button)
 		}
 	}
 
@@ -437,9 +439,7 @@ private struct ChapterMarkersView: View {
 	}
 
 	private func toggleFavorite(_ item: FavoriteItem) {
-		let willAdd = !favorites.isFavorite(item)
 		favorites.toggle(item)
-		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	var body: some View {
@@ -535,9 +535,7 @@ private struct RelatedLinksView: View {
 	}
 
 	private func toggleFavorite(_ item: FavoriteItem) {
-		let willAdd = !favorites.isFavorite(item)
 		favorites.toggle(item)
-		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	var body: some View {

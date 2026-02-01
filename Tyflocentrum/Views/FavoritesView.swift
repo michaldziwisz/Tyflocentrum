@@ -14,7 +14,6 @@ struct FavoritesView: View {
 
 	private func removeFavorite(_ item: FavoriteItem) {
 		favorites.remove(item)
-		announceIfVoiceOver("Usunięto z ulubionych.")
 	}
 
 	var body: some View {
@@ -150,9 +149,7 @@ private struct FavoriteTopicRow: View {
 
 	private func toggleFavorite() {
 		let item = favoriteItem()
-		let willAdd = !favorites.isFavorite(item)
 		favorites.toggle(item)
-		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	private func openPlayer() {
@@ -270,9 +267,7 @@ private struct FavoriteLinkRow: View {
 
 	private func toggleFavorite() {
 		let item = favoriteItem()
-		let willAdd = !favorites.isFavorite(item)
 		favorites.toggle(item)
-		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	var body: some View {

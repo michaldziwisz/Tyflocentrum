@@ -694,7 +694,12 @@ final class TyfloAPI: ObservableObject {
 		return try await fetch(url, decoder: decoder)
 	}
 
-	func fetchCommentsPage(forPostID postID: Int, page: Int, perPage: Int) async throws -> WPPage<Comment> {
+	func fetchCommentsPage(
+		forPostID postID: Int,
+		page: Int,
+		perPage: Int,
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> WPPage<Comment> {
 		guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 		guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 
@@ -712,11 +717,17 @@ final class TyfloAPI: ObservableObject {
 
 		let decoder = JSONDecoder()
 		decoder.keyDecodingStrategy = .convertFromSnakeCase
-		return try await fetchWPPage(url, decoder: decoder)
+		return try await fetchWPPage(url, decoder: decoder, cachePolicy: cachePolicy)
 	}
 
 	func fetchCommentsCount(forPostID postID: Int) async throws -> Int {
-		let firstPage = try await fetchCommentsPage(forPostID: postID, page: 1, perPage: 1)
+		// Always bypass URLCache for "meta" checks (count), because we observed stale totals on first open on device.
+		let firstPage = try await fetchCommentsPage(
+			forPostID: postID,
+			page: 1,
+			perPage: 1,
+			cachePolicy: .reloadIgnoringLocalCacheData
+		)
 		if let total = firstPage.total {
 			return total
 		}

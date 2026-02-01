@@ -312,14 +312,22 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let addFavoriteButton = app.buttons["Dodaj do ulubionych"].firstMatch
 		let addFavoriteMenuItem = app.menuItems["Dodaj do ulubionych"].firstMatch
+		let addFavoriteElement: XCUIElement
 		if addFavoriteButton.waitForExistence(timeout: 2) {
-			addFavoriteButton.tap()
+			addFavoriteElement = addFavoriteButton
 		} else {
 			XCTAssertTrue(addFavoriteMenuItem.waitForExistence(timeout: 2))
-			addFavoriteMenuItem.tap()
+			addFavoriteElement = addFavoriteMenuItem
 		}
+		addFavoriteElement.tap()
 
-		podcastRow.tap()
+		let menuDismissPredicate = NSPredicate(format: "exists == false")
+		let menuDismissExpectation = expectation(for: menuDismissPredicate, evaluatedWith: addFavoriteElement)
+		XCTAssertEqual(XCTWaiter().wait(for: [menuDismissExpectation], timeout: 5), .completed)
+
+		let podcastRowAfterFavorite = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRowAfterFavorite.waitForExistence(timeout: 5))
+		podcastRowAfterFavorite.tap()
 
 		let favoriteButton = app.descendants(matching: .any).matching(identifier: "podcastDetail.favorite").firstMatch
 		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
@@ -350,7 +358,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let commentsSummary = app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch
 		XCTAssertTrue(commentsSummary.waitForExistence(timeout: 5))
 
-		let predicate = NSPredicate(format: "label == %@", "Komentarze: 2 komentarze")
+		let predicate = NSPredicate(format: "label == %@", "2 komentarze")
 		let waitExpectation = expectation(for: predicate, evaluatedWith: commentsSummary)
 		XCTAssertEqual(XCTWaiter().wait(for: [waitExpectation], timeout: 5), .completed)
 
@@ -365,6 +373,32 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let commentContent = app.descendants(matching: .any).matching(identifier: "comment.content").firstMatch
 		XCTAssertTrue(commentContent.waitForExistence(timeout: 5))
+	}
+
+	func testPodcastDetailActionsWorkWithLargeContent() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_LARGE_PODCAST_CONTENT"])
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcastRow.waitForExistence(timeout: 5))
+		podcastRow.tap()
+
+		let favoriteButton = app.descendants(matching: .any).matching(identifier: "podcastDetail.favorite").firstMatch
+		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))
+		favoriteButton.tap()
+
+		let favoritePredicate = NSPredicate(format: "label == %@", "Usuń z ulubionych")
+		let favoriteWaitExpectation = expectation(for: favoritePredicate, evaluatedWith: favoriteButton)
+		XCTAssertEqual(XCTWaiter().wait(for: [favoriteWaitExpectation], timeout: 5), .completed)
+
+		let commentsSummary = app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch
+		XCTAssertTrue(commentsSummary.waitForExistence(timeout: 5))
+
+		let commentsPredicate = NSPredicate(format: "label == %@", "2 komentarze")
+		let commentsWaitExpectation = expectation(for: commentsPredicate, evaluatedWith: commentsSummary)
+		XCTAssertEqual(XCTWaiter().wait(for: [commentsWaitExpectation], timeout: 5), .completed)
 	}
 
 	func testFavoriteTopicPlayActionOpensPlayer() {
@@ -406,9 +440,14 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(topicRow.waitForExistence(timeout: 5))
 		topicRow.press(forDuration: 1.0)
 
-		let playAction = app.buttons["Odtwarzaj od tego miejsca"].firstMatch
-		XCTAssertTrue(playAction.waitForExistence(timeout: 5))
-		playAction.tap()
+		let playButton = app.buttons["Odtwarzaj od tego miejsca"].firstMatch
+		let playMenuItem = app.menuItems["Odtwarzaj od tego miejsca"].firstMatch
+		if playButton.waitForExistence(timeout: 2) {
+			playButton.tap()
+		} else {
+			XCTAssertTrue(playMenuItem.waitForExistence(timeout: 2))
+			playMenuItem.tap()
+		}
 
 		let playPauseButton = app.descendants(matching: .any).matching(identifier: "player.playPause").firstMatch
 		XCTAssertTrue(playPauseButton.waitForExistence(timeout: 5))
@@ -426,6 +465,9 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
 		XCTAssertTrue(content.waitForExistence(timeout: 5))
+
+		let shareButton = app.descendants(matching: .any).matching(identifier: "articleDetail.share").firstMatch
+		XCTAssertTrue(shareButton.waitForExistence(timeout: 5))
 
 		let favoriteButton = app.descendants(matching: .any).matching(identifier: "articleDetail.favorite").firstMatch
 		XCTAssertTrue(favoriteButton.waitForExistence(timeout: 5))

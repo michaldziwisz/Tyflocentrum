@@ -167,7 +167,6 @@ final class NewsFeedViewModel: ObservableObject {
 	private let initialBatchSize: Int
 	private let loadMoreBatchSize: Int
 	private var requestGeneration = UUID()
-	private var pendingLoadMoreAfterRefresh = false
 
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
@@ -251,18 +250,15 @@ final class NewsFeedViewModel: ObservableObject {
 			seenIDs = scratch.seenIDs
 		}
 
-		if pendingLoadMoreAfterRefresh, canLoadMore {
-			pendingLoadMoreAfterRefresh = false
-			Task { await loadMore(api: api) }
-		} else {
-			pendingLoadMoreAfterRefresh = false
-		}
+		// If the user triggers "load more" during refresh, `loadMore(api:)` will wait for `isLoading` to clear
+		// instead of scheduling a separate follow-up task here. This avoids flakey overlaps and keeps the state
+		// transitions deterministic (important for accessibility and tests).
 	}
 
 	func loadMore(api: TyfloAPI) async {
-		guard !isLoading else {
-			pendingLoadMoreAfterRefresh = true
-			return
+		while isLoading {
+			guard !Task.isCancelled else { return }
+			await Task.yield()
 		}
 		guard hasLoaded else {
 			await loadIfNeeded(api: api)
