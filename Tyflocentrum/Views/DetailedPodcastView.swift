@@ -17,13 +17,6 @@ struct DetailedPodcastView: View {
 	@State private var commentsCount: Int?
 	@State private var isCommentsCountLoading = false
 	@State private var commentsCountErrorMessage: String?
-	@State private var isFavorite = false
-	@AccessibilityFocusState private var focusedElement: FocusedElement?
-
-	private enum FocusedElement: Hashable {
-		case favorite
-		case commentsSummary
-	}
 
 	private var favoriteItem: FavoriteItem {
 		let summary = WPPostSummary(
@@ -36,22 +29,13 @@ struct DetailedPodcastView: View {
 		return .podcast(summary)
 	}
 
+	private var isFavorite: Bool {
+		favorites.isFavorite(favoriteItem)
+	}
+
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
 		UIAccessibility.post(notification: .announcement, argument: message)
-	}
-
-	private func refreshVoiceOverFocus(_ element: FocusedElement) {
-		guard UIAccessibility.isVoiceOverRunning else { return }
-		Task { @MainActor in
-			focusedElement = nil
-			await Task.yield()
-			focusedElement = element
-		}
-	}
-
-	private func syncFavoriteState() {
-		isFavorite = favorites.isFavorite(favoriteItem)
 	}
 
 	private var commentsCountValueText: String {
@@ -126,8 +110,6 @@ struct DetailedPodcastView: View {
 			.accessibilityValue(isFavorite ? "W ulubionych" : "Poza ulubionymi")
 			.accessibilityHint("Dodaje lub usuwa podcast z ulubionych.")
 			.accessibilityIdentifier("podcastDetail.favorite")
-			.accessibilityFocused($focusedElement, equals: .favorite)
-			.id(isFavorite)
 		}
 	}
 
@@ -154,15 +136,12 @@ struct DetailedPodcastView: View {
 		.accessibilityValue(commentsCountValueText)
 		.accessibilityHint("Dwukrotnie stuknij, aby przejrzeć komentarze.")
 		.accessibilityIdentifier("podcastDetail.commentsSummary")
-		.accessibilityFocused($focusedElement, equals: .commentsSummary)
-		.id(commentsCountValueText)
 	}
 
 	private func toggleFavorite() {
+		let willAdd = !favorites.isFavorite(favoriteItem)
 		favorites.toggle(favoriteItem)
-		syncFavoriteState()
-		announceIfVoiceOver(isFavorite ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
-		refreshVoiceOverFocus(.favorite)
+		announceIfVoiceOver(willAdd ? "Dodano do ulubionych." : "Usunięto z ulubionych.")
 	}
 
 	var body: some View {
@@ -183,13 +162,9 @@ struct DetailedPodcastView: View {
 		.navigationTitle(podcast.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
 		.task(id: podcast.id) { @MainActor in
-			syncFavoriteState()
 			commentsCount = nil
 			commentsCountErrorMessage = nil
 			await loadCommentsCount()
-		}
-		.onReceive(favorites.$items) { _ in
-			syncFavoriteState()
 		}
 	}
 
