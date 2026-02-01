@@ -5,6 +5,10 @@ on:
     branches: ["master"]
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   runner-health:
     name: Runner health
