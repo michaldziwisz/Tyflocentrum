@@ -248,6 +248,7 @@ final class NewsFeedViewModelTests: XCTestCase {
 	func testLoadMoreInFlightDoesNotPolluteRefreshResults() async {
 		let lock = NSLock()
 		var stage = 0
+		var shouldTrackPage2Requests = false
 		var shouldBlockFirstPage2Request = true
 		let page2Requested = expectation(description: "Page 2 request started")
 		let allowPage2ToFinish = DispatchSemaphore(value: 0)
@@ -264,7 +265,7 @@ final class NewsFeedViewModelTests: XCTestCase {
 
 			lock.lock()
 			let currentStage = stage
-			let shouldBlock = shouldBlockFirstPage2Request && page == 2
+			let shouldBlock = shouldTrackPage2Requests && shouldBlockFirstPage2Request && page == 2
 			if shouldBlock {
 				shouldBlockFirstPage2Request = false
 			}
@@ -311,6 +312,10 @@ final class NewsFeedViewModelTests: XCTestCase {
 
 		await viewModel.refresh(api: api)
 		XCTAssertEqual(viewModel.items.map(\.id), ["podcast.1", "article.10"])
+
+		lock.lock()
+		shouldTrackPage2Requests = true
+		lock.unlock()
 
 		let loadMoreTask = Task { @MainActor in
 			await viewModel.loadMore(api: api)
