@@ -13,6 +13,7 @@
 			BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
 			A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */; };
 			A1B2C3D4E5F60718293A4B95 /* Logging.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B94 /* Logging.swift */; };
+			A7D1B6C0F3E4D2C1B9A80706 /* DiagnosticsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A7D1B6C0F3E4D2C1B9A80705 /* DiagnosticsStore.swift */; };
 			A1B2C3D4E5F60718293A4B9A /* PolishPluralization.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B98 /* PolishPluralization.swift */; };
 			A1B2C3D4E5F60718293A4B97 /* VoiceOverScrollBarPrimer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */; };
 			BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
@@ -123,6 +124,7 @@
 			BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
 			A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceCapabilities.swift; sourceTree = "<group>"; };
 			A1B2C3D4E5F60718293A4B94 /* Logging.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Logging.swift; sourceTree = "<group>"; };
+			A7D1B6C0F3E4D2C1B9A80705 /* DiagnosticsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiagnosticsStore.swift; sourceTree = "<group>"; };
 			A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceOverScrollBarPrimer.swift; sourceTree = "<group>"; };
 			8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowNotesParser.swift; sourceTree = "<group>"; };
 			D0C1B2A3F4E5D6C7B8A9F001 /* VoiceMessageRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VoiceMessageRecorder.swift; sourceTree = "<group>"; };
@@ -352,6 +354,7 @@
 					BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
 					A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */,
 					A1B2C3D4E5F60718293A4B94 /* Logging.swift */,
+					A7D1B6C0F3E4D2C1B9A80705 /* DiagnosticsStore.swift */,
 					A1B2C3D4E5F60718293A4B98 /* PolishPluralization.swift */,
 					8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */,
 					A9C0D1E2F3A4B5C6D7E8F901 /* MultipartFormDataBuilder.swift */,
@@ -521,6 +524,7 @@
 						89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */,
 						A1B2C3D4E5F60718293A4B90 /* DeviceCapabilities.swift in Sources */,
 						A1B2C3D4E5F60718293A4B95 /* Logging.swift in Sources */,
+						A7D1B6C0F3E4D2C1B9A80706 /* DiagnosticsStore.swift in Sources */,
 						A1B2C3D4E5F60718293A4B9A /* PolishPluralization.swift in Sources */,
 						BE890DFE29087659005D8DC7 /* ShortCategoryView.swift in Sources */,
 						BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
