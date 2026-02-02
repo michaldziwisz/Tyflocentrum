@@ -4,12 +4,6 @@ on:
   push:
     branches: ["master"]
   workflow_dispatch:
-    inputs:
-      force_github_hosted:
-        description: "Skip self-hosted runner and build on GitHub-hosted macOS."
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: ios-unsigned-ipa-${{ github.ref }}
@@ -20,51 +14,13 @@ permissions:
   contents: read
 
 jobs:
-  tests:
-    name: Tests (GitHub-hosted)
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Lint and run tests
-        env:
-          RUN_ARCHIVE: "false"
-        run: bash scripts/build-unsigned-ipa.sh
-
-  build-self-hosted:
-    name: Build (self-hosted)
-    needs: tests
-    if: ${{ needs.tests.result == 'success' && !(github.event_name == 'workflow_dispatch' && inputs.force_github_hosted) }}
-    runs-on: [self-hosted, macOS, tyflocentrum]
-    env:
-      RUN_TESTS: "false"
-    outputs:
-      succeeded: ${{ steps.build.outcome == 'success' }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build unsigned IPA
-        id: build
-        continue-on-error: true
-        run: bash scripts/build-unsigned-ipa.sh
-
-      - uses: actions/upload-artifact@v4
-        if: steps.build.outcome == 'success'
-        with:
-          name: Tyflocentrum-unsigned-ipa
-          path: tyflocentrum.ipa
-
-  build-github:
+  build:
     name: Build (GitHub-hosted)
-    needs: [tests, build-self-hosted]
-    if: needs.tests.result == 'success' && always() && needs.build-self-hosted.outputs.succeeded != 'true'
     runs-on: macos-14
-    env:
-      RUN_TESTS: "false"
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build unsigned IPA
+      - name: Lint, test and build unsigned IPA
         run: bash scripts/build-unsigned-ipa.sh
 
       - uses: actions/upload-artifact@v4
