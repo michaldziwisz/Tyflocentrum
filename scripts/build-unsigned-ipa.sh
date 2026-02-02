@@ -7,6 +7,7 @@ SWIFTFORMAT_VERSION="${SWIFTFORMAT_VERSION:-0.58.7}"
 SIM_DESTINATION="${SIM_DESTINATION:-}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-${RUNNER_TEMP:-$PWD}/DerivedData-${GITHUB_RUN_ID:-local}}"
 RUN_TESTS="${RUN_TESTS:-true}"
+RUN_ARCHIVE="${RUN_ARCHIVE:-true}"
 
 ensure_swiftformat() {
 	if command -v swiftformat >/dev/null 2>&1; then
@@ -162,27 +163,29 @@ if [[ "$RUN_TESTS" == "true" ]]; then
 	echo "::endgroup::"
 fi
 
-echo "::group::Archive (no codesign)"
-rm -rf build
-xcodebuild \
-	-project "$PROJECT_PATH" \
-	-scheme "$SCHEME" \
-	-configuration Release \
-	-sdk iphoneos \
-	-destination 'generic/platform=iOS' \
-	-archivePath build/Tyflocentrum.xcarchive \
-	-derivedDataPath "$DERIVED_DATA_PATH" \
-	archive \
-	CODE_SIGNING_ALLOWED=NO \
-	CODE_SIGNING_REQUIRED=NO \
-	CODE_SIGN_IDENTITY=""
-echo "::endgroup::"
+if [[ "$RUN_ARCHIVE" == "true" ]]; then
+	echo "::group::Archive (no codesign)"
+	rm -rf build
+	xcodebuild \
+		-project "$PROJECT_PATH" \
+		-scheme "$SCHEME" \
+		-configuration Release \
+		-sdk iphoneos \
+		-destination 'generic/platform=iOS' \
+		-archivePath build/Tyflocentrum.xcarchive \
+		-derivedDataPath "$DERIVED_DATA_PATH" \
+		archive \
+		CODE_SIGNING_ALLOWED=NO \
+		CODE_SIGNING_REQUIRED=NO \
+		CODE_SIGN_IDENTITY=""
+	echo "::endgroup::"
 
-echo "::group::Create unsigned IPA"
-rm -rf Payload tyflocentrum.ipa
-mkdir -p Payload
-cp -R build/Tyflocentrum.xcarchive/Products/Applications/*.app Payload/
-/usr/bin/zip -r tyflocentrum.ipa Payload
-echo "::endgroup::"
+	echo "::group::Create unsigned IPA"
+	rm -rf Payload tyflocentrum.ipa
+	mkdir -p Payload
+	cp -R build/Tyflocentrum.xcarchive/Products/Applications/*.app Payload/
+	/usr/bin/zip -r tyflocentrum.ipa Payload
+	echo "::endgroup::"
 
-ls -lh tyflocentrum.ipa
+	ls -lh tyflocentrum.ipa
+fi

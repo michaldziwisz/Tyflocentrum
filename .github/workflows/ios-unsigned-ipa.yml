@@ -20,10 +20,24 @@ permissions:
   contents: read
 
 jobs:
+  tests:
+    name: Tests (GitHub-hosted)
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint and run tests
+        env:
+          RUN_ARCHIVE: "false"
+        run: bash scripts/build-unsigned-ipa.sh
+
   build-self-hosted:
     name: Build (self-hosted)
-    if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.force_github_hosted) }}
+    needs: tests
+    if: ${{ needs.tests.result == 'success' && !(github.event_name == 'workflow_dispatch' && inputs.force_github_hosted) }}
     runs-on: [self-hosted, macOS, tyflocentrum]
+    env:
+      RUN_TESTS: "false"
     outputs:
       succeeded: ${{ steps.build.outcome == 'success' }}
     steps:
@@ -42,9 +56,11 @@ jobs:
 
   build-github:
     name: Build (GitHub-hosted)
-    needs: build-self-hosted
-    if: always() && needs.build-self-hosted.outputs.succeeded != 'true'
+    needs: [tests, build-self-hosted]
+    if: needs.tests.result == 'success' && always() && needs.build-self-hosted.outputs.succeeded != 'true'
     runs-on: macos-14
+    env:
+      RUN_TESTS: "false"
     steps:
       - uses: actions/checkout@v4
 
