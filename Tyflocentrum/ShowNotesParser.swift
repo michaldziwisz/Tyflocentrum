@@ -19,14 +19,31 @@ struct RelatedLink: Identifiable, Equatable {
 }
 
 enum ShowNotesParser {
-	private static let timecodeRegex: NSRegularExpression = {
+	// Wzorce są stałe, więc kompilacja nie może się nie udać przy poprawnym
+	// kodzie - ale `try!` znaczy "wywal aplikację, jeśli jednak się nie udała",
+	// a to najgorsza możliwa reakcja w apce, której nie da się naprawić bez
+	// nowego wydania. Literówka we wzorcu przy przyszłej edycji ubijałaby
+	// aplikację przy pierwszym wejściu w notatki audycji.
+	// Wartość opcjonalna nic nie kosztuje: obie zmienne są używane wyłącznie
+	// przez `firstMatch`, więc `regex?.firstMatch(...)` daje przy braku wzorca
+	// dokładnie ten sam wynik, co brak dopasowania - czyli funkcja po prostu
+	// nie znajduje znacznika czasu ani adresu, zamiast przerywać działanie.
+	private static let timecodeRegex: NSRegularExpression? = {
 		let pattern = #"(?:\b\d{1,2}:\d{2}:\d{2}\b|\b\d{1,2}:\d{2}\b)$"#
-		return try! NSRegularExpression(pattern: pattern)
+		let regex = try? NSRegularExpression(pattern: pattern)
+		if regex == nil {
+			AppLog.parsing.error("Nie udalo sie skompilowac wzorca znacznika czasu.")
+		}
+		return regex
 	}()
 
-	private static let emailRegex: NSRegularExpression = {
+	private static let emailRegex: NSRegularExpression? = {
 		let pattern = #"[A-Z0-9._%+\-]+@[A-Z0-9.\-]+\.[A-Z]{2,}"#
-		return try! NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+		let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive])
+		if regex == nil {
+			AppLog.parsing.error("Nie udalo sie skompilowac wzorca adresu e-mail.")
+		}
+		return regex
 	}()
 
 	static func parse(from comments: [Comment]) -> (markers: [ChapterMarker], links: [RelatedLink]) {
@@ -120,7 +137,7 @@ enum ShowNotesParser {
 	private static func parseMarkerLine(_ line: String) -> (String, TimeInterval)? {
 		let nsLine = line as NSString
 		let range = NSRange(location: 0, length: nsLine.length)
-		guard let match = timecodeRegex.firstMatch(in: line, range: range) else { return nil }
+		guard let match = timecodeRegex?.firstMatch(in: line, range: range) else { return nil }
 
 		let timeString = nsLine.substring(with: match.range)
 		guard let seconds = parseTimecode(timeString) else { return nil }
@@ -252,7 +269,7 @@ enum ShowNotesParser {
 		let compact = line.replacingOccurrences(of: " ", with: "")
 		let nsLine = compact as NSString
 		let range = NSRange(location: 0, length: nsLine.length)
-		guard let match = emailRegex.firstMatch(in: compact, range: range) else { return nil }
+		guard let match = emailRegex?.firstMatch(in: compact, range: range) else { return nil }
 
 		let email = nsLine.substring(with: match.range)
 		return URL(string: "mailto:\(email)")

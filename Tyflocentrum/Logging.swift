@@ -15,4 +15,7 @@ enum AppLog {
 	static let persistence = Logger(subsystem: subsystem, category: "persistence")
 	static let accessibility = Logger(subsystem: subsystem, category: "accessibility")
 	static let uiTests = Logger(subsystem: subsystem, category: "ui-tests")
+	// Parsowanie treści z serwisów (notatki audycji, znaczniki czasu, odnośniki).
+	// Nie logujemy tu treści wiadomości ani głosówek - tylko fakty techniczne.
+	static let parsing = Logger(subsystem: subsystem, category: "parsing")
 }
