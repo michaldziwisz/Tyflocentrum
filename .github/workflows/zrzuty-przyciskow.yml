@@ -1,0 +1,39 @@
+name: Zrzuty przyciskow (weryfikacja czytelnosci)
+
+# Robi zrzuty odtwarzacza i szczegolow audycji w DWOCH wariantach ustawien
+# dostepnosci (domyslny i zwiekszony kontrast + duza czcionka), zeby dalo sie
+# WZROKOWO ocenic czytelnosc przyciskow: predkosc, znaczniki czasu, odnosniki,
+# ulubione.
+#
+# Zgloszenie od uzytkownikow mowi, ze te przyciski sa slabo widoczne przy
+# zwiekszonym kontrascie. Autor projektu jest niewidomy i nie zweryfikuje tego
+# wzrokiem, wiec dowodem musi byc zrzut z tego samego trybu, w ktorym problem
+# zgloszono - nie zapewnienie, ze "powinno byc dobrze".
+
+on:
+  workflow_dispatch:
+    inputs:
+      urzadzenie:
+        description: 'Symulator (dokladna nazwa z simctl)'
+        required: true
+        default: 'iPhone 17 Pro Max'
+
+permissions:
+  contents: read
+
+jobs:
+  przyciski:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zrzuty w dwoch wariantach dostepnosci
+        env:
+          URZADZENIE: ${{ inputs.urzadzenie }}
+        run: bash scripts/zrzuty-przyciskow.sh
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zrzuty-przyciskow
+          path: artefakty-przyciski/

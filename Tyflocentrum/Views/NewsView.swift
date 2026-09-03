@@ -508,6 +508,26 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 		do {
 			_ = try await appendNextPage(fetchPage: fetchPage)
 			guard !Task.isCancelled else { return }
+
+			if items.isEmpty {
+				// PONOWIENIE PO NIEUDANYM PIERWSZYM ŻĄDANIU.
+				// Wcześniej ta gałąź od razu pokazywała komunikat o błędzie
+				// i czekała, aż użytkownik znajdzie przycisk „Spróbuj ponownie”.
+				// Lista Nowości (`NewsFeedViewModel`) ponawiała w tej sytuacji
+				// sama, a listy kategorii nie — czyli ta sama awaria sieci dawała
+				// dwa różne zachowania, zależnie od zakładki.
+				//
+				// Dla osoby korzystającej z czytnika ekranu każdy dodatkowy krok
+				// po nieudanym starcie to realny koszt: trzeba znaleźć przycisk,
+				// który pojawił się gdzieś na ekranie. Jedno ciche ponowienie
+				// załatwia typowy przypadek (chwilowy timeout przy starcie),
+				// a przycisk zostaje na wypadek, gdyby i ono nie pomogło.
+				try? await Task.sleep(nanoseconds: 250_000_000)
+				guard !Task.isCancelled else { return }
+				_ = try await appendNextPage(fetchPage: fetchPage)
+				guard !Task.isCancelled else { return }
+			}
+
 			hasLoaded = true
 
 			if items.isEmpty {
@@ -515,8 +535,22 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 			}
 		} catch {
 			guard !Task.isCancelled else { return }
+			// Ta sama logika w gałęzi błędu: pierwszy nieudany strzał to najczęściej
+			// chwilowy timeout, więc dajemy jedną cichą próbę, zamiast od razu
+			// odsyłać użytkownika do przycisku.
+			try? await Task.sleep(nanoseconds: 250_000_000)
+			if !Task.isCancelled {
+				do {
+					_ = try await appendNextPage(fetchPage: fetchPage)
+				} catch {
+					// Druga próba też padła — dalej idziemy ścieżką komunikatu.
+				}
+			}
+			guard !Task.isCancelled else { return }
 			hasLoaded = true
-			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			if items.isEmpty {
+				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			}
 		}
 	}
 
