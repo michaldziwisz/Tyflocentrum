@@ -177,6 +177,31 @@ ensure_swiftformat
 swiftformat --config .swiftformat --lint .
 echo "::endgroup::"
 
+echo "::group::Bramki projektu (Python)"
+# TE BRAMKI ISTNIALY, ALE NIC ICH NIE URUCHAMIALO. Byly opisane w dokumentacji
+# i w APPSTORE_PROGRESS.md jako "dowod", a realnie nikt ich nie wolal na CI -
+# czyli pilnowaly dokladnie tyle, ile plik lezacy na dysku. Klasyczny fałszywy
+# dowod: raport mowi "sprawdzone", a pomiar nigdy nie biegnie.
+#
+# Kazda z nich sprawdza rzecz, ktora psuje sie CICHO (kod sie kompiluje, testy
+# przechodza), a skutek widac dopiero przy wysylce do Apple albo u uzytkownika:
+#   - konto_apple        : cudzy DEVELOPMENT_TEAM po merge z upstreamu,
+#   - manifest_prywatnosci: brak deklaracji = odrzucenie przez App Store Connect,
+#   - ikony_ios          : brakujacy rozmiar albo kanal alfa w ikonie,
+#   - kontrast_przyciskow: kolor ponizej progu WCAG dla oslabionego wzroku,
+#   - tytuly_zrzutow     : dane testowe na zrzutach wyslanych do sklepu.
+for bramka in \
+	tools/test_konto_apple.py \
+	tools/test_manifest_prywatnosci.py \
+	tools/test_ikony_ios.py \
+	tools/test_kontrast_przyciskow.py \
+	tools/test_tytuly_zrzutow.py
+do
+	echo "--- $bramka"
+	python3 "$bramka"
+done
+echo "::endgroup::"
+
 rm -rf "$DERIVED_DATA_PATH"
 
 if [[ "$RUN_TESTS" == "true" ]]; then
