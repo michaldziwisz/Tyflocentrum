@@ -63,6 +63,15 @@ def kontrast(a, b):
     return (l1 + 0.05) / (l2 + 0.05)
 
 
+def zmieszaj(kolor, tlo, alfa):
+    """Kolor wynikowy po nalozeniu `kolor` z przezroczystoscia `alfa` na `tlo`.
+
+    Potrzebne, bo SwiftUI `.opacity(0.12)` NIE zmienia progu WCAG - liczy sie
+    kolor, ktory realnie widzi uzytkownik, czyli wynik mieszania z tlem.
+    """
+    return tuple(round(kolor[i] * alfa + tlo[i] * (1 - alfa)) for i in range(3))
+
+
 def wczytaj_kolory():
     """Wyciagnij krotki RGB ze zrodla Swift."""
     with open(ZRODLO, encoding="utf-8") as f:
@@ -120,6 +129,20 @@ def testy(kolory=None):
             abs(kontrast((0, 0, 0), bialy) - 21.0) < 0.1)
     sprawdz(f"bialy na bialym = 1:1 (wyszlo {kontrast(bialy, bialy):.2f})",
             abs(kontrast(bialy, bialy) - 1.0) < 0.01)
+
+    print("--- 7. PULAPKA POLPRZEZROCZYSTOSCI: samo tlo 12% NIE wystarcza ---")
+    # Ekran glosowki mial Color.accentColor.opacity(0.12) jako CALE oznaczenie
+    # kontrolki. Zmierzone: to daje 1,17:1, czyli kontrolka praktycznie znika.
+    # Wniosek ogolny: przy polprzezroczystym wypelnieniu granice MUSI dawac
+    # obramowanie, bo samo tlo nie przejdzie progu. Ten test pilnuje, zebysmy
+    # nie "naprawili" tego z powrotem samym kolorem z alfa.
+    mieszane = zmieszaj(wypelnienie, TLO_JASNE, 0.12)
+    k_tla = kontrast(mieszane, TLO_JASNE)
+    sprawdz(f"tlo 12% ({mieszane}) samo NIE spelnia 3:1 - dlatego jest obramowanie "
+            f"({k_tla:.2f}:1)", k_tla < PROG_KONTROLKA)
+    k_obramowania = kontrast(obramowanie, TLO_JASNE)
+    sprawdz(f"ale obramowanie {obramowanie} spelnia 3:1 ({k_obramowania:.2f}:1)",
+            k_obramowania >= PROG_KONTROLKA)
 
 
 def kontrola_waznosci():

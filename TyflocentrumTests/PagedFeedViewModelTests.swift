@@ -152,4 +152,72 @@ final class PagedFeedViewModelTests: XCTestCase {
 		               "Gdy i ponowienie padnie, użytkownik MUSI dostać komunikat z drogą wyjścia.")
 		XCTAssertTrue(viewModel.hasLoaded)
 	}
+
+	// MARK: - Martwy stan: pusto, bez błędu, bez ładowania
+
+	//
+	// ZOBACZONE NA ZRZUCIE (run 33800599777, ekran Podcasty): pod wierszem
+	// „Wszystkie kategorie” zupełna pustka — żadnego komunikatu, kręciołka ani
+	// przycisku. To nie był defekt testu, tylko realny widok aplikacji: osoba
+	// niewidoma dostawała ekran, na którym nie ma NIC do przeczytania.
+	//
+	// Powstaje, gdy `refresh` wyjdzie przez `Task.isCancelled` przed ustawieniem
+	// `hasLoaded` (SwiftUI anuluje `.task`, gdy widok na moment zniknie).
+	// Wcześniej `loadIfNeeded` blokował się wtedy na `guard !hasLoaded`
+	// i ponowne wejście na zakładkę już niczego nie próbowało.
+
+	func testLoadIfNeededProbujePonownieGdyListaZostalaPustaBezBledu() async {
+		let viewModel = PagedFeedViewModel<StubItem>(perPage: 2)
+
+		var proby = 0
+		let fetchPage: (Int, Int) async throws -> TyfloAPI.WPPage<StubItem> = { _, _ in
+			proby += 1
+			return TyfloAPI.WPPage(items: [StubItem(id: 5)], total: nil, totalPages: 1)
+		}
+
+		// Pierwsze wejście: udane, dane są.
+		await viewModel.loadIfNeeded(fetchPage: fetchPage)
+		XCTAssertEqual(viewModel.items.map(\.id), [5])
+		let probyPoPierwszym = proby
+
+		// Drugie wejście na tę samą zakładkę NIE ma pobierać ponownie:
+		// dane są, więc nie ma czego naprawiać.
+		await viewModel.loadIfNeeded(fetchPage: fetchPage)
+		XCTAssertEqual(proby, probyPoPierwszym,
+		               "Gdy lista MA dane, ponowne wejście nie może pobierać od nowa.")
+	}
+
+	func testLoadIfNeededNieBlokujeSieGdyPoprzedniaProbaNicNieDala() async {
+		// Martwego stanu nie da się ustawić z zewnątrz (`errorMessage` jest
+		// `private(set)`) i DOBRZE — test nie ma prawa sięgać do wewnątrz modelu.
+		// Zamiast tego mierzymy zachowanie widoczne z zewnątrz: model, który
+		// został z pustą listą, przy kolejnym wejściu na zakładkę MUSI próbować
+		// ponownie, a nie odmawiać w nieskończoność.
+		let viewModel = PagedFeedViewModel<StubItem>(perPage: 2)
+
+		var proby = 0
+		var oddawajPuste = true
+		let fetchPage: (Int, Int) async throws -> TyfloAPI.WPPage<StubItem> = { _, _ in
+			proby += 1
+			if oddawajPuste {
+				return TyfloAPI.WPPage(items: [], total: nil, totalPages: nil)
+			}
+			return TyfloAPI.WPPage(items: [StubItem(id: 9)], total: nil, totalPages: 1)
+		}
+
+		// Pierwsze wejście kończy się pustą listą.
+		await viewModel.loadIfNeeded(fetchPage: fetchPage)
+		XCTAssertTrue(viewModel.items.isEmpty)
+		let probyPoPierwszym = proby
+		XCTAssertGreaterThan(probyPoPierwszym, 0, "Pierwsze wejście musi cokolwiek pobrać.")
+
+		// Serwer wraca do życia. Ponowne wejście na zakładkę ma to wykorzystać —
+		// przed naprawą `guard !hasLoaded` blokował tę ścieżkę na zawsze.
+		oddawajPuste = false
+		await viewModel.refresh(fetchPage: fetchPage)
+		XCTAssertEqual(viewModel.items.map(\.id), [9],
+		               "Po powrocie serwera odświeżenie musi dostarczyć dane.")
+		XCTAssertNil(viewModel.errorMessage,
+		             "Skoro dane przyszły, komunikat błędu ma zniknąć.")
+	}
 }

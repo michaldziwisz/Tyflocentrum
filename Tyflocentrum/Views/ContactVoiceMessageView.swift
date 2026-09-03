@@ -78,10 +78,29 @@ struct ContactVoiceMessageView: View {
 						.fontWeight(.semibold)
 				}
 				.frame(maxWidth: .infinity, minHeight: 56)
-				.contentShape(Rectangle())
-				.background(Color.accentColor.opacity(0.12))
-				.cornerRadius(12)
+				.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+				.background(
+					// Było: Color.accentColor.opacity(0.12). Zmierzone — dawało
+					// tło (224, 239, 255), czyli granicę 1,17:1 wobec białego tła
+					// strony, przy progu WCAG 1.4.11 równym 3:1. Przy słabym
+					// wzroku ten przycisk praktycznie znikał, a jest to główna
+					// kontrolka ekranu głosówki.
+					//
+					// Wypełnienie zostaje delikatne (to duży obszar, nie chcemy
+					// płachty koloru), ale dochodzi obramowanie o zmierzonym
+					// kontraście 6,37:1 — ono odpowiada za granicę kontrolki.
+					RoundedRectangle(cornerRadius: 12, style: .continuous)
+						.fill(KoloryPrzyciskuAkcji.wypelnienie.opacity(0.12))
+						.overlay(
+							RoundedRectangle(cornerRadius: 12, style: .continuous)
+								.strokeBorder(KoloryPrzyciskuAkcji.obramowanie, lineWidth: 2)
+						)
+				)
 				.gesture(makeHoldToTalkGesture(hasName: hasName))
+				// Ten wzorzec jest POPRAWNY i warto go nie psuć: `children: .ignore`
+				// plus jawna etykieta na tym samym poziomie sprawiają, że kształt
+				// dotyku nie przesłania etykiety. Dokładnie tego zabrakło w moim
+				// pierwszym podejściu do StylPrzyciskuAkcji (patrz komentarz tam).
 				.accessibilityElement(children: .ignore)
 				.accessibilityLabel(holdToTalkAccessibilityLabel(isRecording: isRecording))
 				.accessibilityAddTraits(.isButton)

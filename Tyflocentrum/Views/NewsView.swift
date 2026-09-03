@@ -491,7 +491,11 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	}
 
 	func loadIfNeeded(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
-		guard !hasLoaded else { return }
+		// Warunek celowo NIE jest samym `!hasLoaded`: gdy poprzednie zadanie
+		// zostało anulowane po drodze, `hasLoaded` zostawało fałszywe, a lista
+		// pusta bez komunikatu (zobaczone na zrzucie z run 33800599777). Wejście
+		// na zakładkę ponownie ma wtedy podjąć próbę, a nie utknąć w pustce.
+		guard !hasLoaded || (items.isEmpty && errorMessage == nil && !isLoading) else { return }
 		await refresh(fetchPage: fetchPage)
 	}
 
@@ -702,6 +706,36 @@ struct AsyncListStatusSection: View {
 			Section {
 				Text(emptyMessage)
 					.foregroundColor(.secondary)
+			}
+		} else if isEmpty {
+			// MARTWY STAN: brak błędu, nic się nie ładuje, a `hasLoaded` jest
+			// fałszywe. Wcześniej NIE BYŁO tu żadnej gałęzi, więc lista
+			// pokazywała PUSTY EKRAN bez komunikatu, bez kręciołka i bez drogi
+			// wyjścia — użytkownik nie miał nawet informacji, że coś się nie udało.
+			//
+			// ZOBACZONE NA ZRZUCIE (run 33800599777, ekran Podcasty): pod
+			// wierszem „Wszystkie kategorie” zupełna pustka. To nie był problem
+			// samego testu — tak wyglądała aplikacja dla użytkownika, a osoba
+			// niewidoma dostawała po prostu ekran, na którym nie ma nic do
+			// przeczytania.
+			//
+			// Jak się tu trafia: `refresh` wychodzi przez `Task.isCancelled`
+			// zanim ustawi `hasLoaded` (SwiftUI anuluje zadanie `.task`, gdy widok
+			// zniknie na moment). `loadIfNeeded` też już nie pomoże, bo `.task`
+			// nie odpala się ponownie bez przemontowania widoku.
+			Section {
+				Text("Nie udało się pobrać danych. Spróbuj ponownie.")
+					.foregroundColor(.secondary)
+
+				if let retryAction {
+					Button("Spróbuj ponownie") {
+						Task { await retryAction() }
+					}
+					.accessibilityHint(retryHint)
+					.accessibilityIdentifier(retryIdentifier ?? "asyncList.retry")
+					.disabled(isRetryDisabled)
+					.accessibilityHidden(isRetryDisabled)
+				}
 			}
 		}
 	}
