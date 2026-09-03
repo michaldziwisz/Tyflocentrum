@@ -90,6 +90,50 @@ przy progu 3:1). To nie jest ozdobnik: ikona o niskim kontraście jest realną
 barierą dla osób słabowidzących, a autor projektu jest niewidomy i nie sprawdzi
 tego wzrokiem.
 
+## Zrzuty ekranu do App Store (bez iPada, bez Maca)
+
+Apple wymaga zrzutów dla **iPhone'a 6.9"** oraz — skoro projekt ma
+`TARGETED_DEVICE_FAMILY = "1,2"` — także dla **iPada 13"**. Fizyczne urządzenia
+nie są potrzebne: runner ma symulatory obu klas, a zrzuty z symulatora są
+pikselowo dokładne i App Store Connect je przyjmuje.
+
+Uwaga terminologiczna, bo bywa myląca: to **symulator**, nie emulator. Nie
+emuluje procesora — uruchamia natywny kod na macOS i renderuje UIKit w prawdziwej
+rozdzielczości urządzenia. Dlatego wymiary wychodzą dokładnie takie, jak na sprzęcie.
+
+```bash
+# w CI: workflow "Zrzuty ekranu do App Store" (workflow_dispatch)
+# lokalnie na macOS:
+URZADZENIA="iPhone 17 Pro Max,iPad Pro 13-inch (M5)" bash scripts/zrzuty-ekranu.sh
+python3 scripts/sprawdz_zrzuty.py artefakty
+python3 scripts/sprawdz_zrzuty.py --test    # 10 asercji, kontrola waznosci
+```
+
+Wymagane rozmiary (wprost z `developer.apple.com`, „Screenshot specifications”):
+
+| klasa | akceptowane rozmiary (pion) |
+|---|---|
+| iPhone 6.9" | 1320×2868, 1290×2796, 1260×2736 |
+| iPad 13" | 2064×2752, 2048×2732 |
+
+Zrzuty **nie mogą mieć kanału alfa**. `scripts/sprawdz_zrzuty.py` pilnuje obu
+rzeczy, bo inaczej błąd wyszedłby dopiero przy wysyłce do Apple.
+
+Trzy rzeczy, które łatwo przeoczyć:
+
+- **Dopasowanie nazwy symulatora musi być dokładne.** `iPad Pro 11-inch` pasuje
+  do prefiksu „iPad Pro 1…”, ale zrzuty z 11 cali **nie spełniają** wymogu klasy
+  13". Dlatego `scripts/udid_symulatora.py` porównuje pełną nazwę i wypisuje
+  listę dostępnych, gdy nie trafi.
+- **`XCTAttachment` wymaga `lifetime = .keepAlways`.** Bez tego XCTest usuwa
+  załączniki z testów, które przeszły — czyli zrzuty dostawalibyśmy tylko wtedy,
+  gdy test padnie.
+- **Zrzuty robimy w trybie `UI_TESTING`** (stubowana sieć, Core Data w pamięci),
+  żeby karta sklepu nie zależała od tego, co akurat jest na serwerach. Ale to
+  materiał marketingowy: jeśli w stubach są tytuły w stylu „Test artykuł 1”,
+  zrzut nie nadaje się do sklepu i trzeba wzbogacić dane stubu. Obejrzyj zrzuty,
+  zanim je wyślesz — skrypt potwierdza tylko rozmiar i format, nie treść.
+
 ## Najważniejsze entrypointy
 
 - Start appki: `Tyflocentrum/TyflocentrumApp.swift`
