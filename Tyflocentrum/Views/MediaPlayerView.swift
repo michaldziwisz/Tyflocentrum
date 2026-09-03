@@ -234,6 +234,7 @@ struct MediaPlayerView: View {
 				} label: {
 					Text("Prędkość: \(playbackRateText)x")
 				}
+				.buttonStyle(.akcjaObramowana)
 				.accessibilityLabel("Zmień prędkość odtwarzania")
 				.accessibilityValue("\(playbackRateText)x")
 				.accessibilityHint("Dwukrotnie stuknij, aby przełączyć prędkość. Przesuń w górę lub w dół, aby zwiększyć lub zmniejszyć.")
@@ -256,11 +257,15 @@ struct MediaPlayerView: View {
 					ProgressView("Ładowanie dodatków…")
 						.accessibilityIdentifier("player.showNotesLoading")
 				} else if !chapterMarkers.isEmpty || !relatedLinks.isEmpty {
-					HStack(spacing: 12) {
+					// VStack, nie HStack: przy dużej czcionce dwa przyciski obok
+					// siebie ściskały się do nieczytelnych słupków. W kolumnie
+					// każdy ma pełną szerokość i stałe położenie.
+					VStack(spacing: 12) {
 						if !chapterMarkers.isEmpty {
 							Button("Znaczniki czasu") {
 								shouldShowChapterMarkers = true
 							}
+							.buttonStyle(.akcjaObramowana)
 							.accessibilityHint("Wyświetla listę znaczników czasu. Dwukrotnie stuknij, aby przejść do wybranego fragmentu.")
 							.accessibilityIdentifier("player.showChapterMarkers")
 						}
@@ -269,11 +274,11 @@ struct MediaPlayerView: View {
 							Button("Odnośniki") {
 								shouldShowRelatedLinks = true
 							}
+							.buttonStyle(.akcjaObramowana)
 							.accessibilityHint("Wyświetla odnośniki uzupełniające audycję.")
 							.accessibilityIdentifier("player.showRelatedLinks")
 						}
 					}
-					.buttonStyle(.bordered)
 				}
 			}
 
@@ -283,6 +288,7 @@ struct MediaPlayerView: View {
 						await performLiveCheck()
 					}
 				}
+				.buttonStyle(.akcja)
 				.accessibilityHint("Sprawdza, czy trwa audycja interaktywna i otwiera formularz kontaktu.")
 				.accessibilityIdentifier("player.contactRadio")
 				.alert("Błąd", isPresented: $shouldShowNoLiveAlert) {

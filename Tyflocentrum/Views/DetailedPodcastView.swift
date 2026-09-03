@@ -92,6 +92,8 @@ struct DetailedPodcastView: View {
 	}
 
 	private var actionsSection: some View {
+		// alignment .leading nie ma już znaczenia dla samych przycisków (mają
+		// maxWidth: .infinity), ale zostaje dla ewentualnych elementów tekstowych.
 		VStack(alignment: .leading, spacing: 12) {
 			NavigationLink {
 				MediaPlayerView(
@@ -103,6 +105,22 @@ struct DetailedPodcastView: View {
 				)
 			} label: {
 				Label("Słuchaj", systemImage: "play.circle.fill")
+					// NavigationLink nie przyjmuje ButtonStyle, więc styl trzeba
+					// nałożyć na etykietę. Wartości te same co w StylPrzyciskuAkcji
+					// - kontrast pilnowany testem tools/test_kontrast_przyciskow.py.
+					.font(.body)
+					.fontWeight(.semibold)
+					.multilineTextAlignment(.center)
+					.minimumScaleFactor(0.8)
+					.foregroundStyle(.white)
+					.padding(.vertical, 12)
+					.padding(.horizontal, 16)
+					.frame(maxWidth: .infinity)
+					.background(
+						RoundedRectangle(cornerRadius: 12, style: .continuous)
+							.fill(KoloryPrzyciskuAkcji.wypelnienie)
+					)
+					.contentShape(Rectangle())
 			}
 			.accessibilityLabel("Słuchaj audycji")
 			.accessibilityHint("Otwiera odtwarzacz audycji.")
@@ -116,6 +134,19 @@ struct DetailedPodcastView: View {
 				)
 			) {
 				Label("Udostępnij", systemImage: "square.and.arrow.up")
+					.font(.body)
+					.fontWeight(.semibold)
+					.multilineTextAlignment(.center)
+					.minimumScaleFactor(0.8)
+					.foregroundStyle(KoloryPrzyciskuAkcji.obramowanie)
+					.padding(.vertical, 12)
+					.padding(.horizontal, 16)
+					.frame(maxWidth: .infinity)
+					.background(
+						RoundedRectangle(cornerRadius: 12, style: .continuous)
+							.strokeBorder(KoloryPrzyciskuAkcji.obramowanie, lineWidth: 2)
+					)
+					.contentShape(Rectangle())
 			}
 			.accessibilityIdentifier("podcastDetail.share")
 
@@ -127,6 +158,7 @@ struct DetailedPodcastView: View {
 					systemImage: isFavorite ? "star.fill" : "star"
 				)
 			}
+			.buttonStyle(.akcjaObramowana)
 			.accessibilityLabel(isFavorite ? "Usuń z ulubionych" : "Dodaj do ulubionych")
 			.accessibilityIdentifier("podcastDetail.favorite")
 			.accessibilityFocused($focusedElement, equals: .favorite)
