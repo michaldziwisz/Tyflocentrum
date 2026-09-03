@@ -12,8 +12,30 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install SwiftFormat
-        run: brew install swiftformat
+      # Wersja MUSI być ta sama, co w lincie (scripts/build-unsigned-ipa.sh),
+      # inaczej ten workflow przeformatowałby repo NOWSZYM narzędziem i wypchnął
+      # na master zmiany, których lint w CI nie wymaga (a przy innej wersji
+      # nawet by ich nie przyjął). `brew install swiftformat` daje najnowsze
+      # wydanie, więc go tu nie ma — patrz komentarz w skrypcie lintu.
+      - name: Install SwiftFormat (przypieta wersja)
+        run: |
+          set -euo pipefail
+          VERSION="$(grep -oE 'SWIFTFORMAT_VERSION:-[0-9.]+' scripts/build-unsigned-ipa.sh | head -1 | cut -d- -f2-)"
+          if [[ -z "$VERSION" ]]; then
+            echo "Nie udalo sie odczytac SWIFTFORMAT_VERSION ze skryptu lintu." >&2
+            exit 1
+          fi
+          echo "Wersja z lintu: $VERSION"
+          curl -fsSL -o /tmp/swiftformat.zip \
+            "https://github.com/nicklockwood/SwiftFormat/releases/download/$VERSION/swiftformat.zip"
+          unzip -q /tmp/swiftformat.zip -d /tmp/swiftformat-bin
+          chmod +x /tmp/swiftformat-bin/swiftformat
+          echo "/tmp/swiftformat-bin" >> "$GITHUB_PATH"
+          GOT="$(/tmp/swiftformat-bin/swiftformat --version | tr -d '[:space:]')"
+          if [[ "$GOT" != "$VERSION" ]]; then
+            echo "Oczekiwano $VERSION, dostano $GOT." >&2
+            exit 1
+          fi
 
       - name: Run SwiftFormat
         run: swiftformat --config .swiftformat .
