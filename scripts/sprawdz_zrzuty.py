@@ -48,8 +48,8 @@ def klasa(rozmiar):
     return None
 
 
-def sprawdz(katalog, wymagaj_ipada=True, cicho=False):
-    """Zwroc (liczba_problemow, licznik_klas)."""
+def sprawdz(katalog, wymagaj_ipada=True, min_na_klase=1, cicho=False):
+    """Zwroc (lista_problemow, licznik_klas)."""
     pliki = sorted(glob.glob(os.path.join(katalog, "*.png")))
     problemy = []
     licznik = {"iPhone 6.9": 0, "iPad 13": 0}
@@ -83,9 +83,23 @@ def sprawdz(katalog, wymagaj_ipada=True, cicho=False):
 
     if licznik["iPhone 6.9"] == 0:
         problemy.append("brak zrzutow dla iPhone 6.9 (wymagane dla apki na iPhone)")
-    if wymagaj_ipada and licznik["iPad 13"] == 0:
+    elif licznik["iPhone 6.9"] < min_na_klase:
         problemy.append(
-            "brak zrzutow dla iPad 13 (wymagane, bo TARGETED_DEVICE_FAMILY = \"1,2\")")
+            f"iPhone 6.9: tylko {licznik['iPhone 6.9']} zrzutow, oczekiwano "
+            f"co najmniej {min_na_klase}")
+    if wymagaj_ipada:
+        if licznik["iPad 13"] == 0:
+            problemy.append(
+                "brak zrzutow dla iPad 13 (wymagane, bo TARGETED_DEVICE_FAMILY = \"1,2\")")
+        elif licznik["iPad 13"] < min_na_klase:
+            # Ten warunek wylapal realna awarie: na iPadzie z iOS 26 kolekcja
+            # app.tabBars jest pusta (system renderuje TabView jako panel boczny),
+            # wiec test przerywal po PIERWSZYM ekranie i mielismy 1 zrzut zamiast 5.
+            # Bez progu "co najmniej N" bramka mowila wtedy "wszystko zgodne".
+            problemy.append(
+                f"iPad 13: tylko {licznik['iPad 13']} zrzutow, oczekiwano co "
+                f"najmniej {min_na_klase} - sprawdz, czy test nie przerwal sie "
+                f"po pierwszym ekranie")
     return problemy, licznik
 
 
@@ -161,6 +175,21 @@ def test_wlasny():
         asercja("iPad 11 nie liczy sie jako 13", licznik["iPad 13"] == 0)
         asercja("i jest zglaszany jako problem", bool(problemy))
 
+    print("--- 5b. NEGATYW: NIEPELNY komplet z iPada (test urwal sie po 1. ekranie) ---")
+    # To jest przypadek, ktory realnie wystapil (run 33782945660): na iPadzie
+    # app.tabBars jest puste w iOS 26, wiec powstal 1 zrzut zamiast 5, a bramka
+    # bez progu min_na_klase orzekla "wszystko zgodne".
+    with tempfile.TemporaryDirectory() as kat:
+        for i in range(5):
+            zrob_png(os.path.join(kat, f"iphone-{i}.png"), 1320, 2868, False)
+        zrob_png(os.path.join(kat, "ipad-1.png"), 2064, 2752, False)
+        bez_progu, _ = sprawdz(kat, cicho=True)
+        asercja(f"przy progu 1 niepelny komplet PRZECHODZI (dostano: {bez_progu})",
+                not bez_progu)
+        z_progiem, _ = sprawdz(kat, min_na_klase=4, cicho=True)
+        asercja("przy progu 4 niepelny komplet jest WYKRYTY",
+                any("tylko 1 zrzutow" in p for p in z_progiem))
+
     print("--- 6. orientacja pozioma jest dopuszczalna ---")
     with tempfile.TemporaryDirectory() as kat:
         zrob_png(os.path.join(kat, "iphone-1.png"), 2868, 1320, False)
@@ -187,6 +216,10 @@ def main():
     p.add_argument("katalog", nargs="?", default="artefakty")
     p.add_argument("--tylko-iphone", action="store_true",
                    help="nie wymagaj zrzutow iPada")
+    p.add_argument("--min-na-klase", type=int, default=1,
+                   help="ile zrzutow musi byc w KAZDEJ klasie urzadzen "
+                        "(domyslnie 1; workflow uzywa 4, zeby wylapac test "
+                        "przerwany po pierwszym ekranie)")
     p.add_argument("--test", action="store_true",
                    help="uruchom test wlasny z kontrola waznosci")
     args = p.parse_args()
@@ -194,7 +227,9 @@ def main():
     if args.test:
         return test_wlasny()
 
-    problemy, licznik = sprawdz(args.katalog, wymagaj_ipada=not args.tylko_iphone)
+    problemy, licznik = sprawdz(args.katalog,
+                                wymagaj_ipada=not args.tylko_iphone,
+                                min_na_klase=args.min_na_klase)
     print()
     print(f"zrzutow iPhone 6.9: {licznik['iPhone 6.9']}, iPad 13: {licznik['iPad 13']}")
     if problemy:
