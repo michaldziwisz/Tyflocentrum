@@ -73,7 +73,11 @@ final class AsyncListViewModel<Item>: ObservableObject {
 	}
 
 	func loadIfNeeded(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 45) async {
-		guard !hasLoaded else { return }
+		// Ta sama pułapka co w `PagedFeedViewModel` (patrz komentarz tam):
+		// `load` wychodzi przez `Task.isCancelled` przed ustawieniem `hasLoaded`,
+		// więc samo `guard !hasLoaded` zamykało widok w stanie „pusto i nic się
+		// nie dzieje” na stałe. Ponowne wejście na ekran ma podjąć próbę.
+		guard !hasLoaded || (items.isEmpty && errorMessage == nil && !isLoading) else { return }
 		await load(fetch, timeoutSeconds: timeoutSeconds)
 	}
 
