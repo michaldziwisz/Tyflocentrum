@@ -1,0 +1,39 @@
+name: Zrzuty ekranu do App Store
+
+# Robi zrzuty na symulatorach iPhone'a i iPada, sprawdza je wobec wymogow
+# Apple i wystawia jako artefakt do pobrania. Cala logika siedzi w skryptach
+# (scripts/zrzuty-ekranu.sh, scripts/sprawdz_zrzuty.py), zeby dalo sie ja
+# uruchomic i testowac poza CI - i zeby nie wklejac wieloliniowego Pythona
+# w YAML, co lamie wciecia.
+
+on:
+  workflow_dispatch:
+    inputs:
+      urzadzenia:
+        description: 'Symulatory (dokladne nazwy z simctl, po przecinku)'
+        required: true
+        default: 'iPhone 17 Pro Max,iPad Pro 13-inch (M5)'
+
+permissions:
+  contents: read
+
+jobs:
+  zrzuty:
+    # Ten sam obraz co CI: Xcode 26 / SDK iOS 26 (patrz ios-unsigned-ipa.yml).
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Zrob zrzuty na symulatorach
+        env:
+          URZADZENIA: ${{ inputs.urzadzenia }}
+        run: bash scripts/zrzuty-ekranu.sh
+
+      - name: Sprawdz zgodnosc z wymogami App Store
+        run: python3 scripts/sprawdz_zrzuty.py artefakty
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: zrzuty-app-store
+          path: artefakty/

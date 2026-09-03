@@ -10,15 +10,18 @@ RUN_TESTS="${RUN_TESTS:-true}"
 RUN_ARCHIVE="${RUN_ARCHIVE:-true}"
 
 ensure_swiftformat() {
-	if command -v swiftformat >/dev/null 2>&1; then
-		return
-	fi
-
-	if command -v brew >/dev/null 2>&1; then
-		brew install swiftformat
-		return
-	fi
-
+	# WAŻNE: wersja MUSI być przypięta. Formatowanie kodu to nie test poprawności,
+	# tylko zgodność z konkretnym wydaniem narzędzia — kolejne wydania SwiftFormat
+	# dodają i zmieniają reguły, więc niezmieniony plik zaczyna oblewać lint sam
+	# z siebie. Tak zczerwieniało to CI: przebieg z 29.01.2026 był zielony,
+	# a marcowy i czerwcowy padały po 13 sekundach, mimo że np.
+	# Tyflocentrum/SettingsStore.swift nie był w tym czasie tknięty.
+	# Zmierzone na tym repo (binarka linuksowa, WSL): 0.58.7 => 1/63 plików
+	# do formatowania, 0.63.0 => 22/63.
+	#
+	# Dlatego NIE używamy `brew install swiftformat` (daje najnowszą wersję)
+	# ani gołego `command -v swiftformat` (na runnerze bywa preinstalowany).
+	# Zawsze bierzemy DOKŁADNIE tę wersję i sprawdzamy, co dostaliśmy.
 	local tool_cache="${RUNNER_TOOL_CACHE:-$PWD/.tool-cache}"
 	local swiftformat_dir="$tool_cache/swiftformat/$SWIFTFORMAT_VERSION"
 	local swiftformat_bin="$swiftformat_dir/swiftformat"
@@ -29,14 +32,39 @@ ensure_swiftformat() {
 		local tmp_dir
 		tmp_dir="$(mktemp -d)"
 
-		local url="https://github.com/nicklockwood/SwiftFormat/releases/download/$SWIFTFORMAT_VERSION/swiftformat.zip"
+		# swiftformat.zip = macOS; swiftformat_linux.zip = Linux (przydaje się
+		# przy sprawdzaniu lintu poza runnerem macOS).
+		local asset="swiftformat.zip"
+		if [[ "$(uname -s)" == "Linux" ]]; then
+			asset="swiftformat_linux.zip"
+		fi
+
+		local url="https://github.com/nicklockwood/SwiftFormat/releases/download/$SWIFTFORMAT_VERSION/$asset"
 		curl -fsSL -o "$tmp_dir/swiftformat.zip" "$url"
-		/usr/bin/unzip -q "$tmp_dir/swiftformat.zip" -d "$swiftformat_dir"
-		chmod +x "$swiftformat_bin"
+		unzip -q "$tmp_dir/swiftformat.zip" -d "$swiftformat_dir"
 		rm -rf "$tmp_dir"
+
+		# Archiwum linuksowe rozpakowuje się jako `swiftformat_linux`.
+		if [[ ! -f "$swiftformat_bin" && -f "$swiftformat_dir/swiftformat_linux" ]]; then
+			mv "$swiftformat_dir/swiftformat_linux" "$swiftformat_bin"
+		fi
+
+		chmod +x "$swiftformat_bin"
 	fi
 
 	export PATH="$swiftformat_dir:$PATH"
+
+	# Kontrola, że dostaliśmy przypiętą wersję, a nie coś z PATH. Bez tego
+	# przypięcie jest tylko deklaracją: wystarczy inna binarka wcześniej
+	# w PATH i cała powyższa ostrożność przestaje cokolwiek znaczyć.
+	local got
+	got="$(swiftformat --version 2>/dev/null | tr -d '[:space:]')"
+	if [[ "$got" != "$SWIFTFORMAT_VERSION" ]]; then
+		echo "SwiftFormat: oczekiwano $SWIFTFORMAT_VERSION, dostano '${got:-brak}'." >&2
+		echo "Lint bez przypietej wersji nie jest miarodajny - przerywam." >&2
+		exit 1
+	fi
+	echo "SwiftFormat $got (przypieta)"
 }
 
 resolve_sim_destination() {

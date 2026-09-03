@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Manifest prywatnosci. WYMAGANY, nie opcjonalny: Apple pisze wprost, ze
+	  od 1 maja 2024 aplikacje uzywajace "required reason API" bez deklaracji
+	  w manifescie NIE SA przyjmowane przez App Store Connect
+	  (developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api).
+	  CODE_REVIEW_APPSTORE.md z 29.01.2026 nazywal go "(Opcjonalnie)" - to bylo nieaktualne.
+
+	  Kategorie ponizej wynikaja z POMIARU kodu, nie z domyslu:
+	  - UserDefaults: AudioPlayer, DiagnosticsStore, FavoritesStore, SettingsStore,
+	    TyflocentrumApp, ArticlesCategoriesView, ContactView,
+	  - FileTimestamp: VoiceMessageRecorder (resourceValues z .fileSizeKey w 3 miejscach).
+	-->
+
+	<!-- Aplikacja nie sledzi uzytkownikow miedzy aplikacjami/witrynami. -->
+	<key>NSPrivacyTracking</key>
+	<false/>
+	<key>NSPrivacyTrackingDomains</key>
+	<array/>
+
+	<key>NSPrivacyAccessedAPITypes</key>
+	<array>
+		<dict>
+			<!--
+			  CA92.1: dostep do UserDefaults wylacznie po to, by czytac i zapisywac
+			  dane dostepne TYLKO tej aplikacji (ulubione, ustawienia odtwarzania,
+			  preferencje). Nie ma tu grupy aplikacji ani wspoldzielenia danych.
+			-->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryUserDefaults</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>CA92.1</string>
+			</array>
+		</dict>
+		<dict>
+			<!--
+			  C617.1: odczyt rozmiaru plikow WEWNATRZ kontenera aplikacji -
+			  nagran glosowek w katalogu tymczasowym, zeby sprawdzic, czy nagranie
+			  nie jest puste przed wyslaniem. Zadna z tych informacji nie opuszcza
+			  urzadzenia.
+			-->
+			<key>NSPrivacyAccessedAPIType</key>
+			<string>NSPrivacyAccessedAPICategoryFileTimestamp</string>
+			<key>NSPrivacyAccessedAPITypeReasons</key>
+			<array>
+				<string>C617.1</string>
+			</array>
+		</dict>
+	</array>
+
+	<!--
+	  Dane zbierane przez aplikacje. Musi byc SPOJNE z "App Privacy"
+	  w App Store Connect - rozbieznosc jest czestym powodem odrzucenia.
+	  Kontakt z radiem: podpis/imie oraz tresc wiadomosci i nagranie glosowe
+	  wysylane sa na kontakt.tyflopodcast.net, wylacznie gdy uzytkownik sam
+	  zainicjuje wyslanie, i nie sa uzywane do sledzenia ani reklam.
+	-->
+	<key>NSPrivacyCollectedDataTypes</key>
+	<array>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeName</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeAudioData</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeOtherUserContent</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

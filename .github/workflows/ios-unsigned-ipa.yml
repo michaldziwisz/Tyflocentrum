@@ -16,7 +16,17 @@ permissions:
 jobs:
   build:
     name: Build (GitHub-hosted)
-    runs-on: macos-14
+    # macos-26 = Xcode 26 + SDK iOS 26. Dwa powody, oba twarde:
+    # 1) Apple wymaga od 28.04.2026, by aplikacje wysyłane do App Store Connect
+    #    były budowane Xcode 26 na SDK iOS 26 (developer.apple.com/news/upcoming-requirements).
+    #    Build na starszym SDK nie nadaje się do wydania.
+    # 2) Kod używa symboli z nowszego SDK (AVAudioSession .allowBluetoothHFP,
+    #    AVAssetExportSession export(to:as:)), więc na Xcode 15.4 nie kompilował
+    #    się w ogóle. Obraz macos-14 jest dodatkowo oznaczony jako deprecated.
+    # Wersję przypinamy JAWNIE, nie przez -latest: -latest wędruje i zmieniłby
+    # SDK w trakcie życia projektu, a to ta sama klasa błędu, co nieprzypięty
+    # SwiftFormat (patrz scripts/build-unsigned-ipa.sh).
+    runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
 

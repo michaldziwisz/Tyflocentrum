@@ -10,3 +10,7 @@ DerivedData/
 *.ipa
 *.dSYM
 *.dSYM.zip
+
+# Python (narzedzia w tools/)
+__pycache__/
+*.py[cod]

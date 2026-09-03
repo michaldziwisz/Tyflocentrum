@@ -80,11 +80,11 @@ struct TyflocentrumApp: App {
 			}
 			#if DEBUG
 			.onChange(of: settingsStore.pushNotificationPreferences) { _, prefs in
-				guard !isUITesting else { return }
-				Task {
-					await pushNotifications.onPreferencesChanged(prefs: prefs)
+					guard !isUITesting else { return }
+					Task {
+						await pushNotifications.onPreferencesChanged(prefs: prefs)
+					}
 				}
-			}
 			#endif
 		}
 	}

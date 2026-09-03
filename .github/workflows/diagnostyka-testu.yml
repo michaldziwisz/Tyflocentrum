@@ -1,0 +1,92 @@
+name: Diagnostyka testu (powtarzalnosc)
+
+# PO CO. Po przejsciu CI na macos-26 padaja dwa testy dotyczace WYSCIGOW
+# (load-more vs refresh oraz odtworzenie listy po nieudanym zadaniu). Zanim
+# nazwiemy to regresja albo defektem, trzeba wiedziec, czy padaja ZAWSZE, czy
+# raz na kilka przebiegow - to rozstrzyga miedzy realnym bledem logiki
+# a testem wrazliwym na czas (flake). Pelny przebieg CI trwa 27 minut, wiec
+# powtarzanie calosci byloby marnowaniem czasu: tutaj wybieramy pojedyncze testy.
+#
+# Uruchomienie recznie, z parametrami. Nie zastepuje CI - jest przyrzadem.
+
+on:
+  workflow_dispatch:
+    inputs:
+      testy:
+        description: 'Testy do uruchomienia (-only-testing, po przecinku)'
+        required: true
+        default: 'TyflocentrumTests/NewsFeedViewModelTests/testLoadMoreInFlightDoesNotPolluteRefreshResults'
+      powtorzenia:
+        description: 'Ile razy powtorzyc'
+        required: true
+        default: '5'
+
+permissions:
+  contents: read
+
+jobs:
+  powtarzalnosc:
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Powtorz wybrane testy i policz wyniki
+        run: |
+          set -uo pipefail
+
+          SIM_ID="$(xcrun simctl list devices available -j \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin)["devices"]; \
+              c=[x for k,v in d.items() if "iOS" in k for x in v if x.get("isAvailable") and "iPhone" in x["name"]]; \
+              print(c[0]["udid"] if c else "")')"
+          if [ -z "$SIM_ID" ]; then
+            echo "Brak dostepnego symulatora iPhone." >&2
+            exit 1
+          fi
+          echo "symulator: $SIM_ID"
+
+          ARGS=""
+          IFS=',' read -ra LISTA <<< "${{ inputs.testy }}"
+          for t in "${LISTA[@]}"; do
+            ARGS="$ARGS -only-testing:$t"
+          done
+          echo "zakres: $ARGS"
+
+          udane=0
+          nieudane=0
+          for i in $(seq 1 ${{ inputs.powtorzenia }}); do
+            echo "::group::przebieg $i z ${{ inputs.powtorzenia }}"
+            # Osobny derivedDataPath na kazdy przebieg: wspolny katalog
+            # cache'owalby wynik i kolejne przebiegi nie bylyby niezalezne.
+            if xcodebuild \
+              -project Tyflocentrum.xcodeproj \
+              -scheme Tyflocentrum \
+              -configuration Debug \
+              -sdk iphonesimulator \
+              -destination "platform=iOS Simulator,id=$SIM_ID" \
+              -derivedDataPath "$RUNNER_TEMP/DD-$i" \
+              -parallel-testing-enabled NO \
+              -parallel-testing-worker-count 1 \
+              $ARGS \
+              test > "$RUNNER_TEMP/przebieg-$i.log" 2>&1; then
+              echo "przebieg $i: ZALICZONY"
+              udane=$((udane + 1))
+            else
+              echo "przebieg $i: PADL"
+              nieudane=$((nieudane + 1))
+              grep -E "error:|XCTAssert|Failing tests:" -A2 "$RUNNER_TEMP/przebieg-$i.log" | head -30 || true
+            fi
+            echo "::endgroup::"
+          done
+
+          echo "=============================="
+          echo "WYNIK: zaliczone=$udane  padly=$nieudane  z ${{ inputs.powtorzenia }}"
+          echo "=============================="
+          # Zawsze kod 0: to POMIAR, nie bramka jakosci. Niezerowy kod
+          # sugerowalby awarie przyrzadu, a my mierzymy wlasnie odsetek porazek.
+          exit 0
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: logi-powtarzalnosci
+          path: ${{ runner.temp }}/przebieg-*.log

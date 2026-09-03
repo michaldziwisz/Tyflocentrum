@@ -15,6 +15,7 @@
 		74D0E52F50594708AD4B1AEA /* PodcastPlayerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A363867AEA634D11B70C0B89 /* PodcastPlayerSheet.swift */; };
 		89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA3121BCB26744CEAE67FDD /* AsyncTimeout.swift */; };
 		A1B2C3D4E5F60718293A4B64 /* TyflocentrumSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */; };
+		BC7F1B0E2D0200000000B101 /* ZrzutyEkranu.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7F1B0D2D0200000000B100 /* ZrzutyEkranu.swift */; };
 		A1B2C3D4E5F60718293A4B65 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 068F24BC7FC4CF7845F775E1 /* XCTest.framework */; };
 		A1B2C3D4E5F60718293A4B72 /* PushNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B71 /* PushNotificationPreferences.swift */; };
 		A1B2C3D4E5F60718293A4B74 /* NewsFeedViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B73 /* NewsFeedViewModelTests.swift */; };
@@ -36,6 +37,7 @@
 		BE05F01129001CCA009069F7 /* TyfloAPI.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE05F01029001CCA009069F7 /* TyfloAPI.swift */; };
 		BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE1FDCD328F6DE7D00B9601B /* DataController.swift */; };
 		BE2ACFFC292B67C1001914EB /* Changelog.rtf in Resources */ = {isa = PBXBuildFile; fileRef = BE2ACFFB292B67C1001914EB /* Changelog.rtf */; };
+		BC7F1A0E2D0100000000A101 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BC7F1A0D2D0100000000A100 /* PrivacyInfo.xcprivacy */; };
 		BE55421C28FD548300CC0128 /* NewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE55421B28FD548300CC0128 /* NewsView.swift */; };
 		BE56ED2F290B3BE9006ADF67 /* DetailedPodcastView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE56ED2E290B3BE9006ADF67 /* DetailedPodcastView.swift */; };
 		BE7165432921A0D200FF9A89 /* DetailedArticleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */; };
@@ -127,6 +129,7 @@
 		9646723B6391FE47334552EF /* LazyDetailedPodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LazyDetailedPodcastView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5E /* TyflocentrumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumSmokeTests.swift; sourceTree = "<group>"; };
+		BC7F1B0D2D0200000000B100 /* ZrzutyEkranu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZrzutyEkranu.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B71 /* PushNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationPreferences.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B73 /* NewsFeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsFeedViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B75 /* PagedFeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagedFeedViewModelTests.swift; sourceTree = "<group>"; };
@@ -146,6 +149,7 @@
 		BE05F01029001CCA009069F7 /* TyfloAPI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyfloAPI.swift; sourceTree = "<group>"; };
 		BE1FDCD328F6DE7D00B9601B /* DataController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataController.swift; sourceTree = "<group>"; };
 		BE2ACFFB292B67C1001914EB /* Changelog.rtf */ = {isa = PBXFileReference; lastKnownFileType = text.rtf; path = Changelog.rtf; sourceTree = "<group>"; };
+		BC7F1A0D2D0100000000A100 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		BE55421B28FD548300CC0128 /* NewsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsView.swift; sourceTree = "<group>"; };
 		BE56ED2E290B3BE9006ADF67 /* DetailedPodcastView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DetailedPodcastView.swift; sourceTree = "<group>"; };
 		BE64D6C12925A1F9001F9A45 /* AudioToolbox.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AudioToolbox.framework; path = System/Library/Frameworks/AudioToolbox.framework; sourceTree = SDKROOT; };
@@ -247,6 +251,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */,
+				BC7F1B0D2D0200000000B100 /* ZrzutyEkranu.swift */,
 			);
 			path = TyflocentrumUITests;
 			sourceTree = "<group>";
@@ -338,6 +343,7 @@
 			isa = PBXGroup;
 			children = (
 				BEEA97C628E9D6880073E5AB /* Info.plist */,
+				BC7F1A0D2D0100000000A100 /* PrivacyInfo.xcprivacy */,
 				BEEA97B828E9D4BB0073E5AB /* TyflocentrumApp.swift */,
 				A1B2C3D4E5F60718293A4B8F /* DeviceCapabilities.swift */,
 				A1B2C3D4E5F60718293A4B94 /* Logging.swift */,
@@ -497,6 +503,7 @@
 				BEEA97BD28E9D4BB0073E5AB /* Assets.xcassets in Resources */,
 				BC1D24D12C256E5D00FB25D3 /* readme.md in Resources */,
 				BE2ACFFC292B67C1001914EB /* Changelog.rtf in Resources */,
+				BC7F1A0E2D0100000000A101 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -526,6 +533,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1B2C3D4E5F60718293A4B64 /* TyflocentrumSmokeTests.swift in Sources */,
+				BC7F1B0E2D0200000000B101 /* ZrzutyEkranu.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -615,7 +623,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.nunosoft.TyflocentrumUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = net.tyflocentrum.app.UITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_TARGET_NAME = Tyflocentrum;
@@ -634,7 +642,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.nunosoft.TyflocentrumUITests;
+				PRODUCT_BUNDLE_IDENTIFIER = net.tyflocentrum.app.UITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_TARGET_NAME = Tyflocentrum;
@@ -847,7 +855,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.nunosoft.TyflocentrumTests;
+				PRODUCT_BUNDLE_IDENTIFIER = net.tyflocentrum.app.Tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tyflocentrum.app/Tyflocentrum";
@@ -867,7 +875,7 @@
 					"@executable_path/Frameworks",
 					"@loader_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.nunosoft.TyflocentrumTests;
+				PRODUCT_BUNDLE_IDENTIFIER = net.tyflocentrum.app.Tests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_VERSION = 5.0;
 				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Tyflocentrum.app/Tyflocentrum";

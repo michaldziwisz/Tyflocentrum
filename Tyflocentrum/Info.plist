@@ -4,6 +4,14 @@
 <dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Aplikacja potrzebuje dostępu do mikrofonu, aby nagrać wiadomość głosową do Tyfloradia.</string>
+	<!--
+	  Aplikacja uzywa wylacznie standardowego HTTPS/TLS systemu, bez wlasnej
+	  kryptografii, wiec kwalifikuje sie do wyjatku eksportowego. Bez tego
+	  klucza App Store Connect zadaje pytanie eksportowe przy KAZDEJ wysylce
+	  builda, co przy automatycznym wydawaniu blokuje przetwarzanie.
+	-->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>audio</string>

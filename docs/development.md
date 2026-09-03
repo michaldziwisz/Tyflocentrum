@@ -10,12 +10,129 @@
 
 ## CI (build IPA)
 
-- Unsigned IPA: `.github/workflows/ios-unsigned-ipa.yml` (GitHub-hosted `macos-14`)
-  - lint: `swiftformat --lint`
+- Unsigned IPA: `.github/workflows/ios-unsigned-ipa.yml` (GitHub-hosted **`macos-26`**)
+  - lint: `swiftformat --lint` (wersja **przypięta**, patrz niżej)
   - test: `xcodebuild test` (Simulator)
   - build: artifact `Tyflocentrum-unsigned-ipa` (`tyflocentrum.ipa`)
 - Skrypt używany przez workflow: `scripts/build-unsigned-ipa.sh`
 - Pobranie artifactu: `scripts/fetch-ipa.sh` (albo UI GitHub Actions)
+- Diagnostyka powtarzalności testów: `.github/workflows/diagnostyka-testu.yml`
+  (uruchamia wskazane testy N razy; przydatne przy testach wrażliwych na czas)
+
+### Dlaczego `macos-26`, a nie `macos-latest` ani `macos-14`
+
+Dwa powody, oba twarde:
+
+1. Apple wymaga od **28.04.2026**, by aplikacje wysyłane do App Store Connect
+   były budowane **Xcode 26 na SDK iOS 26**. Build na starszym SDK nie nadaje
+   się do wydania, choćby był zielony.
+2. Kod używa symboli z nowszego SDK (`AVAudioSession.CategoryOptions.allowBluetoothHFP`,
+   `AVAssetExportSession.export(to:as:)`), więc na Xcode 15.4 (`macos-14`) nie
+   kompilował się wcale. Obraz `macos-14` jest też oznaczony jako wycofywany.
+
+Wersję obrazu przypinamy **jawnie**: `macos-latest` wędruje i sam zmieniłby SDK
+w trakcie życia projektu — czyli ta sama klasa błędu, co nieprzypięty SwiftFormat.
+
+### Dlaczego wersja SwiftFormat jest przypięta (i sprawdzana)
+
+Lint to zgodność z **konkretnym wydaniem** narzędzia, nie test poprawności kodu.
+Kolejne wydania SwiftFormat dodają reguły, więc niezmieniony plik zaczyna oblewać
+lint sam z siebie. Tak zczerwieniało to CI między styczniem a marcem 2026: skrypt
+brał narzędzie przez `brew install` (zawsze najnowsze) i przebiegi padały po
+13 sekundach, więc build ani testy się nie uruchamiały. Pomiar na tym repo:
+wersja `0.58.7` → 1 plik z 63 do formatowania, wersja `0.63.0` → 22 z 63.
+
+Dlatego `scripts/build-unsigned-ipa.sh` pobiera dokładnie wersję z
+`SWIFTFORMAT_VERSION` i **przerywa pracę**, gdy `swiftformat --version` zwróci
+inną — samo przypięcie bez kontroli jest deklaracją, nie mechanizmem.
+Workflow `SwiftFormat` czyta tę samą wersję ze skryptu lintu, żeby nie
+przeformatował repo nowszym narzędziem i nie wypchnął tego na `master`.
+
+Dowód: `scripts/test-bramka-wersji-swiftformat.sh` (7 asercji, z kontrolą
+negatywną: podstawiona binarka podająca inną wersję musi obalić bramkę).
+
+## Prywatność i wymogi App Store
+
+- **`Tyflocentrum/PrivacyInfo.xcprivacy`** — manifest prywatności. Apple nie
+  przyjmuje aplikacji używających „required reason API” bez deklaracji.
+  Zadeklarowane kategorie wynikają ze skanu kodu: `UserDefaults` (`CA92.1`) oraz
+  metadane plików w `VoiceMessageRecorder` (`C617.1`).
+  Manifest **musi być w fazie Resources** targetu — plik tylko na dysku nie
+  trafia do builda, więc App Store by go nie zobaczył.
+- **`ITSAppUsesNonExemptEncryption = false`** w `Info.plist` — aplikacja używa
+  wyłącznie HTTPS/TLS systemu, bez własnej kryptografii.
+- Dowód: `tools/test_manifest_prywatnosci.py` (15 asercji). Porównuje manifest
+  z kodem **w obie strony**: brak deklaracji oznacza odrzucenie wysyłki,
+  a deklaracja „na zapas” to nieprawdziwe oświadczenie wobec Apple.
+
+## Ikona aplikacji
+
+Ikona jest wspólna dla wersji Windows, Android i iOS. Nie edytuj plików PNG
+ręcznie — generuje je `tools/generuj_ikone_ios.py` z `tools/symbol_zrodlowy.png`:
+
+```bash
+python3 tools/generuj_ikone_ios.py            # podglad, nic nie zapisuje
+python3 tools/generuj_ikone_ios.py --zapisz   # zapis do Assets.xcassets
+python3 tools/test_ikony_ios.py               # 11 asercji
+python3 tools/test_ikony_ios.py --kontrola-waznosci
+```
+
+Czym iOS różni się od Androida (nie jest to ten sam problem geometryczny):
+
+- **bez kanału alfa** — App Store odrzuca ikony z przezroczystością,
+- **bez własnych zaokrągleń** — iOS sam nakłada maskę squircle; własny narożnik
+  dałby zaokrąglenie podwójne, z ciemną obwódką,
+- **bez strefy bezpiecznej 66/108** znanej z adaptive icon Androida, więc symbol
+  ma pełne 75% szerokości kafla, jak w oryginale z Windows.
+
+Test pilnuje też **kontrastu symbolu do tła** wg WCAG 1.4.11 (obecnie 8,12:1
+przy progu 3:1). To nie jest ozdobnik: ikona o niskim kontraście jest realną
+barierą dla osób słabowidzących, a autor projektu jest niewidomy i nie sprawdzi
+tego wzrokiem.
+
+## Zrzuty ekranu do App Store (bez iPada, bez Maca)
+
+Apple wymaga zrzutów dla **iPhone'a 6.9"** oraz — skoro projekt ma
+`TARGETED_DEVICE_FAMILY = "1,2"` — także dla **iPada 13"**. Fizyczne urządzenia
+nie są potrzebne: runner ma symulatory obu klas, a zrzuty z symulatora są
+pikselowo dokładne i App Store Connect je przyjmuje.
+
+Uwaga terminologiczna, bo bywa myląca: to **symulator**, nie emulator. Nie
+emuluje procesora — uruchamia natywny kod na macOS i renderuje UIKit w prawdziwej
+rozdzielczości urządzenia. Dlatego wymiary wychodzą dokładnie takie, jak na sprzęcie.
+
+```bash
+# w CI: workflow "Zrzuty ekranu do App Store" (workflow_dispatch)
+# lokalnie na macOS:
+URZADZENIA="iPhone 17 Pro Max,iPad Pro 13-inch (M5)" bash scripts/zrzuty-ekranu.sh
+python3 scripts/sprawdz_zrzuty.py artefakty
+python3 scripts/sprawdz_zrzuty.py --test    # 10 asercji, kontrola waznosci
+```
+
+Wymagane rozmiary (wprost z `developer.apple.com`, „Screenshot specifications”):
+
+| klasa | akceptowane rozmiary (pion) |
+|---|---|
+| iPhone 6.9" | 1320×2868, 1290×2796, 1260×2736 |
+| iPad 13" | 2064×2752, 2048×2732 |
+
+Zrzuty **nie mogą mieć kanału alfa**. `scripts/sprawdz_zrzuty.py` pilnuje obu
+rzeczy, bo inaczej błąd wyszedłby dopiero przy wysyłce do Apple.
+
+Trzy rzeczy, które łatwo przeoczyć:
+
+- **Dopasowanie nazwy symulatora musi być dokładne.** `iPad Pro 11-inch` pasuje
+  do prefiksu „iPad Pro 1…”, ale zrzuty z 11 cali **nie spełniają** wymogu klasy
+  13". Dlatego `scripts/udid_symulatora.py` porównuje pełną nazwę i wypisuje
+  listę dostępnych, gdy nie trafi.
+- **`XCTAttachment` wymaga `lifetime = .keepAlways`.** Bez tego XCTest usuwa
+  załączniki z testów, które przeszły — czyli zrzuty dostawalibyśmy tylko wtedy,
+  gdy test padnie.
+- **Zrzuty robimy w trybie `UI_TESTING`** (stubowana sieć, Core Data w pamięci),
+  żeby karta sklepu nie zależała od tego, co akurat jest na serwerach. Ale to
+  materiał marketingowy: jeśli w stubach są tytuły w stylu „Test artykuł 1”,
+  zrzut nie nadaje się do sklepu i trzeba wzbogacić dane stubu. Obejrzyj zrzuty,
+  zanim je wyślesz — skrypt potwierdza tylko rozmiar i format, nie treść.
 
 ## Najważniejsze entrypointy
 
@@ -53,14 +170,29 @@
 
 - Konfiguracja: `.swiftformat` (repo root).
 - CI: workflow `iOS (unsigned IPA)` uruchamia `swiftformat --lint` przed testami.
-- Lokalnie na macOS:
+- **Wersja jest przypięta** w `scripts/build-unsigned-ipa.sh` (`SWIFTFORMAT_VERSION`)
+  i sprawdzana — powody w sekcji „Dlaczego wersja SwiftFormat jest przypięta”.
+- Lokalnie na macOS (użyj TEJ SAMEJ wersji, co CI, inaczej dostaniesz inny wynik):
 
 ```bash
-brew install swiftformat
+WERSJA="$(grep -oE 'SWIFTFORMAT_VERSION:-[0-9.]+' scripts/build-unsigned-ipa.sh | head -1 | cut -d- -f2-)"
+brew install swiftformat        # UWAGA: daje najnowsza, sprawdz `swiftformat --version`
 swiftformat --config .swiftformat .
 ```
 
-- Bez Maca: uruchom workflow GitHub Actions **SwiftFormat** (manual). Jeśli są zmiany, workflow sam je zacommituje do `master`.
+- Bez Maca, wprost w WSL/Linuksie — wydania SwiftFormat mają binarkę linuksową,
+  więc lint da się sprawdzić bez runnera macOS i bez zużywania minut CI:
+
+```bash
+WERSJA="$(grep -oE 'SWIFTFORMAT_VERSION:-[0-9.]+' scripts/build-unsigned-ipa.sh | head -1 | cut -d- -f2-)"
+curl -fsSL -o /tmp/sf.zip \
+  "https://github.com/nicklockwood/SwiftFormat/releases/download/$WERSJA/swiftformat_linux.zip"
+unzip -o /tmp/sf.zip -d /tmp/sf && chmod +x /tmp/sf/swiftformat_linux
+/tmp/sf/swiftformat_linux --config .swiftformat --lint .
+```
+
+- Automatyczna poprawa bez Maca: uruchom workflow GitHub Actions **SwiftFormat**
+  (manual). Jeśli są zmiany, workflow sam je zacommituje do `master`.
 
 ### UI tests
 
