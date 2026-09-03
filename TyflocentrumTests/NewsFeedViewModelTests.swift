@@ -273,7 +273,27 @@ final class NewsFeedViewModelTests: XCTestCase {
 
 			if shouldBlock {
 				page2Requested.fulfill()
-				_ = allowPage2ToFinish.wait(timeout: DispatchTime.now() + .seconds(2))
+				// UWAGA NA DWIE ROWNE LICZBY. Wcześniej blokada trwała 2 s, czyli
+				// dokładnie tyle, ile `requestTimeoutSeconds: 2` poniżej. Test
+				// mierzył wtedy, która z dwóch równych wartości zdąży pierwsza,
+				// a nie to, co miał sprawdzać — i padał w 2 z 5 powtórzeń
+				// (zmierzone: .github/workflows/diagnostyka-testu.yml, run
+				// 33782961813, wynik 3 zaliczone / 2 padły przy niezmienionym
+				// kodzie produkcyjnym).
+				//
+				// Dlaczego równe wartości się biją: `StubURLProtocol.startLoading()`
+				// woła handler SYNCHRONICZNIE, a `URLSession` ma domyślny limit
+				// równoległych połączeń na host. Zablokowane `page=2` przetrzymuje
+				// więc obsługę, a `refresh()` pobiera strony sekwencyjnie
+				// (najpierw podcasty, potem artykuły) — przy blokadzie równej
+				// limitowi czasu żądanie podcastu czasem się nie mieściło i lista
+				// wychodziła jako dwie strony samych artykułów.
+				//
+				// 0,4 s wystarcza, by żądanie page=2 było w locie w chwili
+				// `refresh()` (o to w tym teście chodzi), a jednocześnie z
+				// zapasem mieści się w limicie 2 s. Ten margines jest tu istotą
+				// testu, nie kosmetyką: zbliżenie tych liczb przywraca flake.
+				_ = allowPage2ToFinish.wait(timeout: DispatchTime.now() + .milliseconds(400))
 			}
 
 			let (podcastID, articleID): (Int, Int)

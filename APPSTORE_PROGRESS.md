@@ -67,14 +67,65 @@ Kod używa dwóch kategorii wymagających deklaracji — ustalonych skanem kodu,
 
 Manifest jest podpięty do fazy **Resources** targetu. To istotne: plik leżący tylko na dysku, bez wpisu w „Copy Bundle Resources”, nie trafia do builda — czyli App Store by go nie zobaczył, a my mielibyśmy fałszywe poczucie zamkniętej sprawy. Dowód: `tools/test_manifest_prywatnosci.py` (15 asercji) sprawdza to wprost i porównuje manifest z kodem **w obie strony**: brak deklaracji oznacza odrzucenie wysyłki, a deklaracja „na zapas” to nieprawdziwe oświadczenie wobec Apple.
 
-## Otwarte: dwa padające testy
+## Zamknięte: dwa padające testy — oba miały INNE przyczyny, niż zakładano
 
-Oba dotyczą **wyścigów**, więc przed rozstrzygnięciem „regresja czy defekt logiki” trzeba znać powtarzalność:
+Pierwotna hipoteza mówiła „oba dotyczą wyścigów”. Pomiary pokazały, że była błędna
+w obu przypadkach.
 
-1. `NewsFeedViewModelTests.testLoadMoreInFlightDoesNotPolluteRefreshResults` — oczekiwano `["podcast.100","article.200"]`, dostano `["article.200","article.201"]` (linie 331 i 337). Test sprawdza, że wynik `loadMore` w locie nie zanieczyszcza świeżego `refresh`.
-2. `TyflocentrumUITests.testListsRecoverAutomaticallyWhenFirstRequestFails:756` — `XCTAssertTrue` na oczekiwaniu wiersza kategorii po celowo nieudanym pierwszym żądaniu.
+1. `NewsFeedViewModelTests.testLoadMoreInFlightDoesNotPolluteRefreshResults` —
+   **defekt testu, nie kodu**. Blokada semafora trwała 2 s, czyli dokładnie tyle,
+   ile `requestTimeoutSeconds` w tym samym teście: test mierzył, która z dwóch
+   równych liczb zdąży pierwsza. Po skróceniu blokady do 0,4 s przechodzi
+   w 0,44 s, wcześniej zajmował 2,6 s i padał. Kod produkcyjny bez zmian.
+   Wniosek: **dwie równe liczby w teście to nie próg, to wyścig.**
 
-Do pomiaru służy `.github/workflows/diagnostyka-testu.yml`: uruchamia wskazane testy N razy, każdy z osobnym `derivedDataPath` (wspólny cache'owałby wynik i przebiegi nie byłyby niezależne), i kończy się kodem 0, bo jest przyrządem pomiarowym, nie bramką jakości. **Uwaga:** `workflow_dispatch` czyta definicję z gałęzi domyślnej, więc ten workflow da się uruchomić dopiero po scaleniu do `master`.
+2. `testListsRecover…` — **defekt APLIKACJI, ujawniony przez test.** Zrzut ekranu
+   z momentu padnięcia (mechanizm niżej) pokazał ekran Podcasty z samym wierszem
+   „Wszystkie kategorie” i **zupełną pustką** pod nim: bez komunikatu, bez
+   kręciołka, bez przycisku. `AsyncListStatusSection` miał trzy gałęzie (błąd,
+   ładowanie, pusto po udanym pobraniu) i stan „pusto, bez błędu, `hasLoaded`
+   fałszywe” nie pasował do żadnej — więc widok nie renderował niczego. Trafia się
+   tam, gdy `refresh` wyjdzie przez `Task.isCancelled` przed ustawieniem
+   `hasLoaded` (SwiftUI anuluje `.task` przy przełączaniu zakładek), a
+   `guard !hasLoaded` blokował ponowną próbę na stałe.
+
+   Naprawione po obu stronach: czwarta gałąź pokazuje komunikat i przycisk,
+   a `loadIfNeeded` podejmuje próbę, gdy lista została pusta bez błędu.
+   Potwierdzone wzrokowo na kolejnym zrzucie: jest karta „Nie udało się pobrać
+   danych. Spróbuj ponownie.” z klikalnym przyciskiem. Naprawa objęła wszystkie
+   cztery widoki korzystające z tej sekcji (widać to też na ekranie Szukaj).
+
+   Sam test został przepisany na `testListsRecoverWhenFirstRequestFails`: nazwa
+   obiecywała odtworzenie „automatycznie”, a projekt aplikacji mówi co innego —
+   ponowienia są w warstwie API (`withRetry`, 2 próby) i w modelu listy (trzecia),
+   ale gdy wszystkie padną, użytkownik **ma** dostać jawną drogę wyjścia. Test
+   klika teraz „Spróbuj ponownie”, czyli robi to co użytkownik, i nadal wywala
+   się, gdy brakuje i danych, i przycisku — czyli w jedynym realnie złym stanie.
+
+### Trzecia rzecz, którą wykrył ten sam mechanizm
+
+`testCanAddPodcastToFavoritesAndSeeItInFavorites` padł raz na trzy przebiegi,
+a zrzut z padnięcia pokazywał ekran **całkowicie poprawny**. Log wyjaśnił dlaczego:
+na tym runnerze `Wait for app to idle` zajmowało do **143 s**, a start aplikacji
+52 s zamiast typowych 2-3 s. Przy limitach 5 s test mierzył obciążenie maszyny,
+nie zachowanie aplikacji. Limity zebrano w jedno miejsce (`limitUI`, domyślnie
+30 s, nadpisywalne przez `LIMIT_UI_SEKUNDY`).
+
+### Przyrząd, bez którego to wszystko było zgadywaniem
+
+`tearDown` dołącza zrzut ekranu, gdy test padnie; skrypt przekazuje
+`-resultBundlePath`, a workflow wystawia `.xcresult` jako artefakt z `if: always()`.
+Trzy poprzednie cykle diagnozy (po ~27 minut każdy) nie przybliżyły odpowiedzi,
+bo padający test mówi tylko „`XCTAssertTrue` failed w linii N”. Pierwszy zebrany
+zrzut rozstrzygnął dwie sprawy naraz. **Koszt narzędzia zwrócił się w pierwszym
+użyciu** — przy zmianach w UI warto je mieć od początku, nie po trzeciej porażce.
+
+Do pomiaru powtarzalności służy `.github/workflows/diagnostyka-testu.yml`:
+uruchamia wskazane testy N razy, każdy z osobnym `derivedDataPath` (wspólny
+cache'owałby wynik i przebiegi nie byłyby niezależne), i kończy się kodem 0, bo
+jest przyrządem pomiarowym, nie bramką jakości. **Uwaga:** `workflow_dispatch`
+czyta definicję z gałęzi domyślnej, więc ten workflow da się uruchomić dopiero po
+scaleniu do `master`.
 
 ## Wymaga Apple Developer Program / zewnętrznej konfiguracji
 

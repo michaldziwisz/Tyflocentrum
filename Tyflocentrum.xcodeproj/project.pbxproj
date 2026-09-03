@@ -16,6 +16,7 @@
 		89569C47430A8FD8DEB64AA7 /* AsyncTimeout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0BA3121BCB26744CEAE67FDD /* AsyncTimeout.swift */; };
 		A1B2C3D4E5F60718293A4B64 /* TyflocentrumSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */; };
 		BC7F1B0E2D0200000000B101 /* ZrzutyEkranu.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7F1B0D2D0200000000B100 /* ZrzutyEkranu.swift */; };
+		BC7F1C0E2D0300000000C101 /* ZrzutyPrzyciskow.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7F1C0D2D0300000000C100 /* ZrzutyPrzyciskow.swift */; };
 		A1B2C3D4E5F60718293A4B65 /* XCTest.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 068F24BC7FC4CF7845F775E1 /* XCTest.framework */; };
 		A1B2C3D4E5F60718293A4B72 /* PushNotificationPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B71 /* PushNotificationPreferences.swift */; };
 		A1B2C3D4E5F60718293A4B74 /* NewsFeedViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B73 /* NewsFeedViewModelTests.swift */; };
@@ -68,6 +69,7 @@
 		BEEC27DB292E775700F0D869 /* ContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEEC27DA292E775700F0D869 /* ContactView.swift */; };
 		BEF5F7EE292E8BE20065E572 /* ContactResponse.swift in Sources */ = {isa = PBXBuildFile; fileRef = BEF5F7ED292E8BE20065E572 /* ContactResponse.swift */; };
 		C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */; };
+		BC7F1D0E2D0400000000D101 /* StylPrzyciskuAkcji.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC7F1D0D2D0400000000D100 /* StylPrzyciskuAkcji.swift */; };
 		C47C765821AB1728150DA367 /* WPPostSummary.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6021BCA1CC8E35F39047EFEF /* WPPostSummary.swift */; };
 		D2E8B0B4EB840818A771E17E /* PodcastTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ECF1F44F4E7077BA610B02CD /* PodcastTests.swift */; };
 		D382729BD51E13C68BF56155 /* AppMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1347120363C2B310653F610 /* AppMenu.swift */; };
@@ -125,11 +127,13 @@
 		6021BCA1CC8E35F39047EFEF /* WPPostSummary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WPPostSummary.swift; sourceTree = "<group>"; };
 		728859B2796B1E24D2C779FB /* PodcastCommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodcastCommentsView.swift; sourceTree = "<group>"; };
 		78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLView.swift; sourceTree = "<group>"; };
+		BC7F1D0D2D0400000000D100 /* StylPrzyciskuAkcji.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StylPrzyciskuAkcji.swift; sourceTree = "<group>"; };
 		8E896DDBD6BB462F90335C66 /* ShowNotesParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShowNotesParser.swift; sourceTree = "<group>"; };
 		9646723B6391FE47334552EF /* LazyDetailedPodcastView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LazyDetailedPodcastView.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5E /* TyflocentrumUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = TyflocentrumUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TyflocentrumSmokeTests.swift; sourceTree = "<group>"; };
 		BC7F1B0D2D0200000000B100 /* ZrzutyEkranu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZrzutyEkranu.swift; sourceTree = "<group>"; };
+		BC7F1C0D2D0300000000C100 /* ZrzutyPrzyciskow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZrzutyPrzyciskow.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B71 /* PushNotificationPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationPreferences.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B73 /* NewsFeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewsFeedViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B75 /* PagedFeedViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PagedFeedViewModelTests.swift; sourceTree = "<group>"; };
@@ -252,6 +256,7 @@
 			children = (
 				A1B2C3D4E5F60718293A4B5F /* TyflocentrumSmokeTests.swift */,
 				BC7F1B0D2D0200000000B100 /* ZrzutyEkranu.swift */,
+				BC7F1C0D2D0300000000C100 /* ZrzutyPrzyciskow.swift */,
 			);
 			path = TyflocentrumUITests;
 			sourceTree = "<group>";
@@ -278,6 +283,7 @@
 				A83E50FD9BC840E2A1847FB9 /* FavoritesView.swift */,
 				ED2F0E60BF0E4CD1B0748873 /* AccessibleTextView.swift */,
 				78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */,
+				BC7F1D0D2D0400000000D100 /* StylPrzyciskuAkcji.swift */,
 				A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */,
 				BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */,
 				BE55421B28FD548300CC0128 /* NewsView.swift */,
@@ -534,6 +540,7 @@
 			files = (
 				A1B2C3D4E5F60718293A4B64 /* TyflocentrumSmokeTests.swift in Sources */,
 				BC7F1B0E2D0200000000B101 /* ZrzutyEkranu.swift in Sources */,
+				BC7F1C0E2D0300000000C101 /* ZrzutyPrzyciskow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -551,6 +558,7 @@
 				BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
 				E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
 				C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */,
+				BC7F1D0E2D0400000000D101 /* StylPrzyciskuAkcji.swift in Sources */,
 				A1B2C3D4E5F60718293A4B97 /* VoiceOverScrollBarPrimer.swift in Sources */,
 				D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */,
 				F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */,
@@ -777,7 +785,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Tyflocentrum/Preview Content\"";
-				DEVELOPMENT_TEAM = A86C2NBH8N;
+				DEVELOPMENT_TEAM = X2FN885LQU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Tyflocentrum/Info.plist;
@@ -815,7 +823,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Tyflocentrum/Preview Content\"";
-				DEVELOPMENT_TEAM = A86C2NBH8N;
+				DEVELOPMENT_TEAM = X2FN885LQU;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = Tyflocentrum/Info.plist;

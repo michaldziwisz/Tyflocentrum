@@ -30,7 +30,10 @@ jobs:
         run: bash scripts/zrzuty-ekranu.sh
 
       - name: Sprawdz zgodnosc z wymogami App Store
-        run: python3 scripts/sprawdz_zrzuty.py artefakty
+        # min-na-klase 4: test robi 5 ekranow, wiec mniej niz 4 znaczy, ze
+        # przerwal sie w polowie. Bez tego progu przebieg z JEDNYM zrzutem
+        # z iPada przeszedl jako "wszystko zgodne" (run 33782945660).
+        run: python3 scripts/sprawdz_zrzuty.py artefakty --min-na-klase 4
 
       - uses: actions/upload-artifact@v4
         if: always()

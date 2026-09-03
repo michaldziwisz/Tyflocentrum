@@ -73,7 +73,11 @@ final class AsyncListViewModel<Item>: ObservableObject {
 	}
 
 	func loadIfNeeded(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 45) async {
-		guard !hasLoaded else { return }
+		// Ta sama pułapka co w `PagedFeedViewModel` (patrz komentarz tam):
+		// `load` wychodzi przez `Task.isCancelled` przed ustawieniem `hasLoaded`,
+		// więc samo `guard !hasLoaded` zamykało widok w stanie „pusto i nic się
+		// nie dzieje” na stałe. Ponowne wejście na ekran ma podjąć próbę.
+		guard !hasLoaded || (items.isEmpty && errorMessage == nil && !isLoading) else { return }
 		await load(fetch, timeoutSeconds: timeoutSeconds)
 	}
 
@@ -491,7 +495,11 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	}
 
 	func loadIfNeeded(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
-		guard !hasLoaded else { return }
+		// Warunek celowo NIE jest samym `!hasLoaded`: gdy poprzednie zadanie
+		// zostało anulowane po drodze, `hasLoaded` zostawało fałszywe, a lista
+		// pusta bez komunikatu (zobaczone na zrzucie z run 33800599777). Wejście
+		// na zakładkę ponownie ma wtedy podjąć próbę, a nie utknąć w pustce.
+		guard !hasLoaded || (items.isEmpty && errorMessage == nil && !isLoading) else { return }
 		await refresh(fetchPage: fetchPage)
 	}
 
@@ -508,6 +516,26 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 		do {
 			_ = try await appendNextPage(fetchPage: fetchPage)
 			guard !Task.isCancelled else { return }
+
+			if items.isEmpty {
+				// PONOWIENIE PO NIEUDANYM PIERWSZYM ŻĄDANIU.
+				// Wcześniej ta gałąź od razu pokazywała komunikat o błędzie
+				// i czekała, aż użytkownik znajdzie przycisk „Spróbuj ponownie”.
+				// Lista Nowości (`NewsFeedViewModel`) ponawiała w tej sytuacji
+				// sama, a listy kategorii nie — czyli ta sama awaria sieci dawała
+				// dwa różne zachowania, zależnie od zakładki.
+				//
+				// Dla osoby korzystającej z czytnika ekranu każdy dodatkowy krok
+				// po nieudanym starcie to realny koszt: trzeba znaleźć przycisk,
+				// który pojawił się gdzieś na ekranie. Jedno ciche ponowienie
+				// załatwia typowy przypadek (chwilowy timeout przy starcie),
+				// a przycisk zostaje na wypadek, gdyby i ono nie pomogło.
+				try? await Task.sleep(nanoseconds: 250_000_000)
+				guard !Task.isCancelled else { return }
+				_ = try await appendNextPage(fetchPage: fetchPage)
+				guard !Task.isCancelled else { return }
+			}
+
 			hasLoaded = true
 
 			if items.isEmpty {
@@ -515,8 +543,22 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 			}
 		} catch {
 			guard !Task.isCancelled else { return }
+			// Ta sama logika w gałęzi błędu: pierwszy nieudany strzał to najczęściej
+			// chwilowy timeout, więc dajemy jedną cichą próbę, zamiast od razu
+			// odsyłać użytkownika do przycisku.
+			try? await Task.sleep(nanoseconds: 250_000_000)
+			if !Task.isCancelled {
+				do {
+					_ = try await appendNextPage(fetchPage: fetchPage)
+				} catch {
+					// Druga próba też padła — dalej idziemy ścieżką komunikatu.
+				}
+			}
+			guard !Task.isCancelled else { return }
 			hasLoaded = true
-			errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			if items.isEmpty {
+				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+			}
 		}
 	}
 
@@ -668,6 +710,36 @@ struct AsyncListStatusSection: View {
 			Section {
 				Text(emptyMessage)
 					.foregroundColor(.secondary)
+			}
+		} else if isEmpty {
+			// MARTWY STAN: brak błędu, nic się nie ładuje, a `hasLoaded` jest
+			// fałszywe. Wcześniej NIE BYŁO tu żadnej gałęzi, więc lista
+			// pokazywała PUSTY EKRAN bez komunikatu, bez kręciołka i bez drogi
+			// wyjścia — użytkownik nie miał nawet informacji, że coś się nie udało.
+			//
+			// ZOBACZONE NA ZRZUCIE (run 33800599777, ekran Podcasty): pod
+			// wierszem „Wszystkie kategorie” zupełna pustka. To nie był problem
+			// samego testu — tak wyglądała aplikacja dla użytkownika, a osoba
+			// niewidoma dostawała po prostu ekran, na którym nie ma nic do
+			// przeczytania.
+			//
+			// Jak się tu trafia: `refresh` wychodzi przez `Task.isCancelled`
+			// zanim ustawi `hasLoaded` (SwiftUI anuluje zadanie `.task`, gdy widok
+			// zniknie na moment). `loadIfNeeded` też już nie pomoże, bo `.task`
+			// nie odpala się ponownie bez przemontowania widoku.
+			Section {
+				Text("Nie udało się pobrać danych. Spróbuj ponownie.")
+					.foregroundColor(.secondary)
+
+				if let retryAction {
+					Button("Spróbuj ponownie") {
+						Task { await retryAction() }
+					}
+					.accessibilityHint(retryHint)
+					.accessibilityIdentifier(retryIdentifier ?? "asyncList.retry")
+					.disabled(isRetryDisabled)
+					.accessibilityHidden(isRetryDisabled)
+				}
 			}
 		}
 	}

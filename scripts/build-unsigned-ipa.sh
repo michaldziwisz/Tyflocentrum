@@ -6,6 +6,10 @@ SCHEME="${SCHEME:-Tyflocentrum}"
 SWIFTFORMAT_VERSION="${SWIFTFORMAT_VERSION:-0.58.7}"
 SIM_DESTINATION="${SIM_DESTINATION:-}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-${RUNNER_TEMP:-$PWD}/DerivedData-${GITHUB_RUN_ID:-local}}"
+# Wynik testow (.xcresult) laduje w katalogu roboczym, zeby workflow mogl go
+# wystawic jako artefakt. Tam sa zalaczniki, w tym zrzuty ekranu z padajacych
+# testow UI - bez nich diagnoza padniecia sprowadza sie do zgadywania.
+RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/WynikTestow.xcresult}"
 RUN_TESTS="${RUN_TESTS:-true}"
 RUN_ARCHIVE="${RUN_ARCHIVE:-true}"
 
@@ -173,11 +177,58 @@ ensure_swiftformat
 swiftformat --config .swiftformat --lint .
 echo "::endgroup::"
 
+echo "::group::Bramki projektu (Python)"
+# TE BRAMKI ISTNIALY, ALE NIC ICH NIE URUCHAMIALO. Byly opisane w dokumentacji
+# i w APPSTORE_PROGRESS.md jako "dowod", a realnie nikt ich nie wolal na CI -
+# czyli pilnowaly dokladnie tyle, ile plik lezacy na dysku. Klasyczny fałszywy
+# dowod: raport mowi "sprawdzone", a pomiar nigdy nie biegnie.
+#
+# Kazda z nich sprawdza rzecz, ktora psuje sie CICHO (kod sie kompiluje, testy
+# przechodza), a skutek widac dopiero przy wysylce do Apple albo u uzytkownika:
+#   - konto_apple        : cudzy DEVELOPMENT_TEAM po merge z upstreamu,
+#   - manifest_prywatnosci: brak deklaracji = odrzucenie przez App Store Connect,
+#   - ikony_ios          : brakujacy rozmiar albo kanal alfa w ikonie,
+#   - kontrast_przyciskow: kolor ponizej progu WCAG dla oslabionego wzroku,
+#   - tytuly_zrzutow     : dane testowe na zrzutach wyslanych do sklepu.
+#
+# ZALEZNOSCI: test_ikony_ios analizuje piksele, wiec potrzebuje numpy i Pillow.
+# Runner ich nie ma i pierwsze uruchomienie bramek na CI padlo wlasnie na tym
+# (ModuleNotFoundError: numpy) - lokalnie przechodzilo, bo tu biblioteki sa.
+# To zaleznosci NARZEDZI, nie aplikacji.
+#
+# DLACZEGO VENV, A NIE `pip install`: python3 z Homebrew (taki jest na runnerach
+# macOS) jest "externally managed" wg PEP 668 i goly `pip install` konczy sie
+# bledem, a `--break-system-packages` psuje srodowisko systemowe. Venv jest
+# odporny na oba warianty i nie zalezy od tego, jak runner ma zbudowanego Pythona.
+echo "--- srodowisko dla bramek"
+BRAMKI_VENV="${RUNNER_TEMP:-/tmp}/venv-bramki"
+if [[ ! -x "$BRAMKI_VENV/bin/python" ]]; then
+	python3 -m venv "$BRAMKI_VENV"
+fi
+"$BRAMKI_VENV/bin/python" -m pip install --quiet --disable-pip-version-check numpy pillow
+for bramka in \
+	tools/test_konto_apple.py \
+	tools/test_manifest_prywatnosci.py \
+	tools/test_ikony_ios.py \
+	tools/test_kontrast_przyciskow.py \
+	tools/test_tytuly_zrzutow.py
+do
+	echo "--- $bramka"
+	"$BRAMKI_VENV/bin/python" "$bramka"
+done
+echo "::endgroup::"
+
 rm -rf "$DERIVED_DATA_PATH"
 
 if [[ "$RUN_TESTS" == "true" ]]; then
 	echo "::group::Test (Simulator)"
 	resolve_sim_destination
+	# -resultBundlePath: bez niego zalaczniki testow (w tym zrzuty ekranu
+	# robione w tearDown przy PADNIECIU) zostaja w katalogu tymczasowym runnera
+	# i przepadaja razem z maszyna. Padajacy test UI mowi wtedy tylko
+	# "XCTAssertTrue failed w linii N", a nie CO bylo na ekranie - i kazda
+	# kolejna poprawka jest zgadywaniem po 27 minutach na przebieg.
+	rm -rf "$RESULT_BUNDLE_PATH"
 	xcodebuild \
 		-project "$PROJECT_PATH" \
 		-scheme "$SCHEME" \
@@ -185,6 +236,7 @@ if [[ "$RUN_TESTS" == "true" ]]; then
 		-sdk iphonesimulator \
 		-destination "$SIM_DESTINATION" \
 		-derivedDataPath "$DERIVED_DATA_PATH" \
+		-resultBundlePath "$RESULT_BUNDLE_PATH" \
 		-parallel-testing-enabled NO \
 		-parallel-testing-worker-count 1 \
 		test

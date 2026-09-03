@@ -420,7 +420,12 @@ private final class UITestURLProtocol: URLProtocol {
 			return
 		}
 
-		let (statusCode, data) = Self.response(for: request)
+		let (statusCode, rawData) = Self.response(for: request)
+		// Jedno miejsce przejścia dla WSZYSTKICH odpowiedzi atrapy, więc jedno
+		// miejsce podmiany tytułów na realistyczne przy zrzutach do App Store.
+		// Bez flagi UI_TESTING_SCREENSHOTS zwraca dane bez zmian, czyli
+		// wszystkie istniejące testy widzą dokładnie to co dotąd.
+		let data = Self.daneDoZrzutu(rawData)
 		let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
 		client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
 		client?.urlProtocol(self, didLoad: data)
@@ -745,6 +750,44 @@ private final class UITestURLProtocol: URLProtocol {
 
 	private static func isFlagEnabled(_ flag: String) -> Bool {
 		ProcessInfo.processInfo.arguments.contains(flag)
+	}
+
+	/// Realistyczne tytuły na zrzuty do karty App Store.
+	///
+	/// PO CO OSOBNA FLAGA, a nie zmiana danych atrapy w miejscu: napisy w stylu
+	/// „Test podcast” są KONTRAKTEM 13 asercji w `TyflocentrumTests` i
+	/// `TyflocentrumUITests` (np. `XCTAssertEqual(row.label, "Test podcast")`).
+	/// Podmiana ich globalnie naprawiłaby zrzuty i jednocześnie wywaliła testy —
+	/// czyli wymieniłaby jeden problem na drugi. Dlatego tytuły marketingowe
+	/// włącza wyłącznie `UI_TESTING_SCREENSHOTS`, a bez tej flagi wszystko
+	/// zachowuje się dokładnie jak dotąd.
+	private static let tytulyDoZrzutow: [String: String] = [
+		"Test podcast wynik 2": "Poranek z Tyfloradiem — rozmowa o dostępności",
+		"Test podcast 2": "Technikalia: sztuczna inteligencja w czytnikach ekranu",
+		"Test podcast": "Tyflo Przegląd Tygodnia — odcinek 312",
+		"Test artykuł 1": "Jak korzystać z Braille Screen Input",
+		"Test artykuł 2": "Poradnik: dostępne aplikacje bankowe",
+		"Test artykuł": "Nowe funkcje VoiceOver w iOS 26",
+		"Test podcasty 2": "Wywiady",
+		"Test podcasty": "Audycje",
+		"Test artykuły 2": "Recenzje",
+		"Test artykuły": "Poradniki",
+	]
+
+	/// Wstawia realistyczne tytuły do gotowej odpowiedzi JSON atrapy.
+	///
+	/// Podmiana idzie po surowym tekście, bo atrapy trzymają JSON jako literały —
+	/// przepisywanie ich na modele tylko po to, żeby zmienić napis, byłoby
+	/// przebudową bez korzyści. Bez flagi funkcja zwraca wejście bez zmian.
+	static func daneDoZrzutu(_ dane: Data) -> Data {
+		guard isFlagEnabled("UI_TESTING_SCREENSHOTS") else { return dane }
+		guard var tekst = String(data: dane, encoding: .utf8) else { return dane }
+		// Od NAJDŁUŻSZYCH kluczy, inaczej „Test podcast” zje przedrostek
+		// „Test podcast 2” i zostanie ogonek „ 2” przy nowym tytule.
+		for (stary, nowy) in tytulyDoZrzutow.sorted(by: { $0.key.count > $1.key.count }) {
+			tekst = tekst.replacingOccurrences(of: stary, with: nowy)
+		}
+		return tekst.data(using: .utf8) ?? dane
 	}
 
 	private static func shouldFailOnce(_ didFail: inout Bool, whenFlagEnabled flag: String) -> Bool {
