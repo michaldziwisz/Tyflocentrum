@@ -190,8 +190,8 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
 - iPad: odpowiednie zrzuty ekranu + sanity‑check UI.
 
 ### Wysoki priorytet (polish pod stabilność i wizerunek)
-- (Opcjonalnie) dodać `PrivacyInfo.xcprivacy` (jeśli wymagane przez aktualne zasady publikacji i/lub używane API).
-- (Opcjonalnie) rozważyć `ITSAppUsesNonExemptEncryption` (jeśli kwalifikujesz się do wyjątku; i tak trzeba odpowiedzieć w App Store Connect).
+- ✅ **`PrivacyInfo.xcprivacy` — WDROŻONE 03.09.2026.** SPROSTOWANIE: ta pozycja była wcześniej opisana jako „(Opcjonalnie)” i to było **błędne**. Apple pisze wprost: „Starting May 1, 2024, apps that don't describe their use of required reason API in their privacy manifest file aren't accepted by App Store Connect”. Aplikacja używa dwóch kategorii wymagających deklaracji (`UserDefaults` w 7 plikach, metadane plików w `VoiceMessageRecorder`), więc bez manifestu wysyłka zostałaby odrzucona — to był **bloker**, nie polish. Szczegóły i tabela kategorii: `APPSTORE_PROGRESS.md`.
+- ✅ **`ITSAppUsesNonExemptEncryption = false` — WDROŻONE 03.09.2026.** Aplikacja używa wyłącznie HTTPS/TLS systemu, bez własnej kryptografii. Bez tego klucza App Store Connect zadaje pytanie eksportowe przy każdej wysyłce builda.
 - (Produktowo) jeśli chcesz wspierać uruchamianie na Macu: sanity‑testy „iPad app on Mac” (okno, scroll, fokus, skróty klawiaturowe w formularzach).
 
 ### Dodatkowe uwagi do kodu (do wdrożenia)
@@ -200,6 +200,7 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
 - ✅ Cache `no-store` ma limity pamięci + testy ewikcji.
 - ✅ Ujednolicono `IPHONEOS_DEPLOYMENT_TARGET`.
 - ✅ `Podcast.formattedDate` zabezpieczone pod concurrency (lock wokół `DateFormatter`).
+- ✅ **Zero `try!` w kodzie produkcyjnym** (03.09.2026): oba wystąpienia w `ShowNotesParser` zamienione na wartości opcjonalne. Koszt zerowy, bo wzorce służą wyłącznie do `firstMatch` — brak wzorca daje ten sam wynik co brak dopasowania, zamiast ubicia aplikacji.
 - (Opcjonalnie) `PodcastTitle.plainTextCache`: można dodać `totalCostLimit` (np. po długości stringa), jeśli w praktyce cache rośnie za bardzo pamięciowo.
 
 ### Niski priorytet (po wydaniu 1.0)
