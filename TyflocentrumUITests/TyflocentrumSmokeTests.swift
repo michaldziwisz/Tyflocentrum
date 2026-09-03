@@ -52,7 +52,24 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 	private func makeApp(additionalLaunchArguments: [String] = []) -> XCUIApplication {
 		let app = XCUIApplication()
-		app.terminate()
+		// DLACZEGO NIE MA TU `app.terminate()`. Na przeciążonym runnerze rzuca
+		// „Failed to terminate net.tyflocentrum.app:8080: Failed to terminate …:0”
+		// i wywala test JESZCZE PRZED jego pierwszą linią — zmierzone w run
+		// 33814048157, gdzie padło dokładnie w tej linii, a wcześniejsze przebiegi
+		// wywalały się w INNYCH, losowych testach (sygnatura chwiejnego
+		// środowiska, nie defektu aplikacji). Pojedyncze operacje zajmowały tam
+		// do 57 s.
+		//
+		// Owinięcie w `XCTContext.runActivity` NIE POMOGŁOBY: to jest tylko
+		// grupowanie w raporcie, nie przechwytywanie błędów — XCTest nadal
+		// zgłosiłby porażkę.
+		//
+		// Terminate było tu sprzątaniem stanu przed startem, ale jest ZBĘDNE.
+		// Dokumentacja Apple dla `XCUIApplication.launch()` mówi wprost: „If the
+		// application is already running, this call terminates the existing
+		// instance, to ensure a clean launch state for the newly launched
+		// instance”. Czyli usunięcie tej linii nie zmienia izolacji testów —
+		// usuwa tylko drugie, zawodne wywołanie tej samej operacji.
 		app.launchArguments = ["UI_TESTING"] + additionalLaunchArguments
 		return app
 	}
