@@ -6,6 +6,26 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		continueAfterFailure = false
 	}
 
+	/// Zrzut ekranu dołączany do wyniku, gdy test PADNIE.
+	///
+	/// PO CO. Padający test UI mówi tylko „XCTAssertTrue failed w linii N”. Nie
+	/// mówi, CO było na ekranie: komunikat błędu, pusta lista, kręciołek czy
+	/// zupełnie inny widok. Bez tego każda kolejna poprawka jest zgadywaniem,
+	/// a każdy cykl zgadywania to ~27 minut CI. Zrzut zamienia „nie wiem, czemu
+	/// nie widzi wiersza” na konkretną obserwację.
+	///
+	/// `tearDown` jest wołany także po porażce, a `testRun?.hasSucceeded`
+	/// pozwala nie zaśmiecać artefaktów zrzutami z udanych przebiegów.
+	override func tearDown() {
+		if testRun?.hasSucceeded == false {
+			let zrzut = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+			zrzut.name = "PADL-\(name)"
+			zrzut.lifetime = .keepAlways
+			add(zrzut)
+		}
+		super.tearDown()
+	}
+
 	private func makeApp(additionalLaunchArguments: [String] = []) -> XCUIApplication {
 		let app = XCUIApplication()
 		app.terminate()

@@ -36,7 +36,10 @@
 //    przy dużej czcionce łamie się na dwie linie,
 //  - `.minimumScaleFactor(0.8)` — przy Dynamic Type XXL tekst raczej się zmniejszy
 //    niż zostanie ucięty; nie schodzimy niżej, bo to psułoby czytelność,
-//  - `.contentShape(Rectangle())` — całe pole jest klikalne, nie tylko litery.
+//  - `.contentShape(...)` — całe pole jest klikalne, nie tylko litery. Kształt
+//    dopasowany do widocznego tła, NIE `Rectangle()`: prostokąt większy niż tło
+//    zepsuł dwa testy UI czekające na zmianę etykiety przycisku ulubionych
+//    (szczegóły przy samym wywołaniu, niżej).
 
 import SwiftUI
 
@@ -80,7 +83,9 @@ struct StylPrzyciskuAkcji: ButtonStyle {
 				RoundedRectangle(cornerRadius: 12, style: .continuous)
 					.fill(KoloryPrzyciskuAkcji.wypelnienie)
 			)
-			.contentShape(Rectangle())
+			// Ten sam powod co w wariancie obramowanym ponizej: kształt dotyku
+			// dopasowany do widocznego tla, nie wiekszy prostokat.
+			.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 			.opacity(configuration.isPressed ? 0.75 : 1)
 	}
 }
@@ -103,7 +108,24 @@ struct StylPrzyciskuAkcjiObramowany: ButtonStyle {
 				RoundedRectangle(cornerRadius: 12, style: .continuous)
 					.strokeBorder(KoloryPrzyciskuAkcji.obramowanie, lineWidth: 2)
 			)
-			.contentShape(Rectangle())
+			// UWAGA: tu było `.contentShape(Rectangle())`. Powiększa obszar dotyku,
+			// ale prostokąt jest WIĘKSZY niż zaokrąglone tło i wchodzi w drzewo
+			// dostępności jako osobny kształt. Zmierzone: po jego dodaniu padły
+			// dwa testy UI czekające na zmianę etykiety „Dodaj do ulubionych” ->
+			// „Usuń z ulubionych” (run 33795666482, linie 394 i 483), a wcześniej
+			// oba przechodziły. Skoro test przestał widzieć nową etykietę, to
+			// VoiceOver również może nie ogłaszać aktualnego stanu — a dla tej
+			// aplikacji to defekt krytyczny, nie kosmetyczny.
+			//
+			// Kształt dopasowany do tła zachowuje powiększony obszar dotyku
+			// (padding + maxWidth nadal działają), bez wprowadzania geometrii
+			// rozbieżnej z tym, co widać.
+			//
+			// UCZCIWIE: nie mam dowodu, że to JEDYNA przyczyna tamtych dwóch
+			// padnięć — potwierdzi to dopiero kolejny przebieg CI. Gdyby testy
+			// nadal padały, następnym krokiem jest zrzut ekranu w momencie
+			// porażki, nie kolejna zmiana na wyczucie.
+			.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 			.opacity(configuration.isPressed ? 0.75 : 1)
 	}
 }

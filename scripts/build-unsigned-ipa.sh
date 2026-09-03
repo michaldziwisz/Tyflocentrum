@@ -6,6 +6,10 @@ SCHEME="${SCHEME:-Tyflocentrum}"
 SWIFTFORMAT_VERSION="${SWIFTFORMAT_VERSION:-0.58.7}"
 SIM_DESTINATION="${SIM_DESTINATION:-}"
 DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-${RUNNER_TEMP:-$PWD}/DerivedData-${GITHUB_RUN_ID:-local}}"
+# Wynik testow (.xcresult) laduje w katalogu roboczym, zeby workflow mogl go
+# wystawic jako artefakt. Tam sa zalaczniki, w tym zrzuty ekranu z padajacych
+# testow UI - bez nich diagnoza padniecia sprowadza sie do zgadywania.
+RESULT_BUNDLE_PATH="${RESULT_BUNDLE_PATH:-$PWD/WynikTestow.xcresult}"
 RUN_TESTS="${RUN_TESTS:-true}"
 RUN_ARCHIVE="${RUN_ARCHIVE:-true}"
 
@@ -178,6 +182,12 @@ rm -rf "$DERIVED_DATA_PATH"
 if [[ "$RUN_TESTS" == "true" ]]; then
 	echo "::group::Test (Simulator)"
 	resolve_sim_destination
+	# -resultBundlePath: bez niego zalaczniki testow (w tym zrzuty ekranu
+	# robione w tearDown przy PADNIECIU) zostaja w katalogu tymczasowym runnera
+	# i przepadaja razem z maszyna. Padajacy test UI mowi wtedy tylko
+	# "XCTAssertTrue failed w linii N", a nie CO bylo na ekranie - i kazda
+	# kolejna poprawka jest zgadywaniem po 27 minutach na przebieg.
+	rm -rf "$RESULT_BUNDLE_PATH"
 	xcodebuild \
 		-project "$PROJECT_PATH" \
 		-scheme "$SCHEME" \
@@ -185,6 +195,7 @@ if [[ "$RUN_TESTS" == "true" ]]; then
 		-sdk iphonesimulator \
 		-destination "$SIM_DESTINATION" \
 		-derivedDataPath "$DERIVED_DATA_PATH" \
+		-resultBundlePath "$RESULT_BUNDLE_PATH" \
 		-parallel-testing-enabled NO \
 		-parallel-testing-worker-count 1 \
 		test

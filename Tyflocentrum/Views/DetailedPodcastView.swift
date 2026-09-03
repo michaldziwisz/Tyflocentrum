@@ -120,7 +120,7 @@ struct DetailedPodcastView: View {
 						RoundedRectangle(cornerRadius: 12, style: .continuous)
 							.fill(KoloryPrzyciskuAkcji.wypelnienie)
 					)
-					.contentShape(Rectangle())
+					.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 			}
 			.accessibilityLabel("Słuchaj audycji")
 			.accessibilityHint("Otwiera odtwarzacz audycji.")
@@ -146,7 +146,7 @@ struct DetailedPodcastView: View {
 						RoundedRectangle(cornerRadius: 12, style: .continuous)
 							.strokeBorder(KoloryPrzyciskuAkcji.obramowanie, lineWidth: 2)
 					)
-					.contentShape(Rectangle())
+					.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 			}
 			.accessibilityIdentifier("podcastDetail.share")
 
@@ -182,7 +182,7 @@ struct DetailedPodcastView: View {
 					.accessibilityHidden(true)
 			}
 			.frame(maxWidth: .infinity, alignment: .leading)
-			.contentShape(Rectangle())
+			.contentShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 		}
 		.buttonStyle(.plain)
 		.accessibilityLabel(commentsCountValueText)

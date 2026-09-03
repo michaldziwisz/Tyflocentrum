@@ -37,3 +37,14 @@ jobs:
         with:
           name: Tyflocentrum-unsigned-ipa
           path: tyflocentrum.ipa
+
+      # Zrzuty ekranu z PADAJACYCH testow UI. if: always(), bo najbardziej
+      # potrzebujemy ich wlasnie wtedy, gdy krok testow zwrocil blad - a wtedy
+      # domyslnie kolejne kroki sa pomijane i dowod przepada razem z runnerem.
+      - name: Wystaw wynik testow (zrzuty z padniec)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wynik-testow-xcresult
+          path: WynikTestow.xcresult
+          if-no-files-found: ignore
