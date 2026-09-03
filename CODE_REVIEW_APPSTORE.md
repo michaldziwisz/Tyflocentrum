@@ -177,11 +177,9 @@ Poniżej jest lista rzeczy, które realnie weryfikuje review (stabilność, komp
   - że masz prawa do używania nazwy i treści (albo jesteś oficjalnym klientem/partnerem).
 
 ### 7.3 Notatki do App Review (co im napisać)
-- Krótki opis przepływów:
-  - gdzie jest player,
-  - gdzie jest kontakt (i że pojawia się tylko podczas audycji interaktywnej),
-  - że aplikacja jest projektowana pod VoiceOver.
-- Jeśli jakaś funkcja zależy od „czy trwa audycja” lub backendu (kontakt, ramówka), daj im informację jak to przetestować lub zapewnij stabilny tryb testowy na czas review.
+- ✅ **NAPISANE 03.09.2026: `docs/notatki-do-app-review.md`** — gotowy tekst do wklejenia w App Store Connect, wraz z listą rzeczy do uzupełnienia przed wysyłką.
+- Najważniejszy punkt, który łatwo przeoczyć: **kontakt z audycją jest widoczny tylko wtedy, gdy trwa audycja interaktywna** (aplikacja pyta serwer o `ac=current`). Recenzent, który otworzy aplikację w środku dnia, tej funkcji NIE ZOBACZY i może uznać ją za nieistniejącą. Dlatego notatka mówi wprost, że to zachowanie zamierzone, i proponuje włączenie trybu testowego audycji na czas recenzji.
+- Pozostałe wątki opisane w notatce: brak konta i logowania, po co mikrofon (nagrywanie zawsze inicjuje użytkownik), push wyłączony w Release, iPad z tego samego kodu, prawa do treści, dostępność jako powód istnienia aplikacji.
 
 ## 8) Rekomendowana lista działań przed wysyłką (priorytety)
 
