@@ -190,6 +190,22 @@ echo "::group::Bramki projektu (Python)"
 #   - ikony_ios          : brakujacy rozmiar albo kanal alfa w ikonie,
 #   - kontrast_przyciskow: kolor ponizej progu WCAG dla oslabionego wzroku,
 #   - tytuly_zrzutow     : dane testowe na zrzutach wyslanych do sklepu.
+#
+# ZALEZNOSCI: test_ikony_ios analizuje piksele, wiec potrzebuje numpy i Pillow.
+# Runner ich nie ma i pierwsze uruchomienie bramek na CI padlo wlasnie na tym
+# (ModuleNotFoundError: numpy) - lokalnie przechodzilo, bo tu biblioteki sa.
+# To zaleznosci NARZEDZI, nie aplikacji.
+#
+# DLACZEGO VENV, A NIE `pip install`: python3 z Homebrew (taki jest na runnerach
+# macOS) jest "externally managed" wg PEP 668 i goly `pip install` konczy sie
+# bledem, a `--break-system-packages` psuje srodowisko systemowe. Venv jest
+# odporny na oba warianty i nie zalezy od tego, jak runner ma zbudowanego Pythona.
+echo "--- srodowisko dla bramek"
+BRAMKI_VENV="${RUNNER_TEMP:-/tmp}/venv-bramki"
+if [[ ! -x "$BRAMKI_VENV/bin/python" ]]; then
+	python3 -m venv "$BRAMKI_VENV"
+fi
+"$BRAMKI_VENV/bin/python" -m pip install --quiet --disable-pip-version-check numpy pillow
 for bramka in \
 	tools/test_konto_apple.py \
 	tools/test_manifest_prywatnosci.py \
@@ -198,7 +214,7 @@ for bramka in \
 	tools/test_tytuly_zrzutow.py
 do
 	echo "--- $bramka"
-	python3 "$bramka"
+	"$BRAMKI_VENV/bin/python" "$bramka"
 done
 echo "::endgroup::"
 
