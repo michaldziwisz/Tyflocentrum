@@ -43,12 +43,20 @@ gdy serwer odpowie, że audycja jest na antenie. Poza godzinami audycji ta sekcj
 jest niewidoczna i **to jest zachowanie zamierzone**, nie błąd.
 
 Audycje na żywo są zwykle w godzinach wieczornych czasu polskiego (CET/CEST),
-najczęściej w środy. Aktualna ramówka jest widoczna w zakładce **Tyfloradio**
-oraz publicznie na `https://tyflopodcast.net`.
+najczęściej we wtorki, środy i czwartki. Aktualna ramówka jest widoczna w zakładce
+**Tyfloradio** oraz publicznie na `https://tyflopodcast.net`.
 
-Jeśli chcecie sprawdzić ten przepływ poza godzinami audycji, prosimy o kontakt
-pod adresem podanym jako Support URL — włączymy tryb testowy audycji na czas
-recenzji i potwierdzimy, kiedy będzie aktywny.
+Jeśli recenzent trafi poza godzinami audycji i chce zobaczyć ten przepływ, prosimy
+o kontakt pod adresem podanym jako Support URL — **podamy najbliższy konkretny
+termin audycji**, wtedy funkcja będzie widoczna bez żadnych zmian w aplikacji ani
+na serwerze.
+
+**Nie włączamy trybu testowego audycji na żądanie i to jest świadoma decyzja.**
+Ten sam serwer obsługuje aplikacje na Androida, Windows oraz stronę internetową,
+a informacja „trwa audycja" dociera do wszystkich słuchaczy jednocześnie. Sztuczne
+włączenie audycji na czas recenzji wprowadziłoby w błąd realnych użytkowników,
+którzy zobaczyliby zaproszenie do kontaktu z audycją, której nie ma na antenie.
+Wolimy podać termin niż zafałszować stan usługi.
 
 ### Mikrofon
 
@@ -94,8 +102,13 @@ krytyczny, nie kosmetyczny.
       (ten sam adres podajemy wyżej jako kontakt na czas recenzji)
 - [x] **wersja angielska: `docs/app-review-notes-en.md`** — to ona idzie do Apple,
       ta polska zostaje jako źródło i do naszego wglądu
-- [ ] potwierdzić z redakcją, czy da się włączyć tryb testowy audycji na żądanie;
-      jeśli nie, zamiast tego podać konkretną datę i godzinę najbliższej audycji
+- [x] **rozstrzygnięte: NIE włączamy trybu testowego audycji.** Ten sam serwer
+      (`kontakt.tyflopodcast.net/json.php?ac=current`) obsługuje aplikacje na
+      Androida i Windows oraz stronę, a flaga „trwa audycja" dociera do wszystkich
+      słuchaczy naraz — sztuczne włączenie wprowadziłoby ich w błąd. Zamiast tego
+      notatka podaje typowe dni audycji i obiecuje konkretny termin na życzenie
+      recenzenta. Zapisane też w notatce po angielsku, żeby przy kolejnej wysyłce
+      nikt nie „poprawił" tego z powrotem.
 - [ ] sprawdzić spójność „App Privacy" w App Store Connect z `PrivacyInfo.xcprivacy`
       (rozbieżność między nimi jest częstym powodem odrzucenia)
 

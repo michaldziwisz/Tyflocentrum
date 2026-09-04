@@ -45,12 +45,20 @@ server reports that a show is live. Outside broadcast hours this section is hidd
 and **this is intended behaviour, not a bug**.
 
 Live shows are usually held in the evening, Polish time (CET/CEST), most often on
-Wednesdays. The current schedule is visible in the **Tyfloradio** tab and publicly
-at `https://tyflopodcast.net`.
+Tuesdays, Wednesdays and Thursdays. The current schedule is visible in the
+**Tyfloradio** tab and publicly at `https://tyflopodcast.net`.
 
-If you would like to test this flow outside broadcast hours, please contact us at
-the address given as our Support URL — we will enable a test broadcast mode for the
-duration of the review and confirm when it is active.
+If you happen to review the app outside broadcast hours and would like to see this
+flow, please contact us at the address given as our Support URL — **we will give you
+the exact date and time of the next live show**, so you can see the feature working
+with no changes to the app or the server.
+
+**We deliberately do not enable a fake "show is live" mode for review.** The same
+server also serves our Android app, our Windows app and the website, and the
+"a show is on air" flag reaches all listeners at once. Switching it on artificially
+would mislead real users, who would be invited to contact a show that is not
+actually broadcasting. We would rather give you a precise time slot than
+misrepresent the state of the service.
 
 ### Microphone
 
