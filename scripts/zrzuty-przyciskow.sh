@@ -41,11 +41,28 @@ for WARIANT in domyslny kontrast; do
 	if [ "$WARIANT" = "kontrast" ]; then
 		# Ustawienia dostepnosci wlaczane po stronie SYMULATORA, nie aplikacji -
 		# dlatego zrzut pokazuje to, co realnie widzi uzytkownik z tymi opcjami.
-		xcrun simctl ui "$UDID" increase-contrast enabled || true
-		xcrun simctl ui "$UDID" content-size accessibility-large || true
+		#
+		# UWAGA NA NAZWY: opcje simctl maja PODKRESLENIA, nie myslniki
+		# (increase_contrast, content_size). Z myslnikami simctl NIE zglasza
+		# bledu - wypisuje pomoc i konczy sie kodem 0, wiec `|| true` maskowalo
+		# to calkowicie: pierwszy przebieg dal zrzuty tylko wariantu domyslnego,
+		# a oba katalogi wygladaly na zrobione. Dlatego teraz sprawdzamy WYNIK.
+		xcrun simctl ui "$UDID" increase_contrast enabled
+		xcrun simctl ui "$UDID" content_size accessibility-large
 	else
-		xcrun simctl ui "$UDID" increase-contrast disabled || true
-		xcrun simctl ui "$UDID" content-size medium || true
+		xcrun simctl ui "$UDID" increase_contrast disabled
+		xcrun simctl ui "$UDID" content_size medium
+	fi
+
+	# Kontrola, ze ustawienie NAPRAWDE weszlo. Bez tego "zrzut w trybie
+	# kontrastu" moglby byc zwyklym zrzutem pod inna nazwa - czyli dowodem,
+	# ktory nie dowodzi niczego.
+	ODCZYT_KONTRAST="$(xcrun simctl ui "$UDID" increase_contrast || echo "?")"
+	ODCZYT_ROZMIAR="$(xcrun simctl ui "$UDID" content_size || echo "?")"
+	echo "stan symulatora: increase_contrast=$ODCZYT_KONTRAST content_size=$ODCZYT_ROZMIAR"
+	if [ "$WARIANT" = "kontrast" ] && [ "$ODCZYT_KONTRAST" != "enabled" ]; then
+		echo "BLAD: nie udalo sie wlaczyc trybu kontrastu (odczyt: $ODCZYT_KONTRAST)" >&2
+		exit 1
 	fi
 
 	BUNDLE="$TMP/Przyciski-$ETYKIETA-$WARIANT.xcresult"
