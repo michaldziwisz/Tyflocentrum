@@ -79,8 +79,8 @@ for WARIANT in domyslny kontrast; do
 		-parallel-testing-enabled NO \
 		-parallel-testing-worker-count 1 \
 		-only-testing:TyflocentrumUITests/ZrzutyPrzyciskow \
-		ETYKIETA_URZADZENIA="$ETYKIETA" \
-		ETYKIETA_WARIANTU="$WARIANT" \
+		TEST_RUNNER_ETYKIETA_URZADZENIA="$ETYKIETA" \
+		TEST_RUNNER_ETYKIETA_WARIANTU="$WARIANT" \
 		test || echo "UWAGA: wariant $WARIANT zwrocil blad - zrzuty moga byc niekompletne"
 
 	echo "::endgroup::"
@@ -99,3 +99,21 @@ done
 echo
 echo "=== zrzuty w $WYJSCIE ==="
 ls -la "$WYJSCIE" || true
+
+# KONTROLA KONCOWA: czy w nazwach plikow SA oba warianty.
+# Poprzednio nie bylo - xcodebuild dostawal ETYKIETA_WARIANTU jako USTAWIENIE
+# BUDOWANIA, a test czytal ProcessInfo.environment swojego procesu, wiec zmienna
+# NIE docierala do symulatora i kazdy przebieg zapisywal zrzuty jako "domyslny",
+# nadpisujac poprzednie. Workflow konczyl sie SUKCESEM z polowa materialu.
+# Prefiks TEST_RUNNER_ to sposob xcodebuild na przekazanie zmiennej SRODOWISKOWEJ
+# do procesu testu (zdejmuje prefiks przed uruchomieniem).
+BRAKI=0
+for W in domyslny kontrast; do
+	ILE="$(ls "$WYJSCIE" 2>/dev/null | grep -c -- "-$W-" || true)"
+	echo "wariant $W: $ILE zrzutow"
+	if [ "$ILE" -eq 0 ]; then
+		echo "BLAD: brak zrzutow wariantu '$W' - etykieta nie dotarla do testu" >&2
+		BRAKI=1
+	fi
+done
+[ "$BRAKI" -eq 0 ] || exit 1
