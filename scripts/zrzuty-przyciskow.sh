@@ -79,8 +79,6 @@ for WARIANT in domyslny kontrast; do
 		-parallel-testing-enabled NO \
 		-parallel-testing-worker-count 1 \
 		-only-testing:TyflocentrumUITests/ZrzutyPrzyciskow \
-		TEST_RUNNER_ETYKIETA_URZADZENIA="$ETYKIETA" \
-		TEST_RUNNER_ETYKIETA_WARIANTU="$WARIANT" \
 		test || echo "UWAGA: wariant $WARIANT zwrocil blad - zrzuty moga byc niekompletne"
 
 	echo "::endgroup::"
@@ -90,10 +88,33 @@ if ! command -v xcparse >/dev/null 2>&1; then
 	brew install chargepoint/xcparse/xcparse
 fi
 
+# WYCIAGANIE ZRZUTOW: kazdy wariant do OSOBNEGO katalogu, potem zmiana nazwy.
+#
+# DLACZEGO TAK, A NIE PRZEZ ZMIENNA SRODOWISKOWA: dwie proby przekazania etykiety
+# wariantu do testu PADLY - ani `ETYKIETA_WARIANTU=...` (xcodebuild traktuje to
+# jako ustawienie budowania), ani prefiks `TEST_RUNNER_` nie dotarly do
+# ProcessInfo.environment procesu testu na symulatorze. Skutek byl ZAWSZE ten sam:
+# oba przebiegi zapisywaly zalaczniki jako "domyslny" i drugi nadpisywal pierwszy.
+#
+# Nazwa wariantu jest znana TUTAJ, w petli, wiec nie ma po co jej nikomu przekazywac.
+# Bierzemy ja z nazwy pliku .xcresult (Przyciski-<urzadzenie>-<wariant>.xcresult)
+# i doklejamy do nazw plikow po wyciagnieciu. Zadnej zaleznosci od xcodebuild.
 for BUNDLE in "$TMP"/Przyciski-*.xcresult; do
 	[ -e "$BUNDLE" ] || continue
-	echo "wyciagam zrzuty z $BUNDLE"
-	xcparse screenshots "$BUNDLE" "$WYJSCIE/" || true
+
+	# Przyciski-iPhone-17-Pro-Max-kontrast.xcresult -> kontrast
+	NAZWA_BUNDLE="$(basename "$BUNDLE" .xcresult)"
+	WARIANT_Z_PLIKU="${NAZWA_BUNDLE##*-}"
+
+	echo "wyciagam zrzuty z $BUNDLE (wariant: $WARIANT_Z_PLIKU)"
+	POD="$TMP/rozpakowane-$WARIANT_Z_PLIKU"
+	rm -rf "$POD"; mkdir -p "$POD"
+	xcparse screenshots "$BUNDLE" "$POD/" || true
+
+	for PLIK in "$POD"/*.png; do
+		[ -e "$PLIK" ] || continue
+		mv "$PLIK" "$WYJSCIE/${ETYKIETA}-${WARIANT_Z_PLIKU}-$(basename "$PLIK")"
+	done
 done
 
 echo

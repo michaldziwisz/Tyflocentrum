@@ -25,17 +25,21 @@ final class ZrzutyPrzyciskow: XCTestCase {
 		continueAfterFailure = false
 	}
 
-	private var etykietaUrzadzenia: String {
-		ProcessInfo.processInfo.environment["ETYKIETA_URZADZENIA"] ?? "urzadzenie"
-	}
-
-	private var etykietaWariantu: String {
-		ProcessInfo.processInfo.environment["ETYKIETA_WARIANTU"] ?? "domyslny"
-	}
-
+	/// Nazwa załącznika = tylko nazwa ekranu.
+	///
+	/// URZĄDZENIE I WARIANT DOKLEJA SKRYPT, nie ten kod. Dwie próby przekazania
+	/// etykiety wariantu tutaj przez zmienną środowiskową padły: `xcodebuild`
+	/// traktuje `ETYKIETA_WARIANTU=...` jako ustawienie budowania, a prefiks
+	/// `TEST_RUNNER_` też nie dotarł do `ProcessInfo.environment` procesu testu
+	/// na symulatorze. Skutek był zawsze ten sam: oba przebiegi zapisywały
+	/// załączniki jako „domyslny” i drugi nadpisywał pierwszy, przy zielonym CI.
+	///
+	/// `scripts/zrzuty-przyciskow.sh` zna wariant we własnej pętli, więc nadaje
+	/// nazwy po wyciągnięciu plików z wyniku testów. Jedno źródło prawdy, zero
+	/// zależności od tego, co `xcodebuild` przepuści do symulatora.
 	private func zapisz(_ app: XCUIApplication, _ nazwa: String) {
 		let zalacznik = XCTAttachment(screenshot: app.screenshot())
-		zalacznik.name = "\(etykietaUrzadzenia)-\(etykietaWariantu)-\(nazwa)"
+		zalacznik.name = nazwa
 		// Bez .keepAlways XCTest kasuje załączniki testów, które przeszły.
 		zalacznik.lifetime = .keepAlways
 		add(zalacznik)
