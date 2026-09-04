@@ -9,6 +9,21 @@ struct SettingsView: View {
 
 	@State private var sharePayload: SharePayload?
 
+	/// Adres polityki prywatności. TEN SAM adres trafia do App Store Connect —
+	/// rozjechanie się tych dwóch miejsc znaczy, że sklep pokazuje inny dokument
+	/// niż aplikacja, więc pilnuje tego bramka `tools/test_adresy_publiczne.py`.
+	///
+	/// `force`-unwrap byłby tu ryzykiem bez potrzeby, ale i tak nie chcemy
+	/// aplikacji bez tego linku: awaryjny adres kieruje na stronę główną
+	/// projektu, gdzie polityka jest podlinkowana.
+	static let politykaPrywatnosciURL = URL(
+		string: "https://michaldziwisz.github.io/Tyflocentrum/privacy/"
+	) ?? URL(string: "https://michaldziwisz.github.io/Tyflocentrum/")!
+
+	static let wsparcieURL = URL(
+		string: "https://michaldziwisz.github.io/Tyflocentrum/"
+	)!
+
 	private func pushAuthorizationTitle(_ status: UNAuthorizationStatus) -> String {
 		switch status {
 		case .notDetermined:
@@ -120,6 +135,24 @@ struct SettingsView: View {
 					}
 				}
 			#endif
+
+			Section("Prywatność i wsparcie") {
+				// Apple wymaga adresu polityki prywatności w metadanych App Store
+				// Connect, a link W SAMEJ APLIKACJI zaleca jako dobrą praktykę.
+				// Dla użytkownika ma to prostszy sens: nie musi szukać opisu
+				// w sklepie, żeby sprawdzić, co aplikacja robi z jego danymi.
+				//
+				// Link, a nie wbudowany tekst: polityka może się zmienić bez
+				// wydawania nowej wersji aplikacji, a wtedy kopia w kodzie
+				// natychmiast zaczyna kłamać.
+				Link("Polityka prywatności", destination: Self.politykaPrywatnosciURL)
+					.accessibilityHint("Otwiera politykę prywatności w przeglądarce.")
+					.accessibilityIdentifier("settings.privacyPolicy")
+
+				Link("Pomoc i kontakt", destination: Self.wsparcieURL)
+					.accessibilityHint("Otwiera stronę wsparcia w przeglądarce.")
+					.accessibilityIdentifier("settings.support")
+			}
 
 			Section("Diagnostyka") {
 				Toggle("Zbieraj log diagnostyczny", isOn: $diagnostics.isEnabled)
