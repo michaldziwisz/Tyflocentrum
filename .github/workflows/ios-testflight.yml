@@ -1,0 +1,184 @@
+name: TestFlight (podpisany build)
+
+# Buduje PODPISANY build i wysyla go do App Store Connect.
+#
+# WYMAGA 7 SEKRETOW w environment 'release' (patrz docs/podpisywanie-ios.md).
+# Bez nich workflow padnie na pierwszym kroku z jasnym komunikatem, a nie
+# w polowie budowania.
+#
+# Odpalany TYLKO recznie i TYLKO z galezi domyslnej, z jawnym potwierdzeniem -
+# wysylka do Apple to skutek publiczny, nie ma sie dziac przy zwyklym pushu.
+
+on:
+  workflow_dispatch:
+    inputs:
+      potwierdzam:
+        description: "Wpisz 'tak', zeby wyslac build do App Store Connect"
+        required: true
+        default: "nie"
+
+jobs:
+  testflight:
+    if: inputs.potwierdzam == 'tak'
+    runs-on: macos-26
+    environment: release
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Sprawdzenie sekretow PRZED budowaniem. Bez tego brakujacy sekret objawia
+      # sie bledem podpisywania w 20. minucie, co jest kosztowne i nieczytelne.
+      - name: Sprawdz, czy sekrety sa ustawione
+        env:
+          CERT: ${{ secrets.APPLE_DIST_CERT_P12_BASE64 }}
+          CERT_PASS: ${{ secrets.APPLE_DIST_CERT_PASSWORD }}
+          PROFIL: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+          TEAM: ${{ secrets.APPLE_TEAM_ID }}
+          ASC_KEY: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_P8: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+        run: |
+          BRAKI=""
+          for N in CERT CERT_PASS PROFIL TEAM ASC_KEY ASC_ISSUER ASC_P8; do
+            [ -z "${!N}" ] && BRAKI="$BRAKI $N"
+          done
+          if [ -n "$BRAKI" ]; then
+            echo "BRAKUJE SEKRETOW:$BRAKI" >&2
+            echo "Instrukcja: docs/podpisywanie-ios.md" >&2
+            exit 1
+          fi
+          echo "wszystkie 7 sekretow na miejscu"
+
+      - name: Wybierz Xcode
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.app \
+            || sudo xcode-select -s "$(ls -d /Applications/Xcode_26*.app | sort -V | tail -1)"
+          xcodebuild -version
+          xcrun --sdk iphoneos --show-sdk-version
+
+      - name: Zaimportuj certyfikat do tymczasowego keychainu
+        env:
+          CERT_B64: ${{ secrets.APPLE_DIST_CERT_P12_BASE64 }}
+          CERT_PASS: ${{ secrets.APPLE_DIST_CERT_PASSWORD }}
+        run: |
+          # Tymczasowy keychain, nie domyslny - po zakonczeniu joba znika razem
+          # z maszyna, wiec certyfikat nigdzie nie zostaje.
+          KEYCHAIN="$RUNNER_TEMP/wysylka.keychain-db"
+          HASLO="$(openssl rand -base64 24)"
+          security create-keychain -p "$HASLO" "$KEYCHAIN"
+          security set-keychain-settings -lut 3600 "$KEYCHAIN"
+          security unlock-keychain -p "$HASLO" "$KEYCHAIN"
+
+          echo "$CERT_B64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -k "$KEYCHAIN" \
+            -P "$CERT_PASS" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -k "$HASLO" "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN" login.keychain-db
+
+          echo "zaimportowane tozsamosci:"
+          security find-identity -v -p codesigning "$KEYCHAIN"
+
+      - name: Zainstaluj profil
+        env:
+          PROFIL_B64: ${{ secrets.APPLE_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          KAT="$HOME/Library/MobileDevice/Provisioning Profiles"
+          mkdir -p "$KAT"
+          echo "$PROFIL_B64" | base64 --decode > "$KAT/tyflocentrum.mobileprovision"
+
+          # Weryfikacja profilu PRZED buildem: zly App ID albo profil deweloperski
+          # zamiast App Store zlapiemy tutaj, nie po 20 minutach budowania.
+          security cms -D -i "$KAT/tyflocentrum.mobileprovision" > "$RUNNER_TEMP/profil.plist"
+          NAZWA="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/profil.plist")"
+          APPID="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:application-identifier' "$RUNNER_TEMP/profil.plist")"
+          TASKALLOW="$(/usr/libexec/PlistBuddy -c 'Print :Entitlements:get-task-allow' "$RUNNER_TEMP/profil.plist")"
+          echo "profil: $NAZWA"
+          echo "app-identifier: $APPID"
+          echo "get-task-allow: $TASKALLOW"
+
+          if [ "$APPID" != "${{ secrets.APPLE_TEAM_ID }}.net.tyflocentrum.app" ]; then
+            echo "BLAD: profil dotyczy innego App ID niz net.tyflocentrum.app" >&2
+            exit 1
+          fi
+          if [ "$TASKALLOW" != "false" ]; then
+            echo "BLAD: to profil DEWELOPERSKI (get-task-allow=true), potrzebny App Store" >&2
+            exit 1
+          fi
+
+      - name: Archiwizuj z podpisem
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          mkdir -p build
+          xcodebuild archive \
+            -project Tyflocentrum.xcodeproj \
+            -scheme Tyflocentrum \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -archivePath build/Tyflocentrum.xcarchive \
+            -allowProvisioningUpdates \
+            DEVELOPMENT_TEAM="$TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="TyfloCentrum App Store"
+
+      - name: Wyeksportuj .ipa
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # mkdir W TYM SAMYM kroku co zapis pliku - przy Sterigo osobny,
+          # pozniejszy krok 'mkdir' wywalil workflow, bo YAML wykonuje po kolei.
+          mkdir -p build
+          cat > build/ExportOptions.plist <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store</string>
+            <key>teamID</key><string>$TEAM_ID</string>
+            <key>uploadSymbols</key><true/>
+            <key>signingStyle</key><string>manual</string>
+            <key>provisioningProfiles</key>
+            <dict>
+              <key>net.tyflocentrum.app</key><string>TyfloCentrum App Store</string>
+            </dict>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath build/Tyflocentrum.xcarchive \
+            -exportOptionsPlist build/ExportOptions.plist \
+            -exportPath build/export
+
+          ls -la build/export
+
+      - name: Wyslij do App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_P8_B64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+        run: |
+          mkdir -p ~/.appstoreconnect/private_keys
+          echo "$ASC_P8_B64" | base64 --decode \
+            > ~/.appstoreconnect/private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+          IPA="$(ls build/export/*.ipa | head -1)"
+          echo "wysylam: $IPA"
+
+          # Walidacja PRZED wysylka: brakujaca ikona, orientacje czy zly SDK
+          # wychodza tutaj z czytelnym komunikatem.
+          xcrun altool --validate-app -f "$IPA" -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+          xcrun altool --upload-app -f "$IPA" -t ios \
+            --apiKey "$ASC_KEY_ID" --apiIssuer "$ASC_ISSUER_ID"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Tyflocentrum-ipa-podpisany
+          path: build/export/*.ipa
+          if-no-files-found: warn
