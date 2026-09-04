@@ -88,10 +88,16 @@ krytyczny, nie kosmetyczny.
 
 ## Do uzupełnienia przed wysyłką
 
-- [ ] Privacy Policy URL (wymagane przez App Store Connect)
-- [ ] Support URL — ten sam adres podajemy wyżej jako kontakt na czas recenzji
-- [ ] przetłumaczyć notatkę na angielski (App Review czyta po angielsku)
+- [x] **Privacy Policy URL:** `https://michaldziwisz.github.io/Tyflocentrum/privacy/`
+      (opublikowane i sprawdzone: kod 200, tytuł strony potwierdzony)
+- [x] **Support URL:** `https://michaldziwisz.github.io/Tyflocentrum/`
+      (ten sam adres podajemy wyżej jako kontakt na czas recenzji)
+- [x] **wersja angielska: `docs/app-review-notes-en.md`** — to ona idzie do Apple,
+      ta polska zostaje jako źródło i do naszego wglądu
 - [ ] potwierdzić z redakcją, czy da się włączyć tryb testowy audycji na żądanie;
       jeśli nie, zamiast tego podać konkretną datę i godzinę najbliższej audycji
 - [ ] sprawdzić spójność „App Privacy" w App Store Connect z `PrivacyInfo.xcprivacy`
       (rozbieżność między nimi jest częstym powodem odrzucenia)
+
+Przy każdej kolejnej wysyłce aktualizuj **oba** pliki: ten i angielski. Rozjechanie
+się ich znaczy, że wysyłamy Apple inną treść, niż mamy zapisaną u siebie.
