@@ -71,30 +71,28 @@ Declining microphone access does not block any other part of the app.
 ### Push notifications
 
 Push notifications are **disabled** in this version. The supporting code exists, but
-the user interface and device registration are inactive in the Release build — we did
-not want to ship a feature that only appears to work. No device identifier is
-transmitted. Enabling push is planned for a future version, together with an updated
-privacy policy and App Privacy answers.
+the user interface and device registration are inactive in the Release build, and no
+device identifier is transmitted. Enabling push is planned for a future version,
+together with updated privacy answers.
 
 ### iPad
 
 The app runs on iPhone and iPad from the same codebase. Features that depend on
-iPhone-specific sensors (proximity, the so-called "ear mode" while recording) are
-hidden and disabled on iPad, where they make no sense.
+iPhone-specific sensors (proximity, "ear mode" while recording) are hidden on iPad.
 
 ### Content and rights
 
 Podcasts, articles and the radio stream come from services run by the Institute for
 Regional Development Foundation (Tyflopodcast, Tyfloświat, Tyfloradio). This app is
 the official client for those services, developed in agreement with their editorial
-team. The same content is publicly available through a web browser.
+team. The same content is publicly available via a web browser.
 
 ### Accessibility
 
-This app is built for screen reader users, and that is its primary purpose. All
-elements carry VoiceOver labels, Dynamic Type is supported, and lists expose
-accessibility actions. If anything cannot be operated with VoiceOver during review,
-please report it as a bug — for us that is a critical defect, not a cosmetic one.
+This app is built for screen reader users. All elements carry VoiceOver labels,
+Dynamic Type is supported, and lists expose accessibility actions. If anything cannot
+be operated with VoiceOver, please report it as a bug — for us that is a critical
+defect, not a cosmetic one.
 
 ### Language
 
