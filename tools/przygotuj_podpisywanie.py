@@ -12,7 +12,7 @@ CO SPRAWDZA PRZED USTAWIENIEM SEKRETOW (kolejnosc = od najtanszego bledu):
      to najczestszy blad: certyfikat wystawiony na inny CSR wyglada poprawnie,
      a podpisywanie pada dopiero na runnerze,
   3. czy certyfikat to naprawde Apple Distribution i czy Team ID sie zgadza,
-  4. czy profil dotyczy net.tyflocentrum.app,
+  4. czy profil dotyczy net.tyflopodcast.tyflocentrum,
   5. czy profil jest App Store, a nie deweloperski (get-task-allow musi byc false),
   6. czy profil nie ma listy urzadzen (to znak profilu deweloperskiego).
 
@@ -37,7 +37,7 @@ import sys
 import tempfile
 
 TEAM_ID = "X2FN885LQU"
-BUNDLE_ID = "net.tyflocentrum.app"
+BUNDLE_ID = "net.tyflopodcast.tyflocentrum"
 REPO = "michaldziwisz/Tyflocentrum"
 KLUCZ_PRYWATNY = os.path.expanduser("~/tyflocentrum-signing/dist.key")
 
@@ -46,9 +46,27 @@ ostrzezenia: list[str] = []
 
 
 def uruchom(cmd: list[str], wejscie: bytes | None = None) -> tuple[int, str]:
-    """Uruchamia polecenie i zwraca (kod, wyjscie). Nie rzuca wyjatkiem."""
+    """Uruchamia polecenie i zwraca (kod, stdout+stderr jako tekst). Nie rzuca wyjatkiem.
+
+    Do KOMUNIKATOW. Gdy potrzebujesz DANYCH wyjsciowych polecenia, uzyj
+    uruchom_dane() - patrz komentarz tam.
+    """
     p = subprocess.run(cmd, input=wejscie, capture_output=True)
     return p.returncode, (p.stdout + p.stderr).decode("utf-8", "replace")
+
+
+def uruchom_dane(cmd: list[str], wejscie: bytes | None = None) -> tuple[int, bytes, str]:
+    """Jak uruchom(), ale ODDZIELA dane od komunikatow i NIE dekoduje danych.
+
+    PO CO OSOBNA FUNKCJA. Profil .mobileprovision wypakowany przez
+    `openssl smime -verify` idzie na stdout, a openssl ROWNOLEGLE pisze na stderr
+    "Verification successful". Sklejenie obu strumieni doklejalo ten napis do
+    binarnego plist i plistlib przerywal bledem "junk after document element",
+    czyli poprawny profil wygladal na uszkodzony. Dekodowanie do str psulo dodatkowo
+    plist w formacie binarnym.
+    """
+    p = subprocess.run(cmd, input=wejscie, capture_output=True)
+    return p.returncode, p.stdout, p.stderr.decode("utf-8", "replace")
 
 
 def znajdz(katalog: str, wzorce: list[str], opis: str) -> str | None:
@@ -112,12 +130,13 @@ def sprawdz_certyfikat(cer: str, tmp: str) -> str | None:
 
 
 def sprawdz_profil(profil: str) -> None:
-    kod, out = uruchom(["openssl", "smime", "-inform", "DER", "-verify", "-noverify", "-in", profil])
+    kod, plist_bajty, komunikaty = uruchom_dane(
+        ["openssl", "smime", "-inform", "DER", "-verify", "-noverify", "-in", profil])
     if kod != 0:
-        bledy.append(f"nie moge odczytac profilu: {out.strip()[:200]}")
+        bledy.append(f"nie moge odczytac profilu: {komunikaty.strip()[:200]}")
         return
     try:
-        dane = plistlib.loads(out.encode("utf-8", "surrogateescape"))
+        dane = plistlib.loads(plist_bajty)
     except Exception as e:  # noqa: BLE001
         bledy.append(f"profil nie jest poprawnym plist: {e}")
         return

@@ -1,130 +1,146 @@
 # Podpisywanie i wysyłka iOS bez Maca
 
-Ta instrukcja domyka **krok 6** ze ściągi `docs/asc-sciaga-wysylka.md`. Procedura
-jest sprawdzona w praktyce przy Sterigo — cały podpisany build i wysyłka robią się
-na runnerze GitHuba, bez fizycznego Maca.
+Ta instrukcja domyka **krok 6** ze ściągi `docs/asc-sciaga-wysylka.md`. Cały podpisany
+build i wysyłka robią się na runnerze GitHuba, bez fizycznego Maca.
 
 ## Co jest gotowe, a co wymaga Ciebie
 
-Uczciwie na wstępie: **tego kroku nie da się zrobić w całości bez Ciebie.** Trzy
-rzeczy powstają wyłącznie po zalogowaniu na konto Apple i nikt inny ich nie wygeneruje.
+Rzeczy, które kiedyś trzeba było klikać w portalu Apple, powstają teraz przez
+App Store Connect API. Zostaje **jedna** czynność w przeglądarce: klucz API.
 
-| Rzecz | Kto robi | Stan |
+| Rzecz | Kto robi | Jak |
 |---|---|---|
-| Klucz prywatny + wniosek o certyfikat (CSR) | ja, lokalnie | **zrobione** |
-| Workflow wysyłkowy `ios-testflight.yml` | ja | **zrobione** |
-| Certyfikat dystrybucyjny (`.cer`) | **Ty** (portal Apple) | czeka |
-| Profil App Store (`.mobileprovision`) | **Ty** (portal Apple) | czeka |
-| Klucz App Store Connect API (`.p8`) | **Ty** (App Store Connect) | czeka |
-| Przetworzenie plików i 7 sekretów w GitHubie | ja | czeka na pliki od Ciebie |
+| Klucz prywatny + wniosek o certyfikat (CSR) | my, lokalnie | `openssl`, klucz nie opuszcza maszyny |
+| Klucz App Store Connect API (`.p8`) | **Ty**, raz | `appstoreconnect.apple.com` → Users and Access → Integrations |
+| App ID (bundle ID) | my | `POST /v1/bundleIds` |
+| Certyfikat dystrybucyjny | my | `POST /v1/certificates` z naszym CSR |
+| Profil App Store | my | `POST /v1/profiles`, typ `IOS_APP_STORE` |
+| 7 sekretów w GitHubie | my | `tools/przygotuj_podpisywanie.py` |
+| Rekord aplikacji w App Store Connect | **Ty**, raz | API tego nie umie, patrz niżej |
+| Sekcja App Privacy | **Ty**, raz | API tego nie umie, patrz niżej |
 
-Dlaczego nie mogę tego obejść: certyfikat i klucz API to **dane uwierzytelniające
-Twojego konta Apple**. Portal wymaga zalogowania i akceptacji regulaminu przez
-człowieka — nie ma publicznego API do ich tworzenia. To bariera z założenia.
+### Czego App Store Connect API NIE umie
 
-Dobra wiadomość: **klucz prywatny nigdy nie opuszcza naszej maszyny.** Ty wgrywasz
-tylko wniosek (CSR), a Apple oddaje certyfikat pasujący do klucza, który został u nas.
+Zmierzone na oficjalnej specyfikacji OpenAPI 4.4.1 (966 ścieżek), nie założone:
 
----
+- **utworzenie rekordu aplikacji** — `/v1/apps` ma wyłącznie `GET`. Apple pisze
+  wprost, żeby nowych aplikacji nie tworzyć przez API;
+- **App Privacy** (deklaracje zbierania danych) — w specyfikacji nie istnieje
+  żaden endpoint dla tych odpowiedzi. Jest tylko `accessibilityDeclarations`,
+  czyli etykiety dostępności, co to zupełnie inna rzecz.
 
-## KROK A — Certyfikat dystrybucyjny (Ty)
+Wszystko pozostałe — metadane wersji, kategoria wiekowa, zrzuty ekranu, cena,
+dostępność terytorialna, wysyłka buildu i **Submit for Review** — jest dostępne
+programowo.
 
-Plik wniosku czeka gotowy w:
-`C:\Users\m\Downloads\tyflocentrum-signing\dist.csr`
+## KROK A — klucz App Store Connect API (Ty, jednorazowo)
 
-1. Wejdź na `developer.apple.com/account/resources/certificates/add`
-2. Wybierz **Apple Distribution**, potem **Continue**.
-3. W polu wyboru pliku wskaż `dist.csr` z katalogu powyżej.
-4. **Continue**, potem **Download** — zapisz `distribution.cer` **do tego samego
-   katalogu** `Downloads\tyflocentrum-signing\`.
+1. `appstoreconnect.apple.com` → **Users and Access** → **Integrations** →
+   **App Store Connect API** → **Team Keys**.
+2. Jeśli widzisz **Request Access**, najpierw to (wymaga roli Account Holder).
+3. **+**, nazwa np. `TyfloCentrum CI`.
+4. Rola: **Admin**. To nie jest ostrożność na zapas — klucz **App Managera nie ma
+   dostępu do Certificates, Identifiers & Profiles**, więc nie wystawi certyfikatu
+   ani profilu i wracamy do klikania w portalu.
+5. **Generate**, potem od razu **Download API Key**. Plik `AuthKey_XXXXXXXXXX.p8`
+   pobiera się **tylko raz**; zgubiony = trzeba wygenerować nowy klucz.
+6. Plik ląduje w `~/tyflocentrum-signing/`, Issuer ID (UUID ze strony) podajesz
+   zwykłym tekstem. Key ID odczytujemy z nazwy pliku.
 
-> Nie potrzebujesz Maca ani programu Keychain Access. Klucz prywatny mam lokalnie,
-> więc certyfikat i klucz połączę w paczkę `.p12` po swojej stronie.
+## KROK B — App ID, certyfikat i profil (my, jedno polecenie)
 
-## KROK B — Profil App Store (Ty)
+```bash
+python3 tools/wystaw_podpisywanie.py --pokaz     # diagnoza, nic nie tworzy
+python3 tools/wystaw_podpisywanie.py --zapisz    # tworzy brakujące
+```
 
-1. `developer.apple.com/account/resources/profiles/add`
-2. W sekcji **Distribution** wybierz **App Store Connect** (albo „App Store" —
-   nazwa zależy od wersji strony), potem **Continue**.
-3. **App ID:** wskaż `net.tyflocentrum.app`.
-   > **Pułapka dostępności zmierzona przy Sterigo:** to nie lista rozwijana, a pole
-   > filtra z wynikami klikalnymi myszą — **Enter często nic nie robi**. Obejścia po
-   > kolei: wpisz `TyfloCentrum`, żeby został jeden wynik; spróbuj **spacji** zamiast
-   > Enter; włącz tryb formularza NVDA i użyj spacji; symuluj klik myszą NVDA
-   > (na laptopie `NVDA+Shift+M`, potem `NVDA+[`).
-4. **Certificate:** zaznacz certyfikat utworzony w kroku A.
-5. **Provisioning Profile Name:** wpisz dokładnie **`TyfloCentrum App Store`**.
-   > Ta nazwa jest zaszyta w workflow. Inna nazwa = build nie znajdzie profilu.
-6. **Generate**, potem **Download** — zapisz `.mobileprovision` do tego samego katalogu.
+Narzędzie jest **idempotentne**: każdy krok najpierw sprawdza, czy rzecz już
+istnieje. Certyfikat rozpoznaje przez **porównanie klucza publicznego** z naszym
+CSR, nie po nazwie — ta sama osoba może mieć kilka certyfikatów, a tylko jeden
+pasuje do klucza prywatnego, który mamy.
 
-## KROK C — Klucz App Store Connect API (Ty)
+Zapisuje `distribution.cer` i `TyfloCentrum.mobileprovision` do
+`~/tyflocentrum-signing/`.
 
-1. `appstoreconnect.apple.com` → **Users and Access** → zakładka **Integrations**
-   → **App Store Connect API**
-2. Przycisk **+** (Generate API Key). Nazwa: `TyfloCentrum CI`, rola **App Manager**.
-3. **Zapisz sobie Key ID i Issuer ID** — możesz mi je podać zwykłym tekstem, nie są
-   tajne bez pliku klucza.
-4. Pobierz plik `AuthKey_XXXXXXXX.p8` do tego samego katalogu.
-   > **Ten plik można pobrać tylko RAZ.** Jeśli go zgubisz, trzeba wygenerować nowy klucz.
+## KROK C — sekrety w GitHubie (my)
 
-## KROK D — Reszta (ja)
+```bash
+python3 tools/przygotuj_podpisywanie.py --katalog ~/tyflocentrum-signing \
+    --issuer-id <ISSUER_ID>
+```
 
-Gdy powiesz, że pliki są w katalogu, robię wszystko pozostałe bez Twojego udziału:
+Przed ustawieniem czegokolwiek sprawdza, po kolei od najtańszego błędu: czy
+certyfikat **pasuje do naszego klucza prywatnego** (porównanie modułów), czy jest
+typu Apple Distribution, czy Team ID się zgadza, czy profil dotyczy właściwego
+App ID, czy nie jest deweloperski (`get-task-allow` musi być `false`) i czy nie ma
+listy urządzeń.
 
-1. weryfikuję, że certyfikat pasuje do klucza prywatnego (porównanie modułów) —
-   niezgodność wychodzi tu, a nie przy budowaniu,
-2. składam paczkę `.p12` z losowym hasłem,
-3. sprawdzam profil: właściwy App ID, brak `get-task-allow`, brak listy urządzeń,
-4. tworzę środowisko `release` w repozytorium, ograniczone do gałęzi domyślnej,
-5. wpisuję **7 sekretów** przez `gh` (mam uprawnienia, sprawdzone),
-6. odpalam workflow i pilnuję wyniku.
+Siedem sekretów ląduje w środowisku `release`, ograniczonym do gałęzi `master`:
+`APPLE_DIST_CERT_P12_BASE64`, `APPLE_DIST_CERT_PASSWORD`,
+`APPLE_PROVISIONING_PROFILE_BASE64`, `APPLE_TEAM_ID`, `ASC_KEY_ID`,
+`ASC_ISSUER_ID`, `ASC_API_KEY_P8_BASE64`.
 
-### Siedem sekretów, które ustawię
+## KROK D — rekord aplikacji (Ty, jednorazowo)
 
-| Nazwa | Skąd |
-|---|---|
-| `APPLE_DIST_CERT_P12_BASE64` | paczka `.p12`, którą złożę |
-| `APPLE_DIST_CERT_PASSWORD` | losowe hasło, które wygeneruję |
-| `APPLE_PROVISIONING_PROFILE_BASE64` | plik z kroku B |
-| `APPLE_TEAM_ID` | `X2FN885LQU` (już wiadomo) |
-| `ASC_KEY_ID` | z kroku C |
-| `ASC_ISSUER_ID` | z kroku C |
-| `ASC_API_KEY_P8_BASE64` | plik `.p8` z kroku C |
+`appstoreconnect.apple.com/apps` → **+** → **New App**:
 
----
+- **Platforms:** iOS
+- **Name:** `TyfloCentrum`
+- **Primary Language:** Polish
+- **Bundle ID:** `net.tyflopodcast.tyflocentrum` (jest już zarejestrowany, więc
+  będzie na liście)
+- **SKU:** `tyflocentrum-ios`
+- **User Access:** Full Access
 
-## Co robi workflow
+## KROK E — build i wysyłka (my)
 
-Kolejność jest celowa — każdy krok, który może paść, pada **przed** kosztownym budowaniem:
+```bash
+gh workflow run ios-testflight.yml -R michaldziwisz/Tyflocentrum \
+    --ref master -f potwierdzam=tak
+```
 
-1. **sprawdza, czy wszystkie 7 sekretów istnieje** i wypisuje brakujące po nazwie,
-2. wybiera Xcode 26, więc SDK będzie akceptowane przez Apple,
-3. importuje certyfikat do **tymczasowego** keychainu, który znika z maszyną,
-4. instaluje profil i **weryfikuje go**: App ID musi być `net.tyflocentrum.app`,
-   a `get-task-allow` musi być `false`, inaczej przerywa,
-5. archiwizuje z podpisem i eksportuje `.ipa` metodą `app-store`,
-6. **waliduje** paczkę przed wysłaniem, potem wysyła do App Store Connect,
-7. zachowuje `.ipa` jako artefakt, także gdy coś padnie.
+Kolejność kroków workflow jest celowa — każdy, który może paść, pada **przed**
+kosztownym budowaniem: sprawdzenie 7 sekretów, wybór Xcode 26, import certyfikatu
+do **tymczasowego** keychainu, instalacja i **weryfikacja** profilu, archiwum
+z podpisem, eksport metodą `app-store`, walidacja paczki, wysyłka, a na końcu
+`.ipa` jako artefakt (także przy porażce).
 
-Uruchamia się **tylko ręcznie**, z gałęzi domyślnej, po wpisaniu `tak` w polu
-potwierdzenia. Wysyłka do Apple jest skutkiem publicznym i nie ma się dziać
-przy zwykłym pushu.
+Uruchamia się tylko ręcznie, z gałęzi domyślnej, po wpisaniu `tak` — wysyłka do
+Apple jest skutkiem publicznym i nie ma się dziać przy zwykłym pushu.
 
-## Czego workflow NIE robi
+## Bundle ID: dlaczego NIE `net.tyflocentrum.app`
 
-Po udanej wysyłce build **nie jest** automatycznie zgłoszony do recenzji. Przy
-Sterigo była to realna pułapka: build siedział w stanie „gotowy do zgłoszenia",
-a wyglądało, jakby poszedł dalej. Zgłoszenie wersji do recenzji robi się w App
-Store Connect przyciskiem **Submit for Review** — albo mogę to domknąć przez API,
-jeśli poprosisz.
+Upstream miał `net.tyflocentrum.app` i tak było w projekcie. **Apple odmawia
+rejestracji tego identyfikatora:** `POST /v1/bundleIds` zwraca HTTP 409,
+„An App ID with Identifier 'net.tyflocentrum.app' is not available". Identyfikator
+jest zajęty poza naszym kontem (w koncie go nie ma, w App Store nie ma aplikacji,
+która by go używała), a takiej blokady nie da się zdjąć przez API ani samodzielnie
+w portalu — zwolnić go może wyłącznie wsparcie Apple.
+
+Kontrola negatywna, żeby nie oskarżyć mechanizmu zamiast identyfikatora:
+`net.tyflocentrum.probaXK7` i `net.tyflocentrum.app.X2FN885LQU` zarejestrowały się
+tym samym wywołaniem bez problemu (oba potem usunięte). Czyli blokada dotyczy
+dokładnie tego jednego łańcucha, nie prefiksu i nie naszych uprawnień.
+
+Wybraliśmy `net.tyflopodcast.tyflocentrum` — **ten sam identyfikator, co wydanie
+na Google Play**, więc aplikacja ma jedną nazwę pakietu na obu platformach.
+Pilnuje tego bramka `tools/test_konto_apple.py`: sprawdza, że bundle ID jest nasz
+**oraz** że zajęty identyfikator z upstreamu nie wrócił (merge z upstreamu dotyka
+`project.pbxproj`, więc powrót jest realny i byłby cichy — build podpisałby się
+profilem, którego nie mamy).
 
 ## Pułapki zapisane, żeby nie wracały
 
 - **Wersja buildu musi rosnąć.** Apple odrzuci powtórzony numer. Przed kolejną
   wysyłką podnosimy `CURRENT_PROJECT_VERSION`.
-- **`mkdir` w tym samym kroku co zapis pliku.** Przy Sterigo osobny, późniejszy
-  krok `mkdir` wywalił workflow, bo YAML wykonuje kroki po kolei.
+- **`mkdir` w tym samym kroku co zapis pliku.** Osobny, późniejszy krok `mkdir`
+  wywalił kiedyś workflow, bo YAML wykonuje kroki po kolei.
 - **Paczka `.p12` z opcją `-legacy`.** Nowszy OpenSSL tworzy format, którego
   keychain macOS nie zawsze czyta.
+- **Nie sklejaj stdout ze stderr, gdy czytasz DANE.** `openssl smime -verify`
+  wypakowuje profil na stdout, a równolegle pisze „Verification successful" na
+  stderr. Zlepienie obu strumieni dokleja ten napis do binarnego plist i
+  `plistlib` przerywa błędem „junk after document element" — poprawny profil
+  wygląda wtedy na uszkodzony. Stąd `uruchom_dane()` obok `uruchom()`.
 - **Ostrzeżenia `brew tap-trust` i o Node 20 to nie błędy** — pojawiają się
-  w każdym naszym przebiegu i nie mają wpływu na wynik.
+  w każdym przebiegu i nie mają wpływu na wynik.

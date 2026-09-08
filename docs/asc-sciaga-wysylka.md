@@ -17,7 +17,8 @@ jedno z drugim automatycznie.
 | Rzecz | Stan | Gdzie |
 |---|---|---|
 | Team ID | `X2FN885LQU` | wpisane w projekt, pilnuje bramka `tools/test_konto_apple.py` |
-| Bundle ID | `net.tyflocentrum.app` | wolny w App Store, sprawdzone |
+| Bundle ID | `net.tyflopodcast.tyflocentrum` | **zarejestrowany** przez API, wspolny z wydaniem na Google Play |
+| App ID, certyfikat, profil | gotowe | wystawione przez ASC API, `tools/wystaw_podpisywanie.py` |
 | Nazwa | TyfloCentrum | wolna w App Store, sprawdzone |
 | Polityka prywatności | opublikowana | `https://michaldziwisz.github.io/Tyflocentrum/privacy/` |
 | Strona wsparcia | opublikowana | `https://michaldziwisz.github.io/Tyflocentrum/` |
@@ -36,23 +37,18 @@ jedno z drugim automatycznie.
 
 ---
 
-## KROK 1 — Zarejestruj App ID
+## KROK 1 — App ID: ZROBIONE, nic nie klikasz
 
-Adres: `developer.apple.com/account/resources/identifiers/add/bundleId`
+App ID `net.tyflopodcast.tyflocentrum` jest już zarejestrowany przez App Store
+Connect API (`POST /v1/bundleIds`), bez capabilities — aplikacja nie używa żadnego
+entitlementu, a zaznaczenie czegokolwiek „na zapas" psuje podpis, bo profil musi
+zgadzać się z zawartością binarki.
 
-1. Wybierz **App IDs**, potem **App**.
-2. **Description:** `TyfloCentrum` (to opis wewnętrzny, nie widzą go użytkownicy).
-3. **Bundle ID:** wybierz **Explicit** i wpisz dokładnie `net.tyflocentrum.app`.
-4. **Capabilities:** **nie zaznaczaj niczego.** Aplikacja nie używa żadnego
-   entitlementu — push jest wyłączony, nie ma Hotspot ani iCloud. Zaznaczenie
-   czegokolwiek „na zapas" może zepsuć podpis, bo profil musi zgadzać się
-   z zawartością binarki.
-5. **Continue**, potem **Register**.
-
-> **Pułapka z Sterigo:** jeśli kiedyś podpisywałeś tę aplikację Sideloadly,
-> na liście może już być wpis z doklejonym Team ID, czyli
-> `net.tyflocentrum.app.X2FN885LQU`. **To nie jest nasz App ID** — potrzebujemy
-> czystego `net.tyflocentrum.app`, bez sufiksu.
+**Dlaczego nie `net.tyflocentrum.app` z upstreamu:** Apple odmawia rejestracji tego
+identyfikatora (HTTP 409, „is not available") — jest zajęty poza naszym kontem
+i tylko wsparcie Apple mógłby go zwolnić. Wzięliśmy identyfikator **wspólny
+z wydaniem na Google Play**, żeby aplikacja miała jedną nazwę pakietu na obu
+platformach. Szczegóły z pomiarem: `docs/podpisywanie-ios.md`.
 
 ---
 
@@ -64,7 +60,7 @@ Adres: `appstoreconnect.apple.com/apps` → przycisk **+** → **New App**
 2. **Name:** `TyfloCentrum` — to nazwa widoczna w App Store, maksymalnie 30 znaków.
 3. **Primary Language:** **Polish**. To ważne: aplikacja jest po polsku i tak trzeba
    ją zgłosić, inaczej recenzent może uznać brak angielskiego za defekt.
-4. **Bundle ID:** wybierz z listy `net.tyflocentrum.app` (pojawi się po kroku 1).
+4. **Bundle ID:** wybierz z listy `net.tyflopodcast.tyflocentrum` (jest już zarejestrowany, więc będzie widoczny).
 5. **SKU:** `tyflocentrum-ios` — dowolny identyfikator wewnętrzny, nigdzie nie widoczny.
 6. **User Access:** Full Access.
 
@@ -165,17 +161,16 @@ Adres: rekord aplikacji → wersja **1.0 Prepare for Submission**
 
 ## KROK 6 — Build
 
-Aplikację trzeba wysłać podpisaną. Z WSL zrobiliśmy to dla Sterigo bez Maca,
-przez GitHub Actions — ta sama droga zadziała tutaj, ale wymaga jeszcze:
+Podpisywanie jest **gotowe i nic tu po Twojej stronie nie zostało**: certyfikat
+Apple Distribution, profil `TyfloCentrum App Store` i 7 sekretów w środowisku
+`release` są na miejscu. Build odpalamy poleceniem:
 
-1. certyfikatu dystrybucyjnego (Apple Distribution),
-2. profilu (App Store) dla `net.tyflocentrum.app`,
-3. klucza App Store Connect API (plik `.p8`).
+```bash
+gh workflow run ios-testflight.yml -R michaldziwisz/Tyflocentrum \
+    --ref master -f potwierdzam=tak
+```
 
-**To osobne zadanie i mogę je przygotować** — procedura jest opisana w skillu
-`bse-hardware-iphone` i sprawdzona w praktyce. Powiedz słowo, a zrobię pipeline
-analogiczny do Sterigo. Build z obecnego CI jest **niepodpisany**, więc do App
-Store się nie nadaje.
+Szczegóły i pułapki: `docs/podpisywanie-ios.md`.
 
 Jedna rzecz jest już z drogi: nasz runner to `macos-26`, więc aplikacja zbuduje się
 właściwym SDK. Przy Sterigo upload odrzuciło między innymi dlatego, że runner miał

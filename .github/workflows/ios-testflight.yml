@@ -97,8 +97,8 @@ jobs:
           echo "app-identifier: $APPID"
           echo "get-task-allow: $TASKALLOW"
 
-          if [ "$APPID" != "${{ secrets.APPLE_TEAM_ID }}.net.tyflocentrum.app" ]; then
-            echo "BLAD: profil dotyczy innego App ID niz net.tyflocentrum.app" >&2
+          if [ "$APPID" != "${{ secrets.APPLE_TEAM_ID }}.net.tyflopodcast.tyflocentrum" ]; then
+            echo "BLAD: profil dotyczy innego App ID niz net.tyflopodcast.tyflocentrum" >&2
             exit 1
           fi
           if [ "$TASKALLOW" != "false" ]; then
@@ -142,7 +142,7 @@ jobs:
             <key>signingStyle</key><string>manual</string>
             <key>provisioningProfiles</key>
             <dict>
-              <key>net.tyflocentrum.app</key><string>TyfloCentrum App Store</string>
+              <key>net.tyflopodcast.tyflocentrum</key><string>TyfloCentrum App Store</string>
             </dict>
           </dict>
           </plist>

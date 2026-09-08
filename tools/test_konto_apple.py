@@ -34,6 +34,15 @@ NASZ_TEAM_ID = "X2FN885LQU"
 # powiedziec "wrocilo cudze konto" zamiast tylko "cos sie nie zgadza".
 TEAM_ID_MAINTAINERA = "A86C2NBH8N"
 
+# Bundle ID WSPOLNY z wydaniem na Google Play - jedna aplikacja, jeden identyfikator.
+NASZ_BUNDLE_ID = "net.tyflopodcast.tyflocentrum"
+
+# Identyfikator z upstreamu. ZAJETY poza naszym kontem: Apple odmawia rejestracji
+# (HTTP 409, "is not available"), a takiej blokady nie da sie zdjac przez API.
+# Merge z upstreamu moze go przywrocic - wtedy build podpisze sie profilem, ktorego
+# nie mamy, i wysylka padnie dopiero u Apple.
+BUNDLE_ID_UPSTREAMU = "net.tyflocentrum.app"
+
 bledy = []
 zrobione = 0
 
@@ -77,10 +86,19 @@ def testy(tresc=None):
             ile >= 2)
 
     print("--- 4. bundle ID nalezy do NASZEJ przestrzeni nazw ---")
+    # WSPOLNY z wydaniem na Google Play (net.tyflopodcast.tyflocentrum) - swiadomie,
+    # zeby identyfikator aplikacji byl ten sam na obu platformach.
+    # NIE 'net.tyflocentrum.app': ten identyfikator przyszedl z upstreamu, ale Apple
+    # odmawia jego rejestracji ("An App ID with Identifier ... is not available"),
+    # bo jest zajety poza naszym kontem. Zmierzone POST /v1/bundleIds -> HTTP 409.
     bundle = set(re.findall(r"PRODUCT_BUNDLE_IDENTIFIER = ([^;]+);", t))
     glowne = {b for b in bundle if not b.endswith(("Tests", "UITests"))}
     sprawdz(f"bundle ID aplikacji: {sorted(glowne)}",
-            glowne == {"net.tyflocentrum.app"})
+            glowne == {NASZ_BUNDLE_ID})
+
+    print("--- 5. zajety identyfikator z upstreamu NIE wrocil ---")
+    sprawdz(f"brak {BUNDLE_ID_UPSTREAMU} w pliku projektu",
+            BUNDLE_ID_UPSTREAMU not in t)
 
 
 def kontrola_waznosci():
@@ -100,8 +118,11 @@ def kontrola_waznosci():
          oryginal.replace(f"DEVELOPMENT_TEAM = {NASZ_TEAM_ID};",
                           "DEVELOPMENT_TEAM = ZZ99XX88YY;")),
         ("podmieniony bundle ID (np. przez cudzy szablon)",
-         oryginal.replace("PRODUCT_BUNDLE_IDENTIFIER = net.tyflocentrum.app;",
+         oryginal.replace(f"PRODUCT_BUNDLE_IDENTIFIER = {NASZ_BUNDLE_ID};",
                           "PRODUCT_BUNDLE_IDENTIFIER = com.example.app;")),
+        ("powrot ZAJETEGO bundle ID z upstreamu (typowy skutek merge)",
+         oryginal.replace(f"PRODUCT_BUNDLE_IDENTIFIER = {NASZ_BUNDLE_ID};",
+                          f"PRODUCT_BUNDLE_IDENTIFIER = {BUNDLE_ID_UPSTREAMU};")),
     ]
 
     print("=== WERSJA Z REPO (musi PRZEJSC) ===")

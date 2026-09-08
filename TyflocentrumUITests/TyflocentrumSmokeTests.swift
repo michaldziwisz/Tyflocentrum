@@ -53,7 +53,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 	private func makeApp(additionalLaunchArguments: [String] = []) -> XCUIApplication {
 		let app = XCUIApplication()
 		// DLACZEGO NIE MA TU `app.terminate()`. Na przeciążonym runnerze rzuca
-		// „Failed to terminate net.tyflocentrum.app:8080: Failed to terminate …:0”
+		// „Failed to terminate net.tyflopodcast.tyflocentrum:8080: Failed to terminate …:0”
 		// i wywala test JESZCZE PRZED jego pierwszą linią — zmierzone w run
 		// 33814048157, gdzie padło dokładnie w tej linii, a wcześniejsze przebiegi
 		// wywalały się w INNYCH, losowych testach (sygnatura chwiejnego
