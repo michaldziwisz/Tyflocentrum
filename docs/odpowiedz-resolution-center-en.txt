@@ -1,0 +1,142 @@
+Dear App Review team,
+
+Thank you for the guidance. Please find below all the information requested,
+also saved in the Notes field of App Review Information as instructed. A screen
+recording is attached to the version in App Store Connect.
+
+1. SCREEN RECORDING
+
+Attached. Recorded on a physical iPhone 13 running the latest iOS, with VoiceOver
+active - the synthetic speech you hear and the focus ring you see are the app
+being operated the way its users operate it. The recording begins with launching
+the app from the device and covers the typical user flow end to end: the combined
+"What's new" list, playing a podcast episode with VoiceOver Magic Tap to pause and
+resume, browsing podcasts and articles by category, reading an article, viewing
+reader comments, search, the live radio stream, the broadcast schedule, and the
+live-show contact feature (text message and voice message) described in point 5.
+
+The app has no account registration, no login, no account deletion, no
+user-generated content submission and no paid content, so none of those flows
+appear in the recording - they do not exist in the app. Please see point 8
+regarding comments.
+
+2. PURPOSE AND TARGET AUDIENCE
+
+TyfloCentrum is the official client for Tyflopodcast, Tyfloswiat and Tyfloradio,
+Polish media services for blind and partially sighted people, run by the
+Institute for Regional Development Foundation (Fundacja Instytut Rozwoju
+Regionalnego), a Polish non-profit.
+
+The problem it solves: those three services live on separate websites, and
+navigating them with a screen reader in a general-purpose browser or a generic
+podcast app is slow and error-prone. The app brings all three into one interface
+designed for VoiceOver from the ground up. Accessibility is the reason this app
+exists, not an added feature.
+
+3. SETUP AND ACCESS TO MAIN FEATURES
+
+No credentials are required, because there are none. There is no registration,
+no sign-in, no account, no in-app purchase, and no content locked behind any
+condition. Every feature is available immediately after installation, so the app
+can be reviewed in full without any demo account or sample files.
+
+Where things are:
+- Nowosci (What's new) - combined list of the newest podcast episodes and articles
+- Podcasty (Podcasts) and Artykuly (Articles) - the same content grouped by category
+- Szukaj (Search) - searches both services at once
+- Tyfloradio - live radio player, broadcast schedule, and contact with the live show
+
+Selecting an episode opens the player. With VoiceOver enabled, Magic Tap (a
+two-finger double tap) pauses and resumes playback.
+
+4. EXTERNAL SERVICES, TOOLS AND PLATFORMS
+
+All content comes from our own servers:
+- tyflopodcast.net and tyfloswiat.pl - our WordPress REST API, public, no key
+- Tyfloradio HLS audio stream - our own server
+- kontakt.tyflopodcast.net - our endpoint for the live-show contact form
+
+There is no third-party data provider, no authentication service, no payment
+processor, no advertising SDK, no analytics SDK and no AI service in this app.
+
+Push notifications are disabled in this version: the supporting code exists, but
+the user interface is inactive in the Release build and no device token is
+registered or transmitted. Enabling push is planned for a future version, together
+with updated privacy answers.
+
+5. TIME-DEPENDENT FEATURE - THE LIKELY REASON THE FIRST REVIEW LOOKED INCOMPLETE
+
+The contact form - both text and voice message - is visible ONLY while an
+interactive show is on air on Tyfloradio. The app asks our server (parameter
+ac=current) and reveals the section when the server reports a live show. Outside
+broadcast hours the section is hidden and the button reports that no interactive
+show is currently on air.
+
+This is intended behaviour, not a bug. If the app was reviewed outside broadcast
+hours, this key feature would have been invisible, which we believe is why the
+submission appeared incomplete. The attached recording was deliberately made
+DURING a live broadcast, so the entire flow is visible: opening the contact
+screen, writing a text message, and recording, reviewing and deleting a voice
+message.
+
+We deliberately do not enable a fake "show is live" state for review. The same
+server flag serves our Android app, our Windows app and the website, and it
+reaches all listeners at once. Switching it on artificially would invite real
+users to contact a show that is not actually broadcasting. If you would like to
+see the feature live yourself, please contact us at our Support URL and we will
+give you the exact date and time of the next broadcast, so you can observe it
+with no changes to the app or the server. Live shows are usually held in the
+evening, Polish time, most often on Tuesdays, Wednesdays and Thursdays.
+
+Microphone access is used solely to record a voice message for the live show. It
+is always initiated by the user via a button, never in the background, and
+declining microphone access does not block any other part of the app.
+
+6. REGIONAL DIFFERENCES
+
+None. The app functions consistently across all regions and territories: the same
+features, the same content, the same behaviour. The interface and all content are
+in Polish, because the services it serves are Polish - this is intentional, not a
+missing localisation. The only thing that changes is the live-show contact
+section, and it changes over TIME (see point 5), never by location.
+
+7. AUTHORISATION FOR THIRD-PARTY MATERIAL
+
+The developer of this app, Michal Dziwisz, is the founder and editor-in-chief of
+Tyflopodcast, and one of the editors of Tyfloswiat. Both roles are publicly
+verifiable:
+
+- Editor-in-chief and originator of the Tyflopodcast project:
+  https://tyflopodcast.net/autorzy/michaldziwisz/
+- Listed as an editor of Tyfloswiat in the footer of https://tyfloswiat.pl,
+  with an address in the firr.org.pl domain of the Foundation
+
+In other words, this app is published by the person who runs the editorial side
+of the services whose content it presents, in agreement with the Foundation that
+operates them. In addition, all recordings published by Tyflopodcast are released
+under a Creative Commons BY 3.0 PL licence, as stated in the site footer.
+
+8. USER-GENERATED CONTENT - READ ONLY
+
+For completeness, since it is visible in the recording: the app DISPLAYS reader
+comments on podcast episodes. It is strictly read-only - there is no field,
+button or screen anywhere in the app to write, submit, upload or otherwise
+contribute a comment. The app does not accept content from users.
+
+Comments are moderated by our editorial team before publication and the same
+comments are publicly visible on the website in any browser. Should we add the
+ability to post comments in a future version, we will implement reporting and
+blocking mechanisms and update our privacy answers accordingly, before
+submitting that version.
+
+9. ACCESSIBILITY
+
+This app is built for screen reader users. Every element carries a VoiceOver
+label, Dynamic Type is supported, and lists expose accessibility actions. If
+anything cannot be operated with VoiceOver, we consider it a critical defect
+rather than a cosmetic one, and we would be grateful if you reported it as such.
+
+We are happy to provide any further information you need.
+
+Best regards,
+Michal Dziwisz
