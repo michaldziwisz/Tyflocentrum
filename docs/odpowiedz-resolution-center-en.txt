@@ -3,7 +3,7 @@ Dear App Review team,
 All requested information is below and also saved in the Notes field of App Review Information. A screen recording is attached to version 1.0.
 
 1. SCREEN RECORDING
-Attached. Recorded on a physical iPhone 13 with VoiceOver active - the speech you hear is the app being operated the way its users operate it. It begins with launching the app and covers the typical flow: the "What's new" list, playing an episode with Magic Tap to pause and resume, podcasts and articles by category, an article, reader comments, search, the live radio stream, the schedule, and the live-show contact feature (text and voice message).
+Attached. Recorded on a physical iPhone running the latest iOS, with VoiceOver active - the speech you hear is the app being operated the way its users operate it. It begins with launching the app and covers the typical flow: the "What's new" list, playing an episode with Magic Tap to pause and resume, podcasts and articles by category, an article, reader comments, search, the live radio stream, the schedule, and the live-show contact feature (text and voice message).
 There is no registration, login, account deletion, in-app purchase or paid content, so those flows do not appear - they do not exist in the app.
 
 2. PURPOSE AND AUDIENCE

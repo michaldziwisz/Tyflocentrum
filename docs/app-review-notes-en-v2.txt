@@ -1,7 +1,7 @@
 TyfloCentrum is the official client for Tyflopodcast, Tyfloswiat and Tyfloradio - Polish media services for blind and partially sighted people, run by the Institute for Regional Development Foundation (Fundacja Instytut Rozwoju Regionalnego). Built for VoiceOver users.
 
 1. SCREEN RECORDING
-Attached to this version (App Review Information). Recorded on a physical iPhone 13, iOS 26, VoiceOver active - the speech you hear and the focus ring you see are the app being operated by a blind user. It starts with launching the app and covers the whole typical flow, including the live-show contact feature described in point 5.
+Attached to this version (App Review Information). Recorded on a physical iPhone running the latest iOS, VoiceOver active - the speech you hear and the focus ring you see are the app being operated by a blind user. It starts with launching the app and covers the whole typical flow, including the live-show contact feature described in point 5.
 
 2. PURPOSE AND AUDIENCE
 Audience: blind and partially sighted people in Poland. Problem solved: our podcasts, articles and live radio are spread across three websites, and general-purpose browsers and podcast apps are awkward with a screen reader. This app puts all three in one VoiceOver-first interface. Accessibility is the reason the app exists, not a feature.
