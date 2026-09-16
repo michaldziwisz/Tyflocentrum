@@ -326,7 +326,12 @@ final class TyfloAPI: ObservableObject {
 		return try await fetch(url)
 	}
 
-	func fetchPodcastSummariesPage(page: Int, perPage: Int, categoryID: Int? = nil) async throws -> WPPage<WPPostSummary> {
+	func fetchPodcastSummariesPage(
+		page: Int,
+		perPage: Int,
+		categoryID: Int? = nil,
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> WPPage<WPPostSummary> {
 		guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 		guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 
@@ -350,10 +355,15 @@ final class TyfloAPI: ObservableObject {
 			throw URLError(.badURL)
 		}
 
-		return try await fetchWPPage(url)
+		return try await fetchWPPage(url, cachePolicy: cachePolicy)
 	}
 
-	func fetchArticleSummariesPage(page: Int, perPage: Int, categoryID: Int? = nil) async throws -> WPPage<WPPostSummary> {
+	func fetchArticleSummariesPage(
+		page: Int,
+		perPage: Int,
+		categoryID: Int? = nil,
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> WPPage<WPPostSummary> {
 		guard page > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 		guard perPage > 0 else { return WPPage(items: [], total: nil, totalPages: nil) }
 
@@ -377,7 +387,7 @@ final class TyfloAPI: ObservableObject {
 			throw URLError(.badURL)
 		}
 
-		return try await fetchWPPage(url)
+		return try await fetchWPPage(url, cachePolicy: cachePolicy)
 	}
 
 	func fetchPodcast(id: Int) async throws -> Podcast {

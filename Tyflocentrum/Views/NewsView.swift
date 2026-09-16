@@ -7,6 +7,7 @@
 
 import Foundation
 import SwiftUI
+import UIKit
 
 enum NewsItemKind: String {
 	case podcast
@@ -166,6 +167,14 @@ final class NewsFeedViewModel: ObservableObject {
 	@Published private(set) var loadMoreErrorMessage: String?
 	@Published private(set) var canLoadMore = false
 
+	/// Komunikat do jednorazowego ogłoszenia czytnikowi ekranu po doklejeniu nowości.
+	@Published private(set) var komunikatDostepnosci: String?
+	/// Element, na którym trzeba zakotwiczyć przewijanie po doklejeniu wpisów na górę.
+	@Published private(set) var kotwicaPrzewijania: String?
+
+	private(set) var swiezosc = StanSwiezosci()
+	private let strategia = StrategiaOdswiezania()
+
 	private let requestTimeoutSeconds: TimeInterval
 	private let sourcePerPage: Int
 	private let initialBatchSize: Int
@@ -195,6 +204,101 @@ final class NewsFeedViewModel: ObservableObject {
 	func loadIfNeeded(api: TyfloAPI) async {
 		guard !hasLoaded else { return }
 		await refresh(api: api)
+	}
+
+	/// Odświeżenie, które NIE psuje pozycji czytania ani fokusu czytnika ekranu.
+	///
+	/// Różnica wobec `refresh(api:)` jest zasadnicza, nie kosmetyczna:
+	/// `refresh` buduje listę OD NOWA (użytkownik sam o to poprosił, więc skok na
+	/// początek listy jest zrozumiały), a ta metoda dokłada wyłącznie wpisy, których
+	/// wcześniej nie było, i zostawia resztę listy nietkniętą. Wywołuje ją powrót
+	/// aplikacji z tła i wejście na zakładkę, czyli sytuacje, w których użytkownik
+	/// NIE prosił o przebudowę ekranu — a osoba czytająca listę czytnikiem straciłaby
+	/// wtedy miejsce, w którym była.
+	///
+	/// Pobieramy tylko PIERWSZĄ stronę każdego źródła. Odtwarzanie całej paginacji
+	/// przy każdym powrocie do aplikacji byłoby kilkunastoma żądaniami po to, żeby
+	/// niemal zawsze dostać dane, które już mamy.
+	func odswiezPoPowrocie(api: TyfloAPI, powod: PowodOdswiezenia = .powrotZTla) async {
+		guard strategia.czyOdswiezyc(
+			powod: powod,
+			ostatniSukces: swiezosc.ostatniSukces,
+			ostatniaProba: swiezosc.ostatniaProba,
+			trwaPobieranie: isLoading || isLoadingMore
+		) else { return }
+
+		// Bez danych nie ma czego scalać — wtedy zwykłe pełne wczytanie jest właściwe.
+		guard !items.isEmpty else {
+			await refresh(api: api)
+			return
+		}
+
+		let generation = UUID()
+		requestGeneration = generation
+		isLoading = true
+		swiezosc.zanotujProbe()
+
+		var udaneScalenie = false
+		defer {
+			if requestGeneration == generation {
+				isLoading = false
+				if udaneScalenie {
+					swiezosc.zanotujSukces()
+				}
+			}
+		}
+
+		let porcja = NewsFeedViewModel(
+			requestTimeoutSeconds: requestTimeoutSeconds,
+			sourcePerPage: sourcePerPage,
+			initialBatchSize: sourcePerPage,
+			loadMoreBatchSize: loadMoreBatchSize
+		)
+		await porcja.performRefreshInPlace(api: api)
+
+		guard requestGeneration == generation, !Task.isCancelled else { return }
+
+		// Nieudane pobranie w tym trybie jest CICHE. Użytkownik o nic nie prosił,
+		// więc nie zabieramy mu listy, którą czyta, i nie zamieniamy jej na komunikat
+		// o błędzie — zostaje karencja z `StrategiaOdswiezania`, a lista bez zmian.
+		guard !porcja.items.isEmpty else { return }
+		udaneScalenie = true
+
+		let wynik = ScalanieNowosci.scal(
+			biezace: items,
+			swieze: porcja.items,
+			identyfikator: { $0.id },
+			czyNowszy: NewsItem.isSortedBefore
+		)
+
+		// ROZŁĄCZENIE LISTY OD SERWERA: gdy ŻADEN ze świeżo pobranych wpisów nie jest
+		// nam znany, to nie jest „kilka nowości” — to znaczy, że nowych treści jest
+		// więcej niż jedna strona i scalanie zrobiłoby DZIURĘ w ciągłości listy
+		// (najnowsze wpisy, potem brak, potem stare). Wtedy uczciwiej przebudować
+		// listę od nowa, mimo kosztu utraty pozycji: pokazanie niepełnej historii
+		// jako ciągłej jest gorsze niż jednorazowy skok na początek.
+		if wynik.liczbaNowych == porcja.items.count {
+			await refresh(api: api)
+			return
+		}
+
+		guard wynik.maNowe else { return }
+
+		items = wynik.elementy
+		// Kursory paginacji odnoszą się do stanu sprzed scalenia, więc kolejne
+		// „załaduj starsze” mogłoby zwrócić wpisy, które właśnie doklejiliśmy.
+		// Dopisanie ich do `seenIDs` sprawia, że zostaną odfiltrowane.
+		for element in wynik.elementy.prefix(wynik.liczbaNowych) {
+			seenIDs.insert(element.id)
+		}
+		kotwicaPrzewijania = wynik.kotwica
+		komunikatDostepnosci = ScalanieNowosci.komunikatONowych(wynik.liczbaNowych)
+	}
+
+	/// Kasowanie komunikatu po ogłoszeniu — inaczej ten sam tekst mógłby zostać
+	/// odczytany drugi raz przy kolejnym przerysowaniu widoku.
+	func komunikatOdczytany() {
+		komunikatDostepnosci = nil
 	}
 
 	func refresh(api: TyfloAPI) async {
@@ -248,6 +352,10 @@ final class NewsFeedViewModel: ObservableObject {
 			hasLoaded = true
 			canLoadMore = scratch.canLoadMore
 			loadMoreErrorMessage = scratch.loadMoreErrorMessage
+			// Znacznik świeżości aktualizuje TAKŻE pełne odświeżenie, inaczej próg
+			// z `StrategiaOdswiezania` liczyłby wiek od zimnego startu i strzelał
+			// zaraz po tym, jak użytkownik sam odświeżył listę.
+			swiezosc.zanotujSukces()
 
 			podcasts = scratch.podcasts
 			articles = scratch.articles
@@ -338,15 +446,34 @@ final class NewsFeedViewModel: ObservableObject {
 			let nextPage = source.nextPage
 			let perPage = sourcePerPage
 
+			// Pierwszą stronę pobieramy Z POMINIĘCIEM lokalnych cache'ów.
+			// Powód jest konkretny: `NoStoreInMemoryCache` trzyma odpowiedzi
+			// tyfloswiat.pl przez 5 minut i był sprawdzany także wtedy, gdy
+			// użytkownik sam pociągnął listę w dół — czyli ręczne odświeżenie
+			// mogło oddać dane z pamięci i wyglądać jak „nie dociąga nowych treści”.
+			// Dalsze strony to historia, która się nie zmienia, więc tam cache
+			// jest pożądany i zostaje.
+			let politykaCache: URLRequest.CachePolicy = nextPage == 1
+				? .reloadIgnoringLocalCacheData
+				: .useProtocolCachePolicy
+
 			let page: TyfloAPI.WPPage<WPPostSummary>
 			switch source.kind {
 			case .podcast:
 				page = try await withTimeout(requestTimeoutSeconds) {
-					try await api.fetchPodcastSummariesPage(page: nextPage, perPage: perPage)
+					try await api.fetchPodcastSummariesPage(
+						page: nextPage,
+						perPage: perPage,
+						cachePolicy: politykaCache
+					)
 				}
 			case .article:
 				page = try await withTimeout(requestTimeoutSeconds) {
-					try await api.fetchArticleSummariesPage(page: nextPage, perPage: perPage)
+					try await api.fetchArticleSummariesPage(
+						page: nextPage,
+						perPage: perPage,
+						cachePolicy: politykaCache
+					)
 				}
 			}
 
@@ -751,6 +878,16 @@ struct NewsView: View {
 	@StateObject private var viewModel = NewsFeedViewModel()
 	@State private var playerPodcast: Podcast?
 
+	/// Bramka na zakładkę: `TabView` trzyma odwiedzone widoki zamontowane, więc bez
+	/// tego warunku powrót z tła odpalałby pobranie w KAŻDEJ odwiedzonej zakładce
+	/// naraz — pięć razy więcej ruchu po to, żeby zobaczyć jeden ekran.
+	@Environment(\.aktywnaZakladka) private var aktywnaZakladka
+	@Environment(\.scenePhase) private var scenePhase
+
+	/// Identyfikator wpisu, na którym trzymamy widok. Bez tego doklejenie nowości
+	/// na górę przesunęłoby treść pod palcem czytającego.
+	@State private var pozycjaListy: String?
+
 	var body: some View {
 		NavigationStack {
 			ScrollView {
@@ -769,42 +906,49 @@ struct NewsView: View {
 					ForEach(viewModel.items) { item in
 						let stubPodcast = item.post.asPodcastStub()
 
-						NavigationLink {
-							switch item.kind {
-							case .podcast:
-								LazyDetailedPodcastView(summary: item.post)
-							case .article:
-								LazyDetailedArticleView(summary: item.post)
+						// Wiersz i separator w JEDNYM kontenerze ze stabilnym `.id`.
+						// `scrollPosition(id:)` kotwiczy widok po tożsamości elementu w
+						// `scrollTargetLayout`, więc bez tego identyfikatora doklejenie
+						// nowości na górę przesunęłoby treść pod palcem czytającego.
+						VStack(alignment: .leading, spacing: 0) {
+							NavigationLink {
+								switch item.kind {
+								case .podcast:
+									LazyDetailedPodcastView(summary: item.post)
+								case .article:
+									LazyDetailedArticleView(summary: item.post)
+								}
+							} label: {
+								ShortPodcastView(
+									podcast: stubPodcast,
+									showsListenAction: item.kind == .podcast,
+									onListen: item.kind == .podcast
+										? { playerPodcast = stubPodcast }
+										: nil,
+									leadingSystemImageName: item.kind.systemImageName,
+									accessibilityKindLabel: item.kind.label,
+									accessibilityIdentifierOverride: item.kind == .podcast
+										? nil
+										: "article.row.\(item.post.id)",
+									favoriteItem: item.kind == .podcast
+										? .podcast(item.post)
+										: .article(summary: item.post, origin: .post)
+								)
+								.padding(.horizontal)
+								.padding(.vertical, 12)
+								.frame(maxWidth: .infinity, alignment: .leading)
 							}
-						} label: {
-							ShortPodcastView(
-								podcast: stubPodcast,
-								showsListenAction: item.kind == .podcast,
-								onListen: item.kind == .podcast
-									? { playerPodcast = stubPodcast }
-									: nil,
-								leadingSystemImageName: item.kind.systemImageName,
-								accessibilityKindLabel: item.kind.label,
-								accessibilityIdentifierOverride: item.kind == .podcast
-									? nil
-									: "article.row.\(item.post.id)",
-								favoriteItem: item.kind == .podcast
-									? .podcast(item.post)
-									: .article(summary: item.post, origin: .post)
-							)
-							.padding(.horizontal)
-							.padding(.vertical, 12)
-							.frame(maxWidth: .infinity, alignment: .leading)
-						}
-						.buttonStyle(.plain)
-						.accessibilityRemoveTraits(.isButton)
-						.onAppear {
-							guard item.id == viewModel.items.last?.id else { return }
-							Task { await viewModel.loadMore(api: api) }
-						}
+							.buttonStyle(.plain)
+							.accessibilityRemoveTraits(.isButton)
+							.onAppear {
+								guard item.id == viewModel.items.last?.id else { return }
+								Task { await viewModel.loadMore(api: api) }
+							}
 
-						Divider()
-							.padding(.leading, 16)
+							Divider()
+								.padding(.leading, 16)
+						}
+						.id(item.id)
 					}
 
 					if viewModel.errorMessage == nil, viewModel.hasLoaded {
@@ -819,11 +963,50 @@ struct NewsView: View {
 			}
 			.accessibilityIdentifier("news.list")
 			.scrollIndicators(.visible)
+			.scrollTargetLayout()
+			.scrollPosition(id: $pozycjaListy, anchor: .top)
 			.refreshable {
 				await viewModel.refresh(api: api)
 			}
 			.task {
 				await viewModel.loadIfNeeded(api: api)
+			}
+			// POWRÓT APLIKACJI DO PIERWSZEGO PLANU. To jest sedno naprawy: bez tego
+			// `.task` powyżej nie odpala się ponownie (widok nie został odmontowany),
+			// a strażnik `hasLoaded` i tak by nic nie pobrał.
+			//
+			// Reagujemy na PRZEJŚCIE do `.active`, nie na sam fakt bycia aktywnym, i
+			// tylko na widocznej zakładce. Próg czasu pilnuje `StrategiaOdswiezania`.
+			.onChange(of: scenePhase) { staraFaza, nowaFaza in
+				guard nowaFaza == .active, staraFaza != .active else { return }
+				guard aktywnaZakladka == ZakladkaAplikacji.nowosci else { return }
+				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .powrotZTla) }
+			}
+			// WEJŚCIE NA ZAKŁADKĘ. Osobny przypadek od powrotu z tła: aplikacja może
+			// być na wierzchu godzinami, a użytkownik wraca na Nowości z innej zakładki
+			// — wtedy scenePhase się nie zmienia i bez tego warunku dane zostałyby stare.
+			.onChange(of: aktywnaZakladka) { _, nowa in
+				guard nowa == ZakladkaAplikacji.nowosci else { return }
+				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .wejscieNaEkran) }
+			}
+			// Zakotwiczenie widoku na wpisie, który był pierwszy przed doklejeniem.
+			.onChange(of: viewModel.kotwicaPrzewijania) { _, kotwica in
+				guard let kotwica else { return }
+				pozycjaListy = kotwica
+			}
+			// OGŁOSZENIE DLA CZYTNIKA. Wysyłane PO scaleniu i z opóźnieniem, bo w chwili
+			// powrotu do aplikacji VoiceOver mówi swoje (nazwa aplikacji, element z
+			// fokusem) i natychmiastowy komunikat zostałby zagłuszony. Liczba nowych
+			// wpisów jest dodatkowo w nagłówku listy, więc informacja nie znika razem
+			// z wypowiedzią.
+			.onChange(of: viewModel.komunikatDostepnosci) { _, komunikat in
+				guard let komunikat else { return }
+				Task {
+					try? await Task.sleep(nanoseconds: 1_200_000_000)
+					guard !Task.isCancelled else { return }
+					UIAccessibility.post(notification: .announcement, argument: komunikat)
+					viewModel.komunikatOdczytany()
+				}
 			}
 			.id(settings.contentKindLabelPosition)
 			.withAppMenu()
