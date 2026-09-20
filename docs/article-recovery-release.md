@@ -1,8 +1,10 @@
-# Poprawka ładowania artykułów: wydanie testowe 1.0.2 (3)
+# Poprawka ładowania artykułów: iOS 1.0.2 (3)
 
 ## Zakres i stan
 
-Poprawki wprowadzono dla iOS i Androida. Wersja iOS **1.0.2, build 3** jest dostępna w wewnętrznej grupie TestFlight Michała. Nie zgłoszono nowej wersji do App Store ani Google Play. Powiadomienia push pozostają odłożone.
+Poprawki wprowadzono dla iOS i Androida. Michał zaakceptował próbę iOS w TestFlight i zlecił publikację obu platform w sklepach. Wersja iOS **1.0.2, build 3** została zgłoszona do App Store: odczyt API potwierdził `WAITING_FOR_REVIEW` i `releaseType=AFTER_APPROVAL`. Po zatwierdzeniu przez Apple publikacja nastąpi automatycznie. Nie jest to jeszcze potwierdzenie publicznej dostępności. Powiadomienia push pozostają odłożone.
+
+W zgłoszeniu wykorzystano ten sam build z TestFlight, bez przebudowy i ponownego uploadu. Identyfikator wersji: `25b5b106-c34e-447b-a0af-99b609449467`; zgłoszenia: `2daf8bb2-f499-422c-be75-f8ad423e2ae6`; czas wysłania: `2026-09-20T14:01:47.901Z`. Polska lokalizacja ASC to `pl`. Nową notatkę zmian odczytano po zapisie; zachowane zrzuty iPhone oraz iPad mają stan `COMPLETE`, a dane kontaktowe i informacje dla recenzenta są kompletne. Stan recenzji należy ponownie odczytywać w ASC, ponieważ zmienia go Apple.
 
 Kod przygotowano w oddzielnych worktree. Odczyt skrótów potwierdził zachowanie wszystkich zastanych lokalnych plików prac nad push: 25 w iOS i 30 w Androidzie. Nie używano stash, reset ani przełączania gałęzi w tych brudnych katalogach. Naprawy znajdują się w osobnych gałęziach i PR-ach; lokalną pracę nad push należy później świadomie połączyć z nową bazą.
 
@@ -37,10 +39,10 @@ Kod przygotowano w oddzielnych worktree. Odczyt skrótów potwierdził zachowani
 - [PR #2](https://github.com/michaldziwisz/tyflocentrum_android/pull/2), commit `b7d903888dccf2e562c4cbdedc56386cbd0f089a`.
 - `testDebugUnitTest assembleDebug lintDebug`: **41 testów zaliczonych**, zero błędów i pominięć. Lint: zero błędów, 17 ostrzeżeń.
 - Testy obejmują timeout próby i całości, anulowanie przez wywołującego, Retry-After, walidację i kolejność cache, trwałe błędy TLS oraz spóźniony wynik starego loadera.
-- APK debug został zbudowany, ale nie był instalowany ani publikowany. Numer wersji Androida nie został podniesiony. Szczegóły: `docs/ladowanie-artykulow.md` w repo Androida.
+- Poprawkę początkowo sprawdzono w APK debug bez instalacji i publikacji. Po akceptacji Michała przygotowano **1.0.9 (versionCode 10)** i wysłano podpisany AAB na ścieżkę produkcyjną Google Play. [Przebieg publikacji](https://github.com/michaldziwisz/tyflocentrum_android/actions/runs/35515451040) zakończył się sukcesem. Ponowny odczyt API potwierdził `production`, `versionCodes=[10]`, `status=completed`, brak ograniczenia udziału i właściwą polską notatkę zmian. Pojawienie się aktualizacji na konkretnym telefonie może być opóźnione przez sklep. Szczegóły: `docs/wydanie-1.0.9.md` w repo Androida.
 
 ## Dodatkowa naprawa bramki i ograniczenia
 
 W zastanym `StrategiaOdswiezaniaTests.swift` dwie asercje nie kompilowały się przez przekazanie `TimeInterval?` do porównania z `accuracy`. Użyto `try XCTUnwrap`, bez zmiany logiki odświeżania. Pełny przebieg Xcode potwierdził wykonanie tych testów.
 
-Nie odtworzono pierwotnej sporadycznej awarii na fizycznym iPhonie. Testy kontrolowanych awarii potwierdzają odzyskiwanie, lecz symulator nie zastępuje odsłuchu VoiceOver. Testy JVM i APK nie są pomiarem TalkBacka ani Jeshuo. Dalsza próba na urządzeniu powinna objąć serię wejść do różnych artykułów, powroty na ekran oraz ponowienie po chwilowej utracie sieci.
+Nie odtworzono pierwotnej sporadycznej awarii na fizycznym iPhonie. Testy kontrolowanych awarii potwierdzają odzyskiwanie, lecz symulator nie zastępuje odsłuchu VoiceOver. Michał po próbie wydania w TestFlight potwierdził „jest ok” i zatwierdził publikację. Nie opisano szczegółów jego próby, więc nie jest to odrębny pełny audyt VoiceOver. Testy JVM i APK nie są pomiarem TalkBacka ani Jeshuo.
