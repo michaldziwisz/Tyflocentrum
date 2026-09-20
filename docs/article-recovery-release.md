@@ -1,33 +1,46 @@
-# Poprawka ładowania artykułów: zakres wydania testowego
+# Poprawka ładowania artykułów: wydanie testowe 1.0.2 (3)
 
-## Zatwierdzony zakres
+## Zakres i stan
 
-Michał zatwierdził implementację poprawek na iOS i Androidzie oraz dostarczenie wyłącznie wersji iOS przez TestFlight. Bez publikacji do App Store i Google Play. Powiadomienia push pozostają odłożone.
+Poprawki wprowadzono dla iOS i Androida. Wersja iOS **1.0.2, build 3** jest dostępna w wewnętrznej grupie TestFlight Michała. Nie zgłoszono nowej wersji do App Store ani Google Play. Powiadomienia push pozostają odłożone.
 
-Kod powstaje w oddzielnych worktree opartych na wydanych gałęziach, bez importowania lokalnych zmian push. Przed rozpoczęciem zapisano skróty plików i diff istniejącej pracy. Nie używamy stash, reset ani przełączania gałęzi w katalogach zawierających te zmiany.
+Kod przygotowano w oddzielnych worktree. Odczyt skrótów potwierdził zachowanie wszystkich zastanych lokalnych plików prac nad push: 25 w iOS i 30 w Androidzie. Nie używano stash, reset ani przełączania gałęzi w tych brudnych katalogach. Naprawy znajdują się w osobnych gałęziach i PR-ach; lokalną pracę nad push należy później świadomie połączyć z nową bazą.
 
 ## Kryteria odbioru
 
-- [ ] iOS rozróżnia ładowanie, sukces i błąd wyświetlania HTML.
-- [ ] Po awarii renderowania następuje najwyżej jedno automatyczne odzyskanie, następnie dostępne ponowienie ręczne.
-- [ ] Poprawna treść nie jest przeładowywana przy zwykłej aktualizacji SwiftUI.
-- [ ] Android umożliwia ponowienie pobrania bez opuszczania artykułu.
-- [ ] Pobieranie ma ograniczony budżet prób, respektuje anulowanie i odróżnia błędy przejściowe od trwałych.
-- [ ] Ręczne ponowienie pobrania omija nieaktualną pamięć, a błędna odpowiedź nie zostaje w niej jako poprawna.
-- [ ] Testy sprawdzają tekst artykułu, nie tylko obecność kontenera.
-- [ ] Testy jednostkowe i build Androida wykonane.
-- [ ] Pełne testy Xcode z UIKit/WebKit i testami UI wykonane na macOS.
-- [ ] Recenzja zmian wykonana niezależnie od autorów.
-- [ ] Build iOS przetworzony przez Apple i dostępny w wewnętrznej grupie TestFlight Michała.
+- [x] iOS rozróżnia próbę, sukces i błąd wyświetlania HTML.
+- [x] Po awarii renderowania następuje najwyżej jedno automatyczne odzyskanie w danym cyklu, potem dostępne jest ponowienie ręczne.
+- [x] Zdrowy dokument nie jest przeładowywany przy zwykłej aktualizacji SwiftUI.
+- [x] Android umożliwia ponowienie pobrania bez opuszczania artykułu.
+- [x] Pobieranie ma ograniczony budżet prób, respektuje anulowanie i odróżnia błędy przejściowe od trwałych.
+- [x] Ręczne pobranie omija cache, a odpowiedź jest walidowana przed jego aktualizacją.
+- [x] Testy UI iOS sprawdzają rzeczywisty akapit w WKWebView, nie dodatkową etykietę ani sam kontener.
+- [x] Pełne testy jednostkowe, APK i lint Androida wykonane.
+- [x] Testy Xcode z UIKit/WebKit oraz testy UI wykonane na macOS.
+- [x] Niezależne końcowe recenzje obu implementacji zaakceptowane.
+- [x] Apple przetworzyło build, a API potwierdza dostęp builda i Michała w tej samej wewnętrznej grupie TestFlight.
 
-## Numer wersji
+## Dowody iOS
 
-Odczyt App Store Connect przed pracą: wersja 1.0.1 jest wydana, najwyższy numer builda to 2. Planowana paczka testowa: **1.0.2, build 3**. Sam upload do TestFlight nie oznacza zgłoszenia wersji do recenzji App Store.
+- Kod: PR [#3](https://github.com/michaldziwisz/Tyflocentrum/pull/3), commit `67e97aee21aa43fe3aa8e700817315f2bb9dd680`; merge `a2a0524362b291167fc74bab0f0c9b325ccbe6ba`. Drzewa kodu po scaleniu i po testach są identyczne.
+- [Pełny CI](https://github.com/michaldziwisz/Tyflocentrum/actions/runs/35512429977): **204 testy zaliczone, zero błędów i pominięć**. Symulator iPhone 17 Pro, iOS 26.5.
+- Zweryfikowano wykonanie obu nowych testów odzyskiwania, 13 testów stanu HTML i siedmiu testów koordynacji z nawigacją WebKita. Pobrano i obejrzano trzy zrzuty: automatyczne odzyskanie, przycisk po wyczerpaniu automatycznej próby oraz treść po ręcznym ponowieniu. Akapit kontrolny jest czytelny po obu ścieżkach; stan błędu oferuje „Wczytaj treść ponownie”.
+- [Podpis i upload](https://github.com/michaldziwisz/Tyflocentrum/actions/runs/35513941158): Apple potwierdziło walidację i `UPLOAD SUCCEEDED with no errors`.
+- Build/Delivery UUID: `f143647f-672f-4dcf-b171-69d0fe6bcae6`.
+- Odczyt App Store Connect: `processingState=VALID`, `internalBuildState=IN_BETA_TESTING`, build niewygasły, obecny w grupie `ee7203f3-b70a-47fe-8222-0e6aa15476ea`; członkostwo Michała potwierdzone.
+- Dodano polską notatkę „Co testować” i potwierdzono jej treść ponownym odczytem.
+- Podpisana IPA: `net.tyflopodcast.tyflocentrum`, 1.0.2 (3), SDK `iphoneos26.5`, profil dystrybucyjny (`get-task-allow=false`). SHA-256: `5f1427613b3f2a52e10001964c2961b108ec9342f639f93faa8d570f0aae760c`.
+- W rozpakowanej binarce Release potwierdzono brak flag kontrolowanych awarii `UI_TESTING_SAFE_HTML_FAIL_ONCE/TWICE` i obecność tekstu rzeczywistego przycisku odzyskiwania.
 
-## Zastana blokada testów
+## Dowody Androida
 
-Ostatni przebieg CI na bazowym commicie `3120fc9`, run `35256332696`, nie uruchomił testów: dwie asercje w `StrategiaOdswiezaniaTests.swift` przekazywały `TimeInterval?` do wariantu `XCTAssertEqual` z `accuracy`. Zmieniono je na jawne `try XCTUnwrap`, bez modyfikowania logiki odświeżania. Oba testy wykonane z prawdziwym rdzeniem na Swift Linux przeszły. Pełny Xcode pozostaje osobną bramką.
+- [PR #2](https://github.com/michaldziwisz/tyflocentrum_android/pull/2), commit `b7d903888dccf2e562c4cbdedc56386cbd0f089a`.
+- `testDebugUnitTest assembleDebug lintDebug`: **41 testów zaliczonych**, zero błędów i pominięć. Lint: zero błędów, 17 ostrzeżeń.
+- Testy obejmują timeout próby i całości, anulowanie przez wywołującego, Retry-After, walidację i kolejność cache, trwałe błędy TLS oraz spóźniony wynik starego loadera.
+- APK debug został zbudowany, ale nie był instalowany ani publikowany. Numer wersji Androida nie został podniesiony. Szczegóły: `docs/ladowanie-artykulow.md` w repo Androida.
 
-## Ograniczenia
+## Dodatkowa naprawa bramki i ograniczenia
 
-Testy symulatora nie zastępują fizycznego iPhone’a ani odsłuchu VoiceOver. Analogicznie testy JVM/kompilacja nie są testem TalkBacka i Jeshuo. TestFlight służy dalszej weryfikacji zachowania na urządzeniu.
+W zastanym `StrategiaOdswiezaniaTests.swift` dwie asercje nie kompilowały się przez przekazanie `TimeInterval?` do porównania z `accuracy`. Użyto `try XCTUnwrap`, bez zmiany logiki odświeżania. Pełny przebieg Xcode potwierdził wykonanie tych testów.
+
+Nie odtworzono pierwotnej sporadycznej awarii na fizycznym iPhonie. Testy kontrolowanych awarii potwierdzają odzyskiwanie, lecz symulator nie zastępuje odsłuchu VoiceOver. Testy JVM i APK nie są pomiarem TalkBacka ani Jeshuo. Dalsza próba na urządzeniu powinna objąć serię wejść do różnych artykułów, powroty na ekran oraz ponowienie po chwilowej utracie sieci.
