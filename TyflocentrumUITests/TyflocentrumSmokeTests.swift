@@ -293,6 +293,60 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		waitForExpectations(timeout: limitUI)
 	}
 
+	func testArticleRecoveryAutoRecoversAfterControlledSingleRenderFailure() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_SAFE_HTML_FAIL_ONCE"])
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
+		XCTAssertTrue(articleRow.waitForExistence(timeout: limitUI))
+		articleRow.tap()
+
+		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
+		XCTAssertTrue(content.waitForExistence(timeout: limitUI))
+
+		let paragraph = app.webViews.firstMatch.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "Kontrolny akapit artykułu Tyfloświata.")).firstMatch
+		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI))
+
+		let retryButton = app.buttons["articleDetail.retry"]
+		XCTAssertFalse(retryButton.exists)
+
+		let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+		screenshot.name = "SAFEHTML-FAIL-ONCE-RECOVERED"
+		screenshot.lifetime = .keepAlways
+		add(screenshot)
+	}
+
+	func testArticleRecoveryRequiresManualRetryAfterControlledDoubleRenderFailure() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_SAFE_HTML_FAIL_TWICE"])
+		app.launch()
+
+		app.tabBars.buttons["Nowości"].tap()
+
+		let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
+		XCTAssertTrue(articleRow.waitForExistence(timeout: limitUI))
+		articleRow.tap()
+
+		let retryButton = app.buttons["articleDetail.retry"]
+		XCTAssertTrue(retryButton.waitForExistence(timeout: limitUI))
+
+		let failureScreenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+		failureScreenshot.name = "SAFEHTML-FAIL-TWICE-BEFORE-RETRY"
+		failureScreenshot.lifetime = .keepAlways
+		add(failureScreenshot)
+
+		retryButton.tap()
+
+		let paragraph = app.webViews.firstMatch.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "Kontrolny akapit artykułu Tyfloświata.")).firstMatch
+		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI))
+
+		let successScreenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+		successScreenshot.name = "SAFEHTML-FAIL-TWICE-RECOVERED"
+		successScreenshot.lifetime = .keepAlways
+		add(successScreenshot)
+	}
+
 	func testCanOpenPodcastPlayerAndSeeSeekControls() {
 		let app = makeApp()
 		app.launch()

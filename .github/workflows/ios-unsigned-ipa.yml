@@ -38,6 +38,23 @@ jobs:
           name: Tyflocentrum-unsigned-ipa
           path: tyflocentrum.ipa
 
+      - name: Wyeksportuj załączniki testów do plików
+        if: always()
+        run: |
+          if [[ -d WynikTestow.xcresult ]]; then
+            xcrun xcresulttool export attachments --path WynikTestow.xcresult --output-path test-attachments
+            xcrun xcresulttool get test-results summary --path WynikTestow.xcresult > test-attachments/summary.json
+            xcrun xcresulttool get test-results tests --path WynikTestow.xcresult > test-attachments/tests.json
+          fi
+
+      - name: Wystaw zrzuty i pozostałe załączniki
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: wynik-testow-zalaczniki
+          path: test-attachments
+          if-no-files-found: ignore
+
       # Zrzuty ekranu z PADAJACYCH testow UI. if: always(), bo najbardziej
       # potrzebujemy ich wlasnie wtedy, gdy krok testow zwrocil blad - a wtedy
       # domyslnie kolejne kroki sa pomijane i dowod przepada razem z runnerem.
