@@ -662,7 +662,7 @@ private final class UITestURLProtocol: URLProtocol {
 				return (
 					200,
 					#"""
-						{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyfloswiat.pl/?p=\#(postID)"},"link":"https://tyfloswiat.pl/?p=\#(postID)"}
+						{"id":\#(postID),"date":"2026-01-20T00:59:40","title":{"rendered":"Test artykuł"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"<p>Kontrolny akapit artykułu Tyfloświata.</p>"},"guid":{"rendered":"https://tyfloswiat.pl/?p=\#(postID)"},"link":"https://tyfloswiat.pl/?p=\#(postID)"}
 					"""#.data(using: .utf8) ?? Data()
 				)
 			}

@@ -89,6 +89,10 @@
 		F0C0A1B2C3D4E5F607182941 /* RadioScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F0C0A1B2C3D4E5F607182940 /* RadioScheduleView.swift */; };
 		F1E2D3C4B5A6978877665544 /* MultipartFormDataBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9C0D1E2F3A4B5C6D7E8F901 /* MultipartFormDataBuilder.swift */; };
 		FC1F7CD5BB2E35CBF0F19C55 /* SettingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4283FEFC63F0CD0E873A0000 /* SettingsStore.swift */; };
+		A1B2C3D4E5F60718293A4BA1 /* HTMLRenderState.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4BA0 /* HTMLRenderState.swift */; };
+		A1B2C3D4E5F60718293A4BA3 /* SafeHTMLCoordinatorLogic.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4BA2 /* SafeHTMLCoordinatorLogic.swift */; };
+		A1B2C3D4E5F60718293A4BA5 /* HTMLRenderStateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4BA4 /* HTMLRenderStateTests.swift */; };
+		A1B2C3D4E5F60718293A4BA7 /* SafeHTMLCoordinatorLogicTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4BA6 /* SafeHTMLCoordinatorLogicTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -207,6 +211,10 @@
 		F0C0A1B2C3D4E5F607182932 /* ContactTextMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactTextMessageView.swift; sourceTree = "<group>"; };
 		F0C0A1B2C3D4E5F607182934 /* ContactVoiceMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactVoiceMessageView.swift; sourceTree = "<group>"; };
 		F0C0A1B2C3D4E5F607182940 /* RadioScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadioScheduleView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4BA0 /* HTMLRenderState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLRenderState.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4BA2 /* SafeHTMLCoordinatorLogic.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLCoordinatorLogic.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4BA4 /* HTMLRenderStateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTMLRenderStateTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4BA6 /* SafeHTMLCoordinatorLogicTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SafeHTMLCoordinatorLogicTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -246,6 +254,8 @@
 			children = (
 				244C7295B6BC7A57B4A7C542 /* StubURLProtocol.swift */,
 				ECF1F44F4E7077BA610B02CD /* PodcastTests.swift */,
+				A1B2C3D4E5F60718293A4BA4 /* HTMLRenderStateTests.swift */,
+				A1B2C3D4E5F60718293A4BA6 /* SafeHTMLCoordinatorLogicTests.swift */,
 				51AEB5EB9C8F4260E80FB3CA /* TyfloAPITests.swift */,
 				C0FFEE1234567890ABCDEF12 /* MultipartFormDataBuilderTests.swift */,
 				EF01FA9E1D6240CDA0600363 /* FavoritesStoreTests.swift */,
@@ -292,6 +302,8 @@
 				A83E50FD9BC840E2A1847FB9 /* FavoritesView.swift */,
 				ED2F0E60BF0E4CD1B0748873 /* AccessibleTextView.swift */,
 				78188DE1F78A419E9FEC0E93 /* SafeHTMLView.swift */,
+				A1B2C3D4E5F60718293A4BA0 /* HTMLRenderState.swift */,
+				A1B2C3D4E5F60718293A4BA2 /* SafeHTMLCoordinatorLogic.swift */,
 				BC7F1D0D2D0400000000D100 /* StylPrzyciskuAkcji.swift */,
 				A1B2C3D4E5F60718293A4B96 /* VoiceOverScrollBarPrimer.swift */,
 				BE7165422921A0D200FF9A89 /* DetailedArticleView.swift */,
@@ -534,6 +546,8 @@
 			files = (
 				DE7687F4C5C79FE4AF14CE2C /* StubURLProtocol.swift in Sources */,
 				D2E8B0B4EB840818A771E17E /* PodcastTests.swift in Sources */,
+				A1B2C3D4E5F60718293A4BA5 /* HTMLRenderStateTests.swift in Sources */,
+				A1B2C3D4E5F60718293A4BA7 /* SafeHTMLCoordinatorLogicTests.swift in Sources */,
 				13B97F309E41DA3DB11FF9FB /* TyfloAPITests.swift in Sources */,
 				D3C4B5A69788776655443322 /* MultipartFormDataBuilderTests.swift in Sources */,
 				69853FC208E384B34801168A /* FavoritesStoreTests.swift in Sources */,
@@ -571,6 +585,8 @@
 				BE1FDCD428F6DE7D00B9601B /* DataController.swift in Sources */,
 				E3AC556226DF4E6EBF329B2D /* AccessibleTextView.swift in Sources */,
 				C081011CC54240058A970364 /* SafeHTMLView.swift in Sources */,
+				A1B2C3D4E5F60718293A4BA1 /* HTMLRenderState.swift in Sources */,
+				A1B2C3D4E5F60718293A4BA3 /* SafeHTMLCoordinatorLogic.swift in Sources */,
 				BC7F1D0E2D0400000000D101 /* StylPrzyciskuAkcji.swift in Sources */,
 				A1B2C3D4E5F60718293A4B97 /* VoiceOverScrollBarPrimer.swift in Sources */,
 				D8E66E43713743849C1784D2 /* ShowNotesParser.swift in Sources */,
@@ -799,7 +815,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"Tyflocentrum/Preview Content\"";
 				DEVELOPMENT_TEAM = X2FN885LQU;
 				ENABLE_PREVIEWS = YES;
@@ -818,7 +834,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = net.tyflopodcast.tyflocentrum;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -837,7 +853,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 3;
 				DEVELOPMENT_ASSET_PATHS = "\"Tyflocentrum/Preview Content\"";
 				DEVELOPMENT_TEAM = X2FN885LQU;
 				ENABLE_PREVIEWS = YES;
@@ -856,7 +872,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0.1;
+				MARKETING_VERSION = 1.0.2;
 				PRODUCT_BUNDLE_IDENTIFIER = net.tyflopodcast.tyflocentrum;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				PROVISIONING_PROFILE_SPECIFIER = "";

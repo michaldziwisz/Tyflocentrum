@@ -102,6 +102,8 @@ final class TyfloAPI: ObservableObject {
 	private let wpCategoryFields = "id,name,count"
 
 	private static let requestTimeoutSeconds: TimeInterval = 30
+	private static let detailFetchAttemptTimeoutSeconds: TimeInterval = 12
+	private static let detailFetchTotalBudgetSeconds: TimeInterval = 30
 	private static let retryableErrorCodes: Set<URLError.Code> = [
 		.notConnectedToInternet,
 		.timedOut,
@@ -114,6 +116,15 @@ final class TyfloAPI: ObservableObject {
 		.cannotDecodeContentData,
 		.cannotParseResponse,
 	]
+	private static let detailRetryableErrorCodes: Set<URLError.Code> = [
+		.notConnectedToInternet,
+		.timedOut,
+		.cannotFindHost,
+		.cannotConnectToHost,
+		.networkConnectionLost,
+		.dnsLookupFailed,
+	]
+	private static let detailRetryableHTTPStatusCodes: Set<Int> = [408, 429, 500, 502, 503, 504]
 
 	private static func makeSharedSession() -> URLSession {
 		let config = URLSessionConfiguration.default
@@ -203,6 +214,180 @@ final class TyfloAPI: ObservableObject {
 		components.query = nil
 		components.fragment = nil
 		return components.url?.absoluteString ?? "\(url.host ?? "")\(url.path)"
+	}
+
+	private struct HTTPStatusError: Error {
+		let statusCode: Int
+		let retryAfter: TimeInterval?
+	}
+
+	private enum DetailContentKind {
+		case articlePost
+		case tyfloswiatPage
+	}
+
+	static var detailRequestTimeoutSeconds: TimeInterval {
+		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
+			return 2
+		}
+		return detailFetchAttemptTimeoutSeconds
+	}
+
+	private static func parseRetryAfter(_ http: HTTPURLResponse) -> TimeInterval? {
+		guard let rawValue = http.value(forHTTPHeaderField: "Retry-After")?.trimmingCharacters(in: .whitespacesAndNewlines),
+		      !rawValue.isEmpty
+		else {
+			return nil
+		}
+		if let seconds = TimeInterval(rawValue) {
+			return seconds.isFinite ? max(0, seconds) : .infinity
+		}
+		let formatter = DateFormatter()
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.timeZone = TimeZone(secondsFromGMT: 0)
+		formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+		guard let retryDate = formatter.date(from: rawValue) else {
+			return nil
+		}
+		let delay = retryDate.timeIntervalSinceNow
+		guard delay.isFinite, delay >= 0 else {
+			return nil
+		}
+		return delay
+	}
+
+	private static func isRetryableDetailError(_ error: Error) -> Bool {
+		if error is AsyncTimeoutError {
+			return true
+		}
+		if error is CancellationError {
+			return false
+		}
+		if let httpError = error as? HTTPStatusError {
+			return detailRetryableHTTPStatusCodes.contains(httpError.statusCode)
+		}
+		if let urlError = error as? URLError {
+			return detailRetryableErrorCodes.contains(urlError.code)
+		}
+		return false
+	}
+
+	private static func detailRetryDelay(for error: Error) -> TimeInterval {
+		guard let httpError = error as? HTTPStatusError else { return 0.25 }
+		return max(0, httpError.retryAfter ?? 0.25)
+	}
+
+	private func decodeValidatedDetail(
+		_ data: Data,
+		decoder: JSONDecoder,
+		expectedID: Int
+	) throws -> Podcast {
+		let decoded = try decoder.decode(Podcast.self, from: data)
+		guard decoded.id == expectedID else {
+			throw URLError(.cannotParseResponse)
+		}
+		return decoded
+	}
+
+	private func fetchDetail(
+		kind: DetailContentKind,
+		id: Int,
+		cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
+	) async throws -> Podcast {
+		try Task.checkCancellation()
+		let baseURL: URL
+		let path: String
+		switch kind {
+		case .articlePost:
+			baseURL = tyfloWorldBaseURL
+			path = "wp/v2/posts/\(id)"
+		case .tyfloswiatPage:
+			baseURL = tyfloWorldBaseURL
+			path = "wp/v2/pages/\(id)"
+		}
+
+		guard let url = makeWPURL(
+			baseURL: baseURL,
+			path: path,
+			queryItems: [URLQueryItem(name: "_fields", value: wpPostFields)]
+		) else {
+			throw URLError(.badURL)
+		}
+
+		let decoder = JSONDecoder()
+		try Task.checkCancellation()
+		if cachePolicy == .useProtocolCachePolicy, let cached = await noStoreCache.get(url) {
+			do {
+				return try decodeValidatedDetail(cached.data, decoder: decoder, expectedID: id)
+			} catch {
+				await noStoreCache.remove(url)
+			}
+		}
+
+		let budget = RequestAttemptBudget(
+			totalBudget: Self.detailFetchTotalBudgetSeconds,
+			attemptTimeout: Self.detailRequestTimeoutSeconds
+		)
+		var attempt = 0
+		var lastError: Error?
+		while attempt < budget.maxAttempts {
+			try Task.checkCancellation()
+			attempt += 1
+			guard let timeout = budget.timeout(forAttempt: attempt) else {
+				throw lastError ?? AsyncTimeoutError.timedOut
+			}
+
+			var request = URLRequest(url: url)
+			request.cachePolicy = cachePolicy
+			request.timeoutInterval = timeout
+			request.setValue("application/json", forHTTPHeaderField: "Accept")
+			if cachePolicy == .reloadIgnoringLocalCacheData {
+				request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+				request.setValue("no-cache", forHTTPHeaderField: "Pragma")
+			}
+			let attemptRequest = request
+
+			do {
+				let article: Podcast = try await withTimeout(timeout) {
+					let (data, response) = try await self.session.data(for: attemptRequest)
+					guard let http = response as? HTTPURLResponse else {
+						throw URLError(.badServerResponse)
+					}
+					guard (200 ..< 300).contains(http.statusCode) else {
+						throw HTTPStatusError(statusCode: http.statusCode, retryAfter: Self.parseRetryAfter(http))
+					}
+					let decoded = try self.decodeValidatedDetail(data, decoder: decoder, expectedID: id)
+					try Task.checkCancellation()
+					if Self.shouldUseNoStoreCache(for: http) {
+						await self.noStoreCache.set(url, data: data)
+					} else {
+						await self.noStoreCache.remove(url)
+					}
+					try Task.checkCancellation()
+					return decoded
+				}
+				try Task.checkCancellation()
+				return article
+			} catch {
+				lastError = error
+				if Task.isCancelled {
+					throw error
+				}
+				guard attempt < budget.maxAttempts,
+				      Self.isRetryableDetailError(error)
+				else {
+					throw error
+				}
+				let delay = Self.detailRetryDelay(for: error)
+				guard budget.canRetry(after: delay) else {
+					throw error
+				}
+				if delay > 0 {
+					try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+				}
+			}
+		}
+		throw lastError ?? AsyncTimeoutError.timedOut
 	}
 
 	private func withRetry<T>(
@@ -403,17 +588,8 @@ final class TyfloAPI: ObservableObject {
 		return try await fetch(url)
 	}
 
-	func fetchArticle(id: Int) async throws -> Podcast {
-		guard let url = makeWPURL(
-			baseURL: tyfloWorldBaseURL,
-			path: "wp/v2/posts/\(id)",
-			queryItems: [
-				URLQueryItem(name: "_fields", value: wpPostFields),
-			]
-		) else {
-			throw URLError(.badURL)
-		}
-		return try await fetch(url)
+	func fetchArticle(id: Int, cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy) async throws -> Podcast {
+		try await fetchDetail(kind: .articlePost, id: id, cachePolicy: cachePolicy)
 	}
 
 	func getLatestPodcasts() async -> [Podcast] {
@@ -665,17 +841,8 @@ final class TyfloAPI: ObservableObject {
 		return try await fetch(url)
 	}
 
-	func fetchTyfloswiatPage(id: Int) async throws -> Podcast {
-		guard let url = makeWPURL(
-			baseURL: tyfloWorldBaseURL,
-			path: "wp/v2/pages/\(id)",
-			queryItems: [
-				URLQueryItem(name: "_fields", value: wpPostFields),
-			]
-		) else {
-			throw URLError(.badURL)
-		}
-		return try await fetch(url)
+	func fetchTyfloswiatPage(id: Int, cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy) async throws -> Podcast {
+		try await fetchDetail(kind: .tyfloswiatPage, id: id, cachePolicy: cachePolicy)
 	}
 
 	func getPodcasts(for searchString: String) async -> [Podcast] {

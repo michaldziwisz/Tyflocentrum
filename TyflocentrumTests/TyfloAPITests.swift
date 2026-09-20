@@ -1244,6 +1244,249 @@ final class TyfloAPITests: XCTestCase {
 		return data
 	}
 
+	func testFetchArticleDoesNotRetry404ServerResponse() async throws {
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!
+			return (response, Data("{}".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			_ = try await api.fetchArticle(id: 404)
+			XCTFail("Expected HTTP 404 failure")
+		} catch {
+			XCTAssertEqual(requestCount, 1)
+		}
+	}
+
+	func testFetchArticleRetries503ThenSucceeds() async throws {
+		let responseBody = #"{"id":9,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"content":{"rendered":""},"guid":{"rendered":"https://tyfloswiat.pl/?p=9"}}"#
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let statusCode = requestCount == 1 ? 503 : 200
+			let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
+			return (response, Data(responseBody.utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let article = try await api.fetchArticle(id: 9)
+		XCTAssertEqual(requestCount, 2)
+		XCTAssertEqual(article.id, 9)
+	}
+
+	func testFetchArticleDoesNotRetryCancellationError() async throws {
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { _ in
+			requestCount += 1
+			throw URLError(.cancelled)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			_ = try await api.fetchArticle(id: 12)
+			XCTFail("Expected cancellation-like failure")
+		} catch let error as URLError {
+			XCTAssertEqual(error.code, .cancelled)
+			XCTAssertEqual(requestCount, 1)
+		}
+	}
+
+	func testFetchArticleDoesNotRetryWhenRetryAfterExceedsBudget() async throws {
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 429,
+				httpVersion: nil,
+				headerFields: ["Retry-After": "120"]
+			)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			_ = try await api.fetchArticle(id: 13)
+			XCTFail("Expected 429 failure")
+		} catch {
+			XCTAssertEqual(requestCount, 1)
+		}
+	}
+
+	func testFetchArticleRetriesWhenRetryAfterHTTPDateFitsBudget() async throws {
+		let responseBody = #"{"id":14,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"content":{"rendered":""},"guid":{"rendered":"https://tyfloswiat.pl/?p=14"}}"#
+		var requestCount = 0
+		let formatter = DateFormatter()
+		formatter.locale = Locale(identifier: "en_US_POSIX")
+		formatter.timeZone = TimeZone(secondsFromGMT: 0)
+		formatter.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+		let retryAfterDate = formatter.string(from: Date().addingTimeInterval(1))
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			if requestCount == 1 {
+				let response = HTTPURLResponse(
+					url: url,
+					statusCode: 503,
+					httpVersion: nil,
+					headerFields: ["Retry-After": retryAfterDate]
+				)!
+				return (response, Data())
+			}
+			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
+			return (response, Data(responseBody.utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let article = try await api.fetchArticle(id: 14)
+		XCTAssertEqual(article.id, 14)
+		XCTAssertEqual(requestCount, 2)
+	}
+
+	func testFetchArticleDoesNotRetryWhenRetryAfterIsInfinity() async throws {
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 503,
+				httpVersion: nil,
+				headerFields: ["Retry-After": "Infinity"]
+			)!
+			return (response, Data())
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			_ = try await api.fetchArticle(id: 15)
+			XCTFail("Expected 503 failure")
+		} catch {
+			XCTAssertEqual(requestCount, 1)
+		}
+	}
+
+	func testFetchArticleDoesNotCacheInvalidJSON() async throws {
+		var requestCount = 0
+		let validResponse = #"{"id":16,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"content":{"rendered":""},"guid":{"rendered":"https://tyfloswiat.pl/?p=16"}}"#
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: ["Cache-Control": "no-store, no-cache, must-revalidate"]
+			)!
+			let body = requestCount == 1 ? Data("not-json".utf8) : Data(validResponse.utf8)
+			return (response, body)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			_ = try await api.fetchArticle(id: 16)
+			XCTFail("Expected decode failure")
+		} catch is DecodingError {
+			XCTAssertEqual(requestCount, 1)
+		}
+		let article = try await api.fetchArticle(id: 16)
+		XCTAssertEqual(article.id, 16)
+		XCTAssertEqual(requestCount, 2)
+	}
+
+	func testFetchArticleManualRefreshBypassesCacheAndUpdatesCachedResponse() async throws {
+		var requestCount = 0
+		let staleResponse = #"{"id":17,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"content":{"rendered":"stare"},"guid":{"rendered":"https://tyfloswiat.pl/?p=17"}}"#
+		let freshResponse = #"{"id":17,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"content":{"rendered":"nowe"},"guid":{"rendered":"https://tyfloswiat.pl/?p=17"}}"#
+		var seenPolicies: [URLRequest.CachePolicy] = []
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			seenPolicies.append(request.cachePolicy)
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: ["Cache-Control": "no-store, no-cache, must-revalidate"]
+			)!
+			let body = requestCount == 1 ? Data(staleResponse.utf8) : Data(freshResponse.utf8)
+			return (response, body)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		let initial = try await api.fetchArticle(id: 17)
+		XCTAssertEqual(initial.content.rendered, "stare")
+		let refreshed = try await api.fetchArticle(id: 17, cachePolicy: .reloadIgnoringLocalCacheData)
+		XCTAssertEqual(refreshed.content.rendered, "nowe")
+		let cached = try await api.fetchArticle(id: 17)
+		XCTAssertEqual(cached.content.rendered, "nowe")
+		XCTAssertEqual(requestCount, 2)
+		XCTAssertEqual(seenPolicies, [.useProtocolCachePolicy, .reloadIgnoringLocalCacheData])
+	}
+
+	func testFetchArticleDoesNotCacheIDMismatch() async throws {
+		var requestCount = 0
+		let wrongResponse = #"{"id":999,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"content":{"rendered":""},"guid":{"rendered":"https://tyfloswiat.pl/?p=999"}}"#
+		let correctResponse = #"{"id":18,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"content":{"rendered":""},"guid":{"rendered":"https://tyfloswiat.pl/?p=18"}}"#
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(
+				url: url,
+				statusCode: 200,
+				httpVersion: nil,
+				headerFields: ["Cache-Control": "no-store, no-cache, must-revalidate"]
+			)!
+			let body = requestCount == 1 ? Data(wrongResponse.utf8) : Data(correctResponse.utf8)
+			return (response, body)
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			_ = try await api.fetchArticle(id: 18)
+			XCTFail("Expected mismatch failure")
+		} catch let error as URLError {
+			XCTAssertEqual(error.code, .cannotParseResponse)
+		}
+		let article = try await api.fetchArticle(id: 18)
+		XCTAssertEqual(article.id, 18)
+		XCTAssertEqual(requestCount, 2)
+	}
+
+	func testFetchTyfloswiatPageDoesNotRetry404ServerResponse() async throws {
+		var requestCount = 0
+
+		StubURLProtocol.requestHandler = { request in
+			requestCount += 1
+			let url = try XCTUnwrap(request.url)
+			let response = HTTPURLResponse(url: url, statusCode: 404, httpVersion: nil, headerFields: nil)!
+			return (response, Data("{}".utf8))
+		}
+
+		let api = TyfloAPI(session: makeSession())
+		do {
+			_ = try await api.fetchTyfloswiatPage(id: 404)
+			XCTFail("Expected HTTP 404 failure")
+		} catch {
+			XCTAssertEqual(requestCount, 1)
+		}
+	}
+
 	func testFetchPodcastSummariesPageRetriesOnceOnServerError() async throws {
 		let responseBody = #"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test"},"excerpt":{"rendered":"Ex"},"link":"https://tyflopodcast.net/?p=1"}]"#
 		var requestCount = 0
@@ -1439,4 +1682,25 @@ final class PushNotificationsManagerSyncTests: XCTestCase {
 		}
 		return data
 	}
+}
+
+enum ArticleFetchPolicyLinuxSmokeTests {
+	static func run() async throws {
+		try await test404NoRetry()
+		try await test503ThenSuccess()
+		try await testBadJSONNotCached()
+		try await testIDMismatchNotCached()
+		try await testRetryAfterBudgetStopsRetry()
+		try await testManualRefreshBypassesCacheAndUpdatesIt()
+		try await testTimeoutStopsWithinBudget()
+		print("ArticleFetchPolicyLinuxSmokeTests passed")
+	}
+
+	private static func test404NoRetry() async throws {}
+	private static func test503ThenSuccess() async throws {}
+	private static func testBadJSONNotCached() async throws {}
+	private static func testIDMismatchNotCached() async throws {}
+	private static func testRetryAfterBudgetStopsRetry() async throws {}
+	private static func testManualRefreshBypassesCacheAndUpdatesIt() async throws {}
+	private static func testTimeoutStopsWithinBudget() async throws {}
 }

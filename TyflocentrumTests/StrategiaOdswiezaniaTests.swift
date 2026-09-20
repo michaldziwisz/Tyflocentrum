@@ -142,23 +142,23 @@ final class StrategiaOdswiezaniaTests: XCTestCase {
 
 	// MARK: - Znaczniki świeżości
 
-	func testNieudanaProbaNieOdmierzaWiekuDanychOdNowa() {
+	func testNieudanaProbaNieOdmierzaWiekuDanychOdNowa() throws {
 		// Gdyby próba zerowała wiek danych, nieudane pobranie „odmłodziłoby”
 		// stare treści i zablokowało kolejne odświeżenie na 2 minuty.
 		var stan = StanSwiezosci()
 		stan.zanotujSukces(teraz: teraz.addingTimeInterval(-300))
 		stan.zanotujProbe(teraz: teraz)
 
-		XCTAssertEqual(stan.wiekDanych(teraz: teraz), 300, accuracy: 0.001)
+		XCTAssertEqual(try XCTUnwrap(stan.wiekDanych(teraz: teraz)), 300, accuracy: 0.001)
 		XCTAssertEqual(stan.ostatniaProba, teraz)
 	}
 
-	func testSukcesOdmierzaWiekOdNowa() {
+	func testSukcesOdmierzaWiekOdNowa() throws {
 		var stan = StanSwiezosci()
 		stan.zanotujSukces(teraz: teraz.addingTimeInterval(-300))
 		stan.zanotujSukces(teraz: teraz)
 
-		XCTAssertEqual(stan.wiekDanych(teraz: teraz), 0, accuracy: 0.001)
+		XCTAssertEqual(try XCTUnwrap(stan.wiekDanych(teraz: teraz)), 0, accuracy: 0.001)
 	}
 }
 

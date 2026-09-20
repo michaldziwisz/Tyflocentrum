@@ -6,26 +6,25 @@
 import Foundation
 import SwiftUI
 
-struct LazyDetailedArticleView: View {
-	let summary: WPPostSummary
+private enum DetailLoadError: Error {
+	case staleResult
+}
 
-	@EnvironmentObject private var api: TyfloAPI
+struct DetailLoaderView: View {
+	let summary: WPPostSummary
+	let favoriteOrigin: FavoriteArticleOrigin
+	let fetch: (Int, URLRequest.CachePolicy) async throws -> Podcast
+
 	@State private var article: Podcast?
 	@State private var isLoading = false
 	@State private var errorMessage: String?
-	@State private var loadToken = UUID()
-
-	private var requestTimeoutSeconds: TimeInterval {
-		if ProcessInfo.processInfo.arguments.contains("UI_TESTING_FAST_TIMEOUTS") {
-			return 2
-		}
-		return 20
-	}
+	@State private var retryCount = 0
+	@State private var activeRequestID: UUID?
 
 	var body: some View {
 		ZStack {
 			if let article {
-				DetailedArticleView(article: article, favoriteOrigin: .post)
+				DetailedArticleView(article: article, favoriteOrigin: favoriteOrigin)
 			} else if let message = errorMessage {
 				VStack(alignment: .leading, spacing: 12) {
 					Text(message)
@@ -33,7 +32,7 @@ struct LazyDetailedArticleView: View {
 
 					Button("Spróbuj ponownie") {
 						errorMessage = nil
-						loadToken = UUID()
+						retryCount += 1
 					}
 					.accessibilityHint("Ponawia pobieranie danych.")
 					.accessibilityIdentifier("postDetail.retry")
@@ -49,39 +48,67 @@ struct LazyDetailedArticleView: View {
 		}
 		.navigationTitle(summary.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
-		.task(id: loadToken) { await loadIfNeeded() }
+		.task(id: taskID) {
+			await load(triggeringTaskID: taskID, manualRetry: retryCount > 0)
+		}
+		.onDisappear {
+			activeRequestID = nil
+			isLoading = false
+		}
+	}
+
+	private var taskID: String {
+		"\(summary.id)-\(retryCount)"
 	}
 
 	@MainActor
-	private func loadIfNeeded() async {
+	private func load(triggeringTaskID: String, manualRetry: Bool) async {
 		guard article == nil else { return }
-		await load()
-	}
-
-	@MainActor
-	private func load() async {
 		guard !isLoading else { return }
 		isLoading = true
 		errorMessage = nil
-		var pendingErrorMessage: String?
+		let requestID = UUID()
+		activeRequestID = requestID
 		defer {
-			isLoading = false
-			if let pendingErrorMessage {
-				errorMessage = pendingErrorMessage
+			if activeRequestID == requestID {
+				activeRequestID = nil
+				isLoading = false
 			}
 		}
 
 		do {
-			let loaded = try await withTimeout(requestTimeoutSeconds) {
-				try await api.fetchArticle(id: summary.id)
+			let cachePolicy: URLRequest.CachePolicy = manualRetry ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
+			let loaded = try await fetch(summary.id, cachePolicy)
+			guard !Task.isCancelled else { return }
+			guard activeRequestID == requestID, taskID == triggeringTaskID else {
+				throw DetailLoadError.staleResult
 			}
 			article = loaded
+		} catch is CancellationError {
+			return
+		} catch DetailLoadError.staleResult {
+			return
 		} catch {
+			guard !Task.isCancelled else { return }
+			guard activeRequestID == requestID, taskID == triggeringTaskID else { return }
 			if error is AsyncTimeoutError {
-				pendingErrorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
+				errorMessage = "Ładowanie trwa zbyt długo. Spróbuj ponownie."
 			} else {
-				pendingErrorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
+				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 			}
 		}
+	}
+}
+
+struct LazyDetailedArticleView: View {
+	let summary: WPPostSummary
+
+	@EnvironmentObject private var api: TyfloAPI
+
+	var body: some View {
+		DetailLoaderView(summary: summary, favoriteOrigin: .post) { id, cachePolicy in
+			try await api.fetchArticle(id: id, cachePolicy: cachePolicy)
+		}
+		.id("post-\(summary.id)")
 	}
 }

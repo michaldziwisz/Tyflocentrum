@@ -24,43 +24,34 @@ struct SafeHTMLView: UIViewRepresentable {
 		Coordinator(allowedHost: baseURL?.host)
 	}
 
-	func makeUIView(context: Context) -> WKWebView {
+	func makeUIView(context: Context) -> SafeHTMLContainerView {
 		let configuration = WKWebViewConfiguration()
 		configuration.websiteDataStore = .nonPersistent()
 		configuration.defaultWebpagePreferences.allowsContentJavaScript = false
 
-		let webView = WKWebView(frame: .zero, configuration: configuration)
-		webView.navigationDelegate = context.coordinator
-		webView.uiDelegate = context.coordinator
-		webView.isOpaque = false
-		webView.backgroundColor = .clear
-		webView.scrollView.backgroundColor = .clear
-		webView.allowsBackForwardNavigationGestures = false
-		webView.allowsLinkPreview = false
-		webView.accessibilityIdentifier = accessibilityIdentifier
-
-		if #available(iOS 15.0, *) {
-			webView.underPageBackgroundColor = .clear
-		}
-
-		return webView
+		let container = SafeHTMLContainerView(configuration: configuration)
+		container.webView.accessibilityIdentifier = accessibilityIdentifier
+		context.coordinator.attach(webView: container.webView, container: container)
+		return container
 	}
 
-	func updateUIView(_ uiView: WKWebView, context: Context) {
-		uiView.accessibilityIdentifier = accessibilityIdentifier
+	func updateUIView(_ uiView: SafeHTMLContainerView, context: Context) {
+		uiView.webView.accessibilityIdentifier = accessibilityIdentifier
 		context.coordinator.allowedHost = baseURL?.host
+		context.coordinator.currentBaseURL = baseURL
+		context.coordinator.attach(webView: uiView.webView, container: uiView)
+		context.coordinator.requestRender(forHTML: htmlBody, fontSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
+	}
 
-		let optimizedBody = Self.optimizeHTMLBody(htmlBody)
-		let document = Self.makeDocument(body: optimizedBody, fontSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
-		guard context.coordinator.lastLoadedHTML != document else { return }
-
-		context.coordinator.lastLoadedHTML = document
-		uiView.loadHTMLString(document, baseURL: baseURL)
+	static func dismantleUIView(_ uiView: SafeHTMLContainerView, coordinator: Coordinator) {
+		coordinator.prepareForTeardown()
+		uiView.hideRetryButton()
+		uiView.hideMessageLabel()
+		uiView.webView.navigationDelegate = nil
+		uiView.webView.uiDelegate = nil
 	}
 
 	static func optimizeHTMLBody(_ body: String) -> String {
-		// Reduce memory/CPU spikes for large articles by hinting the engine to defer image loading/decoding.
-		// (No JavaScript needed; SafeHTMLView disables JS.)
 		var result = body
 		result = result.replacingOccurrences(
 			of: "(?i)<img(?![^>]*\\bloading=)",
@@ -146,11 +137,100 @@ struct SafeHTMLView: UIViewRepresentable {
 	}
 
 	final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
-		var lastLoadedHTML: String?
-		var allowedHost: String?
+		private let logic: SafeHTMLCoordinatorLogic
+		private weak var container: SafeHTMLContainerView?
+
+		var allowedHost: String? {
+			get { logic.allowedHost }
+			set { logic.allowedHost = newValue }
+		}
+
+		var currentBaseURL: URL? {
+			get { logic.currentBaseURL }
+			set { logic.currentBaseURL = newValue }
+		}
 
 		init(allowedHost: String? = nil) {
-			self.allowedHost = allowedHost
+			logic = SafeHTMLCoordinatorLogic(allowedHost: allowedHost)
+			super.init()
+			#if DEBUG
+				if ProcessInfo.processInfo.arguments.contains("UI_TESTING") {
+					var remainingControlledFailures = 0
+					if ProcessInfo.processInfo.arguments.contains("UI_TESTING_SAFE_HTML_FAIL_ONCE") {
+						remainingControlledFailures = 1
+					} else if ProcessInfo.processInfo.arguments.contains("UI_TESTING_SAFE_HTML_FAIL_TWICE") {
+						remainingControlledFailures = 2
+					}
+					if remainingControlledFailures > 0 {
+						logic.onStateChange = { [weak self] command in
+							guard let self else { return }
+							guard case let .load(_, navigationID) = command else { return }
+							guard remainingControlledFailures > 0 else { return }
+							guard self.logic.state.currentNavigationID == navigationID else { return }
+							remainingControlledFailures -= 1
+							DispatchQueue.main.async { [weak self] in
+								guard let self else { return }
+								guard self.logic.state.currentNavigationID == navigationID else { return }
+								self.logic.didTerminateProcess()
+							}
+						}
+					}
+				}
+			#endif
+			logic.onOverlayChange = { [weak self] state in
+				guard let self, let container = self.container else { return }
+				container.webView.isHidden = state.phase == .failed(.emptyContent)
+				switch state.phase {
+				case .failed(.emptyContent):
+					container.showMessage("Treść artykułu jest pusta.", identifier: "articleDetail.empty")
+					container.hideRetryButton()
+				case .failed:
+					container.hideMessageLabel()
+					if state.showsRetryButton {
+						container.showRetryButton(action: #selector(self.retryButtonTapped), target: self)
+					} else {
+						container.hideRetryButton()
+					}
+				default:
+					container.hideRetryButton()
+					container.hideMessageLabel()
+				}
+			}
+		}
+
+		func attach(webView: WKWebView, container: SafeHTMLContainerView) {
+			self.container = container
+			logic.attach(navigator: webView)
+			webView.navigationDelegate = self
+			webView.uiDelegate = self
+		}
+
+		func requestRender(forHTML html: String, fontSize: CGFloat) {
+			logic.requestRender(forHTML: html, fontSize: fontSize)
+		}
+
+		func prepareForTeardown() {
+			logic.prepareForTeardown()
+		}
+
+		@objc private func retryButtonTapped() {
+			logic.markManualRetryRequested()
+		}
+
+		func webView(_: WKWebView, didFinish navigation: WKNavigation!) {
+			logic.didFinish(navigation: navigation)
+		}
+
+		func webView(_: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+			logic.didFail(navigation: navigation, error: error)
+		}
+
+		func webView(_: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+			logic.didFail(navigation: navigation, error: error)
+		}
+
+		func webViewWebContentProcessDidTerminate(_: WKWebView) {
+			logic.didTerminateProcess()
 		}
 
 		func webView(
@@ -200,5 +280,96 @@ struct SafeHTMLView: UIViewRepresentable {
 				UIApplication.shared.open(url)
 			}
 		}
+	}
+}
+
+final class SafeHTMLContainerView: UIView {
+	let webView: WKWebView
+	private let retryButton = UIButton(type: .system)
+	private let messageLabel = UILabel()
+
+	init(configuration: WKWebViewConfiguration) {
+		webView = WKWebView(frame: .zero, configuration: configuration)
+		super.init(frame: .zero)
+		configureWebView()
+		configureMessageLabel()
+		configureRetryButton()
+		layoutViews()
+	}
+
+	@available(*, unavailable)
+	required init?(coder _: NSCoder) {
+		fatalError("init(coder:) has not been implemented")
+	}
+
+	func showRetryButton(action: Selector, target: Any?) {
+		retryButton.removeTarget(nil, action: nil, for: .allEvents)
+		retryButton.addTarget(target, action: action, for: .touchUpInside)
+		retryButton.isHidden = false
+	}
+
+	func hideRetryButton() {
+		retryButton.isHidden = true
+	}
+
+	func showMessage(_ text: String, identifier: String) {
+		messageLabel.text = text
+		messageLabel.accessibilityIdentifier = identifier
+		messageLabel.isHidden = false
+	}
+
+	func hideMessageLabel() {
+		messageLabel.isHidden = true
+		messageLabel.text = nil
+	}
+
+	private func configureWebView() {
+		webView.isOpaque = false
+		webView.backgroundColor = .clear
+		webView.scrollView.backgroundColor = .clear
+		webView.allowsBackForwardNavigationGestures = false
+		webView.allowsLinkPreview = false
+		if #available(iOS 15.0, *) {
+			webView.underPageBackgroundColor = .clear
+		}
+	}
+
+	private func configureMessageLabel() {
+		messageLabel.numberOfLines = 0
+		messageLabel.font = .preferredFont(forTextStyle: .body)
+		messageLabel.adjustsFontForContentSizeCategory = true
+		messageLabel.isHidden = true
+		messageLabel.translatesAutoresizingMaskIntoConstraints = false
+	}
+
+	private func configureRetryButton() {
+		retryButton.setTitle("Wczytaj treść ponownie", for: .normal)
+		retryButton.titleLabel?.font = .preferredFont(forTextStyle: .body)
+		retryButton.titleLabel?.adjustsFontForContentSizeCategory = true
+		retryButton.titleLabel?.numberOfLines = 0
+		retryButton.accessibilityIdentifier = "articleDetail.retry"
+		retryButton.isHidden = true
+		retryButton.translatesAutoresizingMaskIntoConstraints = false
+	}
+
+	private func layoutViews() {
+		for item in [webView, messageLabel, retryButton] {
+			item.translatesAutoresizingMaskIntoConstraints = false
+			addSubview(item)
+		}
+
+		NSLayoutConstraint.activate([
+			webView.leadingAnchor.constraint(equalTo: leadingAnchor),
+			webView.trailingAnchor.constraint(equalTo: trailingAnchor),
+			webView.topAnchor.constraint(equalTo: topAnchor),
+			webView.bottomAnchor.constraint(equalTo: bottomAnchor),
+			messageLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+			messageLabel.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
+			messageLabel.topAnchor.constraint(equalTo: topAnchor, constant: 16),
+			retryButton.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+			retryButton.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -16),
+			retryButton.heightAnchor.constraint(greaterThanOrEqualToConstant: 44),
+			retryButton.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 12),
+		])
 	}
 }
