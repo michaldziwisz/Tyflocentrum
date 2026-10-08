@@ -220,6 +220,7 @@ struct SearchView: View {
 					}
 				}
 			}
+			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading)
 			.accessibilityIdentifier("search.list")
 			.refreshable {
 				let query = lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)

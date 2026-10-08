@@ -97,8 +97,8 @@ final class TyfloAPI: ObservableObject {
 	private let tyfloPodcastBaseURL = URL(string: "https://tyflopodcast.net/wp-json")!
 	private let tyfloWorldBaseURL = URL(string: "https://tyfloswiat.pl/wp-json")!
 	private let tyfloPodcastAPIURL = URL(string: "https://kontakt.tyflopodcast.net/json.php")!
-	private let wpPostFields = "id,date,title,excerpt,content,guid"
-	private let wpEmbedPostFields = "id,date,link,title,excerpt"
+	private let wpPostFields = "id,date,title,excerpt,content,guid,modified_gmt,tyflocentrum"
+	private let wpEmbedPostFields = "id,date,link,title,excerpt,modified_gmt,tyflocentrum"
 	private let wpCategoryFields = "id,name,count"
 
 	private static let requestTimeoutSeconds: TimeInterval = 30
@@ -143,9 +143,11 @@ final class TyfloAPI: ObservableObject {
 		var maxEntryBytes: Int = 1024 * 1024
 	}
 
+	let contentTimes: ContentTimeClient
 	private let noStoreCache: NoStoreInMemoryCache
-	init(session: URLSession = .shared, noStoreCacheConfig: NoStoreCacheConfig = .init()) {
+	init(session: URLSession = .shared, noStoreCacheConfig: NoStoreCacheConfig = .init(), contentTimeClient: ContentTimeClient? = nil) {
 		self.session = session
+		contentTimes = contentTimeClient ?? ContentTimeClient(session: session)
 		noStoreCache = NoStoreInMemoryCache(
 			ttlSeconds: noStoreCacheConfig.ttlSeconds,
 			maxEntries: noStoreCacheConfig.maxEntries,

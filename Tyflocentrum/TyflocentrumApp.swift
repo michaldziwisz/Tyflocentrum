@@ -26,7 +26,11 @@ struct TyflocentrumApp: App {
 	@StateObject private var pushNotifications = PushNotificationsManager()
 
 	init() {
-		let isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
+		#if DEBUG
+			let isUITesting = ProcessInfo.processInfo.arguments.contains("UI_TESTING")
+		#else
+			let isUITesting = false
+		#endif
 		self.isUITesting = isUITesting
 		_dataController = StateObject(wrappedValue: DataController(inMemory: isUITesting))
 		_api = StateObject(wrappedValue: isUITesting ? TyfloAPI(session: Self.makeUITestSession()) : TyfloAPI.shared)
@@ -425,7 +429,11 @@ private final class UITestURLProtocol: URLProtocol {
 		// miejsce podmiany tytułów na realistyczne przy zrzutach do App Store.
 		// Bez flagi UI_TESTING_SCREENSHOTS zwraca dane bez zmian, czyli
 		// wszystkie istniejące testy widzą dokładnie to co dotąd.
-		let data = Self.daneDoZrzutu(rawData)
+		#if DEBUG
+			let data = ContentTimeUITestData.decorate(Self.daneDoZrzutu(rawData), request: request)
+		#else
+			let data = Self.daneDoZrzutu(rawData)
+		#endif
 		let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
 		client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
 		client?.urlProtocol(self, didLoad: data)
@@ -472,6 +480,9 @@ private final class UITestURLProtocol: URLProtocol {
 	}
 
 	private static func response(for request: URLRequest) -> (Int, Data) {
+		#if DEBUG
+			if let response = ContentTimeUITestData.response(request) { return response }
+		#endif
 		guard let url = request.url else { return (400, Data()) }
 
 		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/categories") {

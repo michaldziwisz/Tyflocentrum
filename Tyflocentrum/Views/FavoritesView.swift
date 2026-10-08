@@ -57,6 +57,7 @@ struct FavoritesView: View {
 				}
 			}
 		}
+		.contentTimes(visibleItems.compactMap(\.contentTimeRequest))
 		.accessibilityIdentifier("favorites.list")
 		.navigationTitle("Ulubione")
 		.navigationBarTitleDisplayMode(.inline)

@@ -20,6 +20,16 @@ struct ShortPodcastView: View {
 
 	@EnvironmentObject private var favorites: FavoritesStore
 	@EnvironmentObject private var settings: SettingsStore
+	@Environment(\.contentTimeValues) private var contentTimeValues
+
+	private var contentTime: ContentTimeLabel? {
+		guard accessibilityKindLabel != "Numer", podcast.isMagazineIssue != true else { return nil }
+		if let favoriteItem {
+			guard let request = favoriteItem.contentTimeRequest else { return nil }
+			if let value = contentTimeValues[request.key] { return value }
+		}
+		return showsListenAction ? podcast.tyflocentrum?.audioTime ?? .unavailable : .unavailable
+	}
 
 	private func announceIfVoiceOver(_ message: String) {
 		guard UIAccessibility.isVoiceOverRunning else { return }
@@ -61,7 +71,7 @@ struct ShortPodcastView: View {
 				.foregroundColor(.primary)
 				.multilineTextAlignment(.leading)
 
-			Text(podcast.formattedDate)
+			Text([podcast.formattedDate, contentTime?.visible].compactMap { $0 }.joined(separator: " · "))
 				.font(.caption)
 				.foregroundColor(.secondary)
 		}
@@ -76,7 +86,7 @@ struct ShortPodcastView: View {
 			rowContent
 		}
 		.accessibilityElement(children: .ignore)
-		.accessibilityLabel(accessibilityTitle)
+		.accessibilityLabel([accessibilityTitle, contentTime?.accessible].compactMap { $0 }.joined(separator: ". "))
 		.accessibilityValue(podcast.formattedDate)
 		.accessibilityHint(hint)
 		.accessibilityIdentifier(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)")
