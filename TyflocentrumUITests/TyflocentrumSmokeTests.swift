@@ -414,7 +414,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 	}
 
 	func testArticleRecoveryRequiresManualRetryAfterControlledDoubleRenderFailure() {
-		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_SAFE_HTML_FAIL_TWICE", "UI_TESTING_SAFE_HTML_TRACE"])
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_SAFE_HTML_FAIL_TWICE"])
 		app.launch()
 
 		app.tabBars.buttons["Nowości"].tap()
@@ -431,14 +431,10 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		failureScreenshot.lifetime = .keepAlways
 		add(failureScreenshot)
 
-		print("[TC-RENDER] before: \(String(describing: retryButton.value))")
 		retryButton.tap()
 
 		let paragraph = app.webViews.firstMatch.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "Kontrolny akapit artykułu Tyfloświata.")).firstMatch
-		let loaded = paragraph.waitForExistence(timeout: limitUI)
-		let diagnosticValue = retryButton.exists ? retryButton.value : app.webViews.firstMatch.value
-		print("[TC-RENDER] after loaded=\(loaded): \(String(describing: diagnosticValue))")
-		XCTAssertTrue(loaded)
+		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI))
 
 		let successScreenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
 		successScreenshot.name = "SAFEHTML-FAIL-TWICE-RECOVERED"

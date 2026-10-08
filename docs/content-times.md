@@ -14,10 +14,6 @@ Nazwa istniejącego wiersza dostępności zawiera czas raz, pełnymi polskimi je
 * Równoczesne żądania wspólnych kluczy korzystają z tych samych aktywnych partii. Anulowanie ostatniego odbiorcy anuluje transport. Odświeżenie usuwa stare wyniki; spóźniony callback nie przywraca poprzedniego cache ani stanu listy.
 * Wadliwe opcjonalne pola nie psują dekodowania wpisu ani całej listy. Stare ulubione i cache numerów pozostają czytelne, z tymi samymi kluczami i kolejnością. Ulubione pobierają same metadane partiami, także dla dawniej zapisanych podcastów, bez pełnego tekstu czy nagrania.
 
-## Diagnostyka odzyskiwania artykułu
-
-Wyłącznie DEBUG i jawny argument `UI_TESTING_SAFE_HTML_TRACE` udostępniają ślad numerów nawigacji, callbacków, timeoutu i ręcznej akcji. Ślad nie zawiera HTML ani treści artykułu. Służy rozróżnieniu anulowania aktywnej próby, spóźnionego callbacku i ponownego utworzenia widoku. Test nadal wymaga rzeczywistego akapitu WKWebView; diagnostyka nie zastępuje asercji ani nie zwiększa timeoutu.
-
 ## Weryfikacja
 
 `ContentTimeContractTests` wykonuje wspólne 50 syntetycznych przypadków kontraktowych. `ContentTimeTests`, `ContentTimeClientTests` i `ContentTimeIntegrationTests` sprawdzają dekodowanie, odmianę, daty, TTL, rozłączne typy, partie, duplikaty, awarie, anulowanie, stare ulubione oraz niezależność listy od zablokowanego transportu metadanych. Rejestr URL w testach sprawdza brak żądania pełnej treści i audio przy ładowaniu listy.

@@ -177,11 +177,6 @@ struct SafeHTMLView: UIViewRepresentable {
 					}
 				}
 			#endif
-			#if DEBUG
-				logic.onDiagnosticTrace = { [weak self] text in
-					self?.container?.setDiagnosticTrace(text)
-				}
-			#endif
 			logic.onOverlayChange = { [weak self] state in
 				guard let self, let container = self.container else { return }
 				container.webView.isHidden = state.phase == .failed(.emptyContent)
@@ -306,13 +301,6 @@ final class SafeHTMLContainerView: UIView {
 	required init?(coder _: NSCoder) {
 		fatalError("init(coder:) has not been implemented")
 	}
-
-	#if DEBUG
-		func setDiagnosticTrace(_ text: String) {
-			webView.accessibilityValue = text
-			retryButton.accessibilityValue = text
-		}
-	#endif
 
 	func showRetryButton(action: Selector, target: Any?) {
 		retryButton.removeTarget(nil, action: nil, for: .allEvents)
