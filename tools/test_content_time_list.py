@@ -151,6 +151,13 @@ command = [str(compiler), '-swift-version', '5', '-module-cache-path', str(args.
            str(repo / 'Tyflocentrum/Models/ContentTime.swift'),
            str(repo / 'Tyflocentrum/ContentTimeClient.swift'),
            str(repo / 'Tyflocentrum/AsyncTimeout.swift'), str(probe), '-o', str(exe)]
+if sys.platform == 'darwin':
+    # Uruchamiamy sondę na hoście macOS, nie w symulatorze iOS. Sama ścieżka
+    # z xcrun --find swiftc nie przekazuje SDK do bezpośredniego wywołania.
+    sdk = subprocess.check_output(['xcrun', '--sdk', 'macosx', '--show-sdk-path'], text=True).strip()
+    command += ['-sdk', sdk]
+(args.out / 'compile-command.json').write_text(json.dumps(command, ensure_ascii=False, indent=2))
+print('Kompilacja sondy:', json.dumps(command, ensure_ascii=False), flush=True)
 build = subprocess.run(command, capture_output=True, text=True, timeout=120)
 (args.out / 'compile.log').write_text(build.stdout + build.stderr)
 if build.returncode:

@@ -217,7 +217,8 @@ do
 	"$BRAMKI_VENV/bin/python" "$bramka"
 done
 # Test selekcji i stanu listy: wykonuje kod aplikacji bez emulowania SwiftUI.
-SWIFTC="$(xcrun --find swiftc)" python3 tools/test_content_time_list.py \
+python3 -B tools/test_content_time_toolchain.py
+SWIFTC="$(xcrun --sdk macosx --find swiftc)" python3 tools/test_content_time_list.py \
 	--out "${RUNNER_TEMP:-$PWD}/content-time-list-probe" --zapisz
 echo "::endgroup::"
 
