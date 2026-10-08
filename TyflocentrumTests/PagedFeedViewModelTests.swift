@@ -78,6 +78,158 @@ final class PagedFeedViewModelTests: XCTestCase {
 		XCTAssertEqual(viewModel.loadMoreErrorMessage, "Nie udało się pobrać kolejnych treści. Spróbuj ponownie.")
 	}
 
+	// MARK: - Przejęcie pierwszego ładowania po anulowaniu
+
+	@MainActor
+	private final class FirstPageGate {
+		let started = XCTestExpectation(description: "Pierwsze żądanie zawieszone")
+		private(set) var requestedPages: [Int] = []
+		private var continuation: CheckedContinuation<TyfloAPI.WPPage<StubItem>, Error>?
+
+		func fetch(page: Int, perPage _: Int) async throws -> TyfloAPI.WPPage<StubItem> {
+			requestedPages.append(page)
+			if requestedPages.count == 1 {
+				return try await withCheckedThrowingContinuation { continuation in
+					self.continuation = continuation
+					started.fulfill()
+				}
+			}
+			return TyfloAPI.WPPage(items: [StubItem(id: 20)], total: nil, totalPages: 1)
+		}
+
+		func finish(_ result: Result<TyfloAPI.WPPage<StubItem>, Error>) {
+			guard let continuation else {
+				XCTFail("Brak zawieszonego pierwszego żądania")
+				return
+			}
+			self.continuation = nil
+			continuation.resume(with: result)
+		}
+	}
+
+	func testLoadIfNeededTakesOverCancelledRequestBeforeItFinishes() async {
+		let model = PagedFeedViewModel<StubItem>(perPage: 2)
+		let gate = FirstPageGate()
+		let first = Task { await model.loadIfNeeded(fetchPage: gate.fetch) }
+		await fulfillment(of: [gate.started], timeout: 5)
+		first.cancel()
+
+		let replacementEntered = expectation(description: "Następne zadanie weszło w model")
+		var replacementFinished = false
+		let replacement = Task {
+			replacementEntered.fulfill()
+			await model.loadIfNeeded(fetchPage: gate.fetch)
+			replacementFinished = true
+		}
+		await fulfillment(of: [replacementEntered], timeout: 5)
+		XCTAssertTrue(model.isLoading, "Pierwsze żądanie wciąż trzyma blokadę")
+		XCTAssertFalse(replacementFinished, "Następne zadanie ma poczekać, nie zgubić ładowanie")
+		XCTAssertEqual(gate.requestedPages, [1], "Nie wysyłamy równoległego żądania")
+
+		gate.finish(.failure(CancellationError()))
+		await first.value
+		await replacement.value
+		XCTAssertEqual(gate.requestedPages, [1, 1])
+		XCTAssertEqual(model.items.map(\.id), [20])
+		XCTAssertTrue(model.hasLoaded)
+		XCTAssertFalse(model.isLoading)
+		XCTAssertNil(model.errorMessage)
+	}
+
+	func testCancelledWaiterReturnsBeforeOwnerAndDoesNotFetch() async {
+		let model = PagedFeedViewModel<StubItem>(perPage: 2)
+		let gate = FirstPageGate()
+		let first = Task { await model.loadIfNeeded(fetchPage: gate.fetch) }
+		await fulfillment(of: [gate.started], timeout: 5)
+		let entered = expectation(description: "Oczekujący wszedł w model")
+		let finished = expectation(description: "Anulowany oczekujący zakończył się")
+		let waiter = Task {
+			entered.fulfill()
+			await model.loadIfNeeded(fetchPage: gate.fetch)
+			finished.fulfill()
+		}
+		await fulfillment(of: [entered], timeout: 5)
+		waiter.cancel()
+		await fulfillment(of: [finished], timeout: 5)
+		XCTAssertTrue(model.isLoading, "Anulowanie oczekującego nie anuluje właściciela")
+		XCTAssertEqual(gate.requestedPages, [1])
+
+		gate.finish(.success(TyfloAPI.WPPage(items: [StubItem(id: 7)], total: nil, totalPages: 1)))
+		await first.value
+		await waiter.value
+		XCTAssertEqual(gate.requestedPages, [1])
+		XCTAssertEqual(model.items.map(\.id), [7])
+		XCTAssertTrue(model.hasLoaded)
+	}
+
+	func testConcurrentLoadersShareSuccessfulFirstRequest() async {
+		let model = PagedFeedViewModel<StubItem>(perPage: 2)
+		let gate = FirstPageGate()
+		let first = Task { await model.loadIfNeeded(fetchPage: gate.fetch) }
+		await fulfillment(of: [gate.started], timeout: 5)
+		let entered = expectation(description: "Wszyscy oczekujący weszli w model")
+		entered.expectedFulfillmentCount = 3
+		var finished = 0
+		let waiters = (0 ..< 3).map { _ in
+			Task {
+				entered.fulfill()
+				await model.loadIfNeeded(fetchPage: gate.fetch)
+				finished += 1
+			}
+		}
+		await fulfillment(of: [entered], timeout: 5)
+		XCTAssertEqual(finished, 0)
+		XCTAssertEqual(gate.requestedPages, [1])
+		gate.finish(.success(TyfloAPI.WPPage(items: [StubItem(id: 7)], total: nil, totalPages: 1)))
+		await first.value
+		for waiter in waiters {
+			await waiter.value
+		}
+		XCTAssertEqual(finished, 3)
+		XCTAssertEqual(gate.requestedPages, [1], "Udana odpowiedź wystarcza wszystkim zadaniom")
+		XCTAssertEqual(model.items.map(\.id), [7])
+		XCTAssertTrue(model.hasLoaded)
+	}
+
+	func testCancelledOwnerDoesNotPublishLateResponse() async {
+		let model = PagedFeedViewModel<StubItem>(perPage: 2)
+		let gate = FirstPageGate()
+		let first = Task { await model.loadIfNeeded(fetchPage: gate.fetch) }
+		await fulfillment(of: [gate.started], timeout: 5)
+		first.cancel()
+		gate.finish(.success(TyfloAPI.WPPage(items: [StubItem(id: 99)], total: nil, totalPages: 1)))
+		await first.value
+		XCTAssertTrue(model.items.isEmpty, "Spóźniona odpowiedź anulowanego zadania nie zmienia listy")
+		XCTAssertFalse(model.hasLoaded)
+		XCTAssertFalse(model.isLoading)
+		XCTAssertNil(model.errorMessage)
+		XCTAssertEqual(gate.requestedPages, [1], "Bez nowego zadania nie ma samoczynnego pobrania")
+
+		await model.loadIfNeeded(fetchPage: gate.fetch)
+		XCTAssertEqual(model.items.map(\.id), [20])
+		XCTAssertTrue(model.hasLoaded)
+		XCTAssertEqual(gate.requestedPages, [1, 1])
+	}
+
+	func testAlreadyCancelledRefreshPreservesLoadedStateWithoutRequest() async {
+		let model = PagedFeedViewModel<StubItem>(perPage: 2)
+		var requests = 0
+		let fetch: (Int, Int) async throws -> TyfloAPI.WPPage<StubItem> = { _, _ in
+			requests += 1
+			return TyfloAPI.WPPage(items: [StubItem(id: requests)], total: nil, totalPages: 1)
+		}
+		await model.loadIfNeeded(fetchPage: fetch)
+		let cancelled = Task {
+			withUnsafeCurrentTask { $0?.cancel() }
+			await model.refresh(fetchPage: fetch)
+		}
+		await cancelled.value
+		XCTAssertEqual(requests, 1)
+		XCTAssertEqual(model.items.map(\.id), [1])
+		XCTAssertTrue(model.hasLoaded)
+		XCTAssertFalse(model.isLoading)
+	}
+
 	// MARK: - Automatyczne ponowienie po nieudanym pierwszym żądaniu
 
 	//

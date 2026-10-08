@@ -616,12 +616,20 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	private var nextPage = 1
 	private var totalPages: Int?
 	private var seenIDs = Set<Item.ID>()
+	private var refreshWaiters: [UUID: CheckedContinuation<Void, Never>] = [:]
 
 	init(perPage: Int = 50) {
 		self.perPage = perPage
 	}
 
 	func loadIfNeeded(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
+		guard !Task.isCancelled else { return }
+		// Nowe zadanie widoku musi doczekać końca starego, także anulowanego.
+		// Po wznowieniu ponownie sprawdzamy stan, aby nie dublować udanego pobrania.
+		while isLoading {
+			await waitForCurrentRefresh()
+			guard !Task.isCancelled else { return }
+		}
 		// Warunek celowo NIE jest samym `!hasLoaded`: gdy poprzednie zadanie
 		// zostało anulowane po drodze, `hasLoaded` zostawało fałszywe, a lista
 		// pusta bez komunikatu (zobaczone na zrzucie z run 33800599777). Wejście
@@ -630,12 +638,38 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 		await refresh(fetchPage: fetchPage)
 	}
 
+	private func waitForCurrentRefresh() async {
+		let id = UUID()
+		await withTaskCancellationHandler {
+			await withCheckedContinuation { continuation in
+				guard isLoading, !Task.isCancelled else {
+					continuation.resume()
+					return
+				}
+				refreshWaiters[id] = continuation
+			}
+		} onCancel: {
+			Task { @MainActor [weak self] in
+				// Usunięcie przed resume daje jednego właściciela kontynuacji,
+				// także gdy anulowanie zbiegnie się z końcem pobierania.
+				self?.refreshWaiters.removeValue(forKey: id)?.resume()
+			}
+		}
+	}
+
 	func refresh(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
-		guard !isLoading else { return }
+		guard !Task.isCancelled, !isLoading else { return }
 		reset()
 
 		isLoading = true
-		defer { isLoading = false }
+		defer {
+			isLoading = false
+			let waiters = Array(refreshWaiters.values)
+			refreshWaiters.removeAll()
+			for waiter in waiters {
+				waiter.resume()
+			}
+		}
 
 		errorMessage = nil
 		loadMoreErrorMessage = nil
@@ -733,6 +767,9 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 		}
 
 		let page = try await fetchPage(nextPage, perPage)
+		// Transport może oddać dane mimo anulowania. Nie publikujemy ich
+		// ani nie przesuwamy numeru strony opuszczonego zadania.
+		try Task.checkCancellation()
 
 		if let totalPages = page.totalPages {
 			self.totalPages = totalPages

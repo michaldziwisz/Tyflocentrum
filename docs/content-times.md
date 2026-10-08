@@ -15,6 +15,12 @@ Nazwa istniejącego wiersza dostępności zawiera czas raz, pełnymi polskimi je
 * Równoczesne żądania wspólnych kluczy korzystają z tych samych aktywnych partii. Anulowanie ostatniego odbiorcy anuluje transport. Odświeżenie usuwa stare wyniki; spóźniony callback nie przywraca poprzedniego cache ani stanu listy.
 * Wadliwe opcjonalne pola nie psują dekodowania wpisu ani całej listy. Stare ulubione i cache numerów pozostają czytelne, z tymi samymi kluczami i kolejnością. Ulubione pobierają same metadane partiami, także dla dawniej zapisanych podcastów, bez pełnego tekstu czy nagrania.
 
+## Pierwsze ładowanie listy
+
+Ponowne wejście widoku podczas trwającego pobierania czeka na jego zakończenie. Jeśli poprzednie zadanie zostało anulowane, nowe przejmuje ładowanie. Udanej odpowiedzi nie pobiera ponownie. Anulowanie oczekującego zadania zwalnia tylko jego oczekiwanie, bez zatrzymywania pobrania innych odbiorców. Jeśli anulowanie jest już widoczne przy sprawdzeniu po powrocie transportu, odpowiedź nie zmienia listy ani numeru strony. Anulowanie po tym sprawdzeniu może nastąpić już po opublikowaniu danych; następne wejście w model ponownie ocenia stan i w razie potrzeby pobiera pierwszą stronę. Nie dodano osobnego limitu czekania: jego długość wynika z dotychczasowych timeoutów transportu i ograniczonego ponowienia po błędzie sieci.
+
+`PagedFeedViewModelTests` sprawdza przejęcie przed końcem anulowanego pobierania, anulowanie oczekującego, współdzielenie udanej odpowiedzi oraz odrzucanie spóźnionych danych i już anulowanego odświeżenia. Kontynuacje sterują kolejnością żądań, bez dobierania opóźnień transportu. Te testy wchodzą do istniejącego targetu XCTest; lokalny adapter logiki nie zastępuje pomiaru iOS.
+
 ## Weryfikacja
 
 `ContentTimeContractTests` wykonuje wspólne 50 syntetycznych przypadków kontraktowych. `ContentTimeTests`, `ContentTimeClientTests` i `ContentTimeIntegrationTests` sprawdzają dekodowanie, odmianę, daty, TTL, rozłączne typy, partie, duplikaty, awarie, anulowanie, stare ulubione oraz niezależność listy od zablokowanego transportu metadanych. Rejestr URL w testach sprawdza brak żądania pełnej treści i audio przy ładowaniu listy. Test `testLongListModifierDeliversEveryTimeWithBoundedCache` montuje rzeczywisty modyfikator SwiftUI w UIHostingController i wymaga wszystkich 600 wartości, zachowując limit 512 wpisów cache oraz paczki po 50 ID.
