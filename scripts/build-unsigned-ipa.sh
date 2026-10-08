@@ -216,6 +216,9 @@ do
 	echo "--- $bramka"
 	"$BRAMKI_VENV/bin/python" "$bramka"
 done
+# Test selekcji i stanu listy: wykonuje kod aplikacji bez emulowania SwiftUI.
+SWIFTC="$(xcrun --find swiftc)" python3 tools/test_content_time_list.py \
+	--out "${RUNNER_TEMP:-$PWD}/content-time-list-probe" --zapisz
 echo "::endgroup::"
 
 rm -rf "$DERIVED_DATA_PATH"

@@ -120,6 +120,8 @@ private struct ContentTimeListModifier: ViewModifier {
 
 extension View {
 	func contentTimes(_ requests: [ContentTimeRequest], refreshing: Bool = false) -> some View {
-		modifier(ContentTimeListModifier(requests: Array(requests.suffix(512)), refreshing: refreshing))
+		// Limit cache nie może odcinać pozycji istniejącej listy. Klient dzieli
+		// pełny zestaw kluczy na paczki i osobno ogranicza pamięć współdzieloną.
+		modifier(ContentTimeListModifier(requests: requests, refreshing: refreshing))
 	}
 }

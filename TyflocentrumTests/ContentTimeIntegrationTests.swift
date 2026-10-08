@@ -1,5 +1,7 @@
 import Foundation
+import SwiftUI
 @testable import Tyflocentrum
+import UIKit
 import XCTest
 
 @MainActor
@@ -94,6 +96,61 @@ final class ContentTimeIntegrationTests: XCTestCase {
 		await gate.release()
 		let result = await pending.value
 		XCTAssertTrue(result.isEmpty)
+	}
+
+	private struct ValuesProbe: View {
+		@Environment(\.contentTimeValues) private var values
+		let observe: ([ContentTimeKey: ContentTimeLabel]) -> Void
+
+		var body: some View {
+			Color.clear.onChange(of: values, initial: true) { _, current in observe(current) }
+		}
+	}
+
+	func testLongListModifierDeliversEveryTimeWithBoundedCache() async throws {
+		let urls = Registry()
+		let client = ContentTimeClient(transport: { request in
+			let url = try XCTUnwrap(request.url)
+			urls.append(url)
+			let query = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems)
+			let ids = try XCTUnwrap(query.first { $0.name == "ids" }?.value).split(separator: ",").compactMap { Int($0) }
+			let now = ISO8601DateFormatter().string(from: Date())
+			let items: [[String: Any]] = ids.map { id in
+				["id": id, "freshness": "fresh", "checked_at": now,
+				 "tyflocentrum": ["schema_version": 1, "text_status": "ready", "word_count": 1001, "reading_minutes": 6]]
+			}
+			let data = try JSONSerialization.data(withJSONObject: ["schema_version": 1, "source": "tyfloswiat.pl", "type": "posts", "items": items])
+			return (data, HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+		})
+		let requests = (1 ... 600).reversed().map { id in
+			ContentTimeRequest(WPPostSummary(id: id, date: "", title: .init(rendered: "Artykuł \(id)"), link: "https://tyfloswiat.pl/?p=\(id)"), kind: .posts)
+		}
+		let ready = expectation(description: "Rzeczywisty modyfikator SwiftUI przekazał wszystkie 600 czasów")
+		ready.assertForOverFulfill = false
+		var observed: [ContentTimeKey: ContentTimeLabel] = [:]
+		let root = ValuesProbe { values in
+			observed = values
+			if requests.allSatisfy({ values[$0.key] == .reading(6) }) { ready.fulfill() }
+		}
+		.contentTimes(requests)
+		.environmentObject(TyfloAPI(session: session(), contentTimeClient: client))
+		let scene = try XCTUnwrap(UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first)
+		let window = UIWindow(windowScene: scene)
+		window.frame = scene.coordinateSpace.bounds
+		window.rootViewController = UIHostingController(rootView: root)
+		window.isHidden = false
+		defer { window.isHidden = true; window.rootViewController = nil }
+		await fulfillment(of: [ready], timeout: 10)
+		XCTAssertEqual(observed.values.filter { $0 == .reading(6) }.count, requests.count)
+		XCTAssertTrue(requests.allSatisfy { observed[$0.key] == .reading(6) })
+		let cached = await client.cachedCount
+		XCTAssertLessThanOrEqual(cached, 512)
+		XCTAssertEqual(urls.urls.count, (requests.count + 49) / 50)
+		for url in urls.urls {
+			let ids = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "ids" }?.value).split(separator: ",")
+			XCTAssertLessThanOrEqual(ids.count, 50)
+			XCTAssertEqual(url.path, "/v1/metadata")
+		}
 	}
 
 	func testListStateDiscardsOldRefreshCallbackAndExpiresValues() async throws {
