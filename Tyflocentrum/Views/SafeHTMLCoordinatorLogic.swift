@@ -26,6 +26,20 @@
 		private var currentNavigationObjectID: ObjectIdentifier?
 		private var renderTimeoutWorkItem: DispatchWorkItem?
 		private let renderTimeout: TimeInterval
+		#if DEBUG
+			var onDiagnosticTrace: ((String) -> Void)?
+			private var diagnosticEvents: [String] = []
+			private let diagnosticID = UUID().uuidString
+		#endif
+
+		private func trace(_ event: String) {
+			#if DEBUG
+				guard ProcessInfo.processInfo.arguments.contains("UI_TESTING_SAFE_HTML_TRACE") else { return }
+				diagnosticEvents.append("\(event) phase=\(state.phase) nav=\(state.currentNavigationID ?? 0) retry=\(state.showsRetryButton)")
+				if diagnosticEvents.count > 80 { diagnosticEvents.removeFirst() }
+				onDiagnosticTrace?(diagnosticID + "\n" + diagnosticEvents.joined(separator: "\n"))
+			#endif
+		}
 
 		init(allowedHost: String? = nil, renderTimeout: TimeInterval = 12) {
 			precondition(renderTimeout.isFinite && renderTimeout > 0)
@@ -52,12 +66,14 @@
 		}
 
 		func markManualRetryRequested() {
+			trace("manualRetry")
 			guard !isDisposed else { return }
 			state.markManualRetryRequested()
 			execute(state.requestRender(html: state.currentHTML ?? ""))
 		}
 
 		func didFinish(navigation: WKNavigation?) {
+			trace("didFinish active=\(activeNavigationID(for: navigation) ?? 0)")
 			guard !isDisposed, let navigationID = activeNavigationID(for: navigation) else { return }
 			cancelTimeout(for: navigationID)
 			state.didFinish(navigationID: navigationID)
@@ -66,6 +82,7 @@
 		}
 
 		func didFail(navigation: WKNavigation?, error: Error) {
+			trace("didFail active=\(activeNavigationID(for: navigation) ?? 0) error=\((error as NSError).domain):\((error as NSError).code)")
 			guard !isDisposed, let navigationID = activeNavigationID(for: navigation) else { return }
 			cancelTimeout(for: navigationID)
 			let nsError = error as NSError
@@ -79,6 +96,7 @@
 		}
 
 		func didTerminateProcess() {
+			trace("processTerminated")
 			guard !isDisposed, let navigationID = state.currentNavigationID else { return }
 			cancelTimeout(for: navigationID)
 			state.didTerminateProcess(navigationID: navigationID)
@@ -86,6 +104,7 @@
 		}
 
 		func prepareForTeardown() {
+			trace("teardown")
 			isDisposed = true
 			cancelTimeout(force: true)
 			navigationIDsByObjectID.removeAll()
@@ -94,6 +113,7 @@
 		}
 
 		private func execute(_ command: HTMLRenderState.Command) {
+			if case let .load(_, id) = command { trace("command.load \(id)") } else { trace("command.none") }
 			guard !isDisposed else { return }
 			onOverlayChange?(state)
 			onStateChange?(command)
@@ -118,6 +138,7 @@
 			currentNavigationObjectID = nil
 			navigator?.stopLoading()
 			let navigation = navigator?.loadHTMLString(html, baseURL: currentBaseURL)
+			trace("loadReturned token=\(navigation != nil)")
 			if let navigation {
 				let objectID = ObjectIdentifier(navigation)
 				navigationIDsByObjectID[objectID] = navigationID
@@ -148,6 +169,7 @@
 			let workItem = DispatchWorkItem { [weak self] in
 				guard let self, !self.isDisposed else { return }
 				guard self.state.currentNavigationID == navigationID else { return }
+				self.trace("timeout \(navigationID)")
 				self.state.didTimeout(navigationID: navigationID)
 				self.currentNavigationObjectID = nil
 				self.execute(self.state.requestRender(html: self.state.currentHTML ?? ""))
