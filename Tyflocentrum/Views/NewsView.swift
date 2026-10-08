@@ -612,6 +612,10 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	@Published private(set) var loadMoreErrorMessage: String?
 	@Published private(set) var canLoadMore = false
 
+	private var categoryDiagnosticState: String {
+		"model=\(ObjectIdentifier(self)) type=\(Item.self) items=\(items.count) hasLoaded=\(hasLoaded) isLoading=\(isLoading) error=\(errorMessage ?? "nil") nextPage=\(nextPage) canceled=\(Task.isCancelled)"
+	}
+
 	private let perPage: Int
 	private var nextPage = 1
 	private var totalPages: Int?
@@ -622,6 +626,8 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	}
 
 	func loadIfNeeded(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
+		CategoryLoadTrace.emit("model.loadIfNeeded.begin", categoryDiagnosticState)
+		defer { CategoryLoadTrace.emit("model.loadIfNeeded.end", categoryDiagnosticState) }
 		// Warunek celowo NIE jest samym `!hasLoaded`: gdy poprzednie zadanie
 		// zostało anulowane po drodze, `hasLoaded` zostawało fałszywe, a lista
 		// pusta bez komunikatu (zobaczone na zrzucie z run 33800599777). Wejście
@@ -631,6 +637,8 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	}
 
 	func refresh(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
+		CategoryLoadTrace.emit("model.refresh.begin", categoryDiagnosticState)
+		defer { CategoryLoadTrace.emit("model.refresh.end", categoryDiagnosticState) }
 		guard !isLoading else { return }
 		reset()
 
@@ -669,6 +677,7 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 				errorMessage = "Nie udało się pobrać danych. Spróbuj ponownie."
 			}
 		} catch {
+			CategoryLoadTrace.emit("model.catch", "\(categoryDiagnosticState) error=\(CategoryLoadTrace.describe(error))")
 			guard !Task.isCancelled else { return }
 			// Ta sama logika w gałęzi błędu: pierwszy nieudany strzał to najczęściej
 			// chwilowy timeout, więc dajemy jedną cichą próbę, zamiast od razu
@@ -678,6 +687,7 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 				do {
 					_ = try await appendNextPage(fetchPage: fetchPage)
 				} catch {
+					CategoryLoadTrace.emit("model.catch", "\(categoryDiagnosticState) error=\(CategoryLoadTrace.describe(error))")
 					// Druga próba też padła — dalej idziemy ścieżką komunikatu.
 				}
 			}
@@ -710,6 +720,7 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 				loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
 			}
 		} catch {
+			CategoryLoadTrace.emit("model.catch", "\(categoryDiagnosticState) error=\(CategoryLoadTrace.describe(error))")
 			guard !Task.isCancelled else { return }
 			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
 		}
@@ -727,12 +738,15 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	}
 
 	private func appendNextPage(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async throws -> Int {
+		CategoryLoadTrace.emit("model.append.begin", categoryDiagnosticState)
+		defer { CategoryLoadTrace.emit("model.append.end", categoryDiagnosticState) }
 		guard nextPage > 0 else {
 			canLoadMore = false
 			return 0
 		}
 
 		let page = try await fetchPage(nextPage, perPage)
+		CategoryLoadTrace.emit("model.append.received", "\(categoryDiagnosticState) received=\(page.items.count)")
 
 		if let totalPages = page.totalPages {
 			self.totalPages = totalPages

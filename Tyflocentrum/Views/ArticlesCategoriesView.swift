@@ -81,6 +81,8 @@ struct ArticlesCategoriesView: View {
 				await viewModel.refresh(fetchPage: fetchPage)
 			}
 			.task {
+				CategoryLoadTrace.emit("view.task.begin", "model=\(ObjectIdentifier(viewModel)) canceled=\(Task.isCancelled)")
+				defer { CategoryLoadTrace.emit("view.task.end", "model=\(ObjectIdentifier(viewModel)) canceled=\(Task.isCancelled) items=\(viewModel.items.count) hasLoaded=\(viewModel.hasLoaded) isLoading=\(viewModel.isLoading) error=\(viewModel.errorMessage ?? "nil")") }
 				await viewModel.loadIfNeeded(fetchPage: fetchPage)
 			}
 			.withAppMenu()
@@ -89,7 +91,15 @@ struct ArticlesCategoriesView: View {
 	}
 
 	private func fetchPage(page: Int, perPage: Int) async throws -> TyfloAPI.WPPage<Category> {
-		try await api.fetchArticleCategoriesPage(page: page, perPage: perPage)
+		CategoryLoadTrace.emit("view.fetch.begin", "model=\(ObjectIdentifier(viewModel)) page=\(page) canceled=\(Task.isCancelled)")
+		do {
+			let result = try await api.fetchArticleCategoriesPage(page: page, perPage: perPage)
+			CategoryLoadTrace.emit("view.fetch.end", "model=\(ObjectIdentifier(viewModel)) ids=\(result.items.map(\.id)) canceled=\(Task.isCancelled)")
+			return result
+		} catch {
+			CategoryLoadTrace.emit("view.fetch.error", "model=\(ObjectIdentifier(viewModel)) canceled=\(Task.isCancelled) error=\(CategoryLoadTrace.describe(error))")
+			throw error
+		}
 	}
 }
 

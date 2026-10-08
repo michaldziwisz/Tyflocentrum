@@ -70,7 +70,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		// instance, to ensure a clean launch state for the newly launched
 		// instance”. Czyli usunięcie tej linii nie zmienia izolacji testów —
 		// usuwa tylko drugie, zawodne wywołanie tej samej operacji.
-		app.launchArguments = ["UI_TESTING"] + additionalLaunchArguments
+		app.launchArguments = ["UI_TESTING", "UI_TESTING_CATEGORY_TRACE"] + additionalLaunchArguments
 		return app
 	}
 

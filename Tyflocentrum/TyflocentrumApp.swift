@@ -31,6 +31,7 @@ struct TyflocentrumApp: App {
 		#else
 			let isUITesting = false
 		#endif
+		CategoryLoadTrace.emit("app.init", "flags=\(ProcessInfo.processInfo.arguments) uiTesting=\(isUITesting)")
 		self.isUITesting = isUITesting
 		_dataController = StateObject(wrappedValue: DataController(inMemory: isUITesting))
 		_api = StateObject(wrappedValue: isUITesting ? TyfloAPI(session: Self.makeUITestSession()) : TyfloAPI.shared)
@@ -412,6 +413,7 @@ private final class UITestURLProtocol: URLProtocol {
 	}
 
 	override func startLoading() {
+		CategoryLoadTrace.emit("stub.start", "object=\(ObjectIdentifier(self)) url=\(request.url?.absoluteString ?? "nil")")
 		guard let url = request.url else {
 			client?.urlProtocol(self, didFailWithError: URLError(.badURL))
 			return
@@ -434,14 +436,17 @@ private final class UITestURLProtocol: URLProtocol {
 		#else
 			let data = Self.daneDoZrzutu(rawData)
 		#endif
+		CategoryLoadTrace.emit("stub.response", "object=\(ObjectIdentifier(self)) url=\(url) status=\(statusCode) rawBytes=\(rawData.count) bytes=\(data.count) categories=\(url.path.contains("/categories") ? String(data: data, encoding: .utf8) ?? "invalidUTF8" : "not-category")")
 		let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
 		client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
 		client?.urlProtocol(self, didLoad: data)
 		client?.urlProtocolDidFinishLoading(self)
 		didCompleteLoading = true
+		CategoryLoadTrace.emit("stub.finish", "object=\(ObjectIdentifier(self))")
 	}
 
 	override func stopLoading() {
+		CategoryLoadTrace.emit("stub.stop", "object=\(ObjectIdentifier(self)) complete=\(didCompleteLoading) url=\(request.url?.absoluteString ?? "nil")")
 		guard !didCompleteLoading else { return }
 		client?.urlProtocol(self, didFailWithError: URLError(.cancelled))
 	}

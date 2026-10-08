@@ -404,6 +404,7 @@ final class TyfloAPI: ObservableObject {
 			do {
 				return try await operation()
 			} catch {
+				CategoryLoadTrace.emit("api.retry.catch", "attempt=\(attempt) canceled=\(Task.isCancelled) error=\(CategoryLoadTrace.describe(error))")
 				if Task.isCancelled {
 					throw error
 				}
@@ -468,7 +469,9 @@ final class TyfloAPI: ObservableObject {
 		request.setValue("application/json", forHTTPHeaderField: "Accept")
 
 		return try await withRetry {
+			CategoryLoadTrace.emit("api.page.request", "url=\(url) canceled=\(Task.isCancelled) protocols=\(String(describing: self.session.configuration.protocolClasses))")
 			let (data, response) = try await self.session.data(for: request)
+			CategoryLoadTrace.emit("api.page.response", "url=\(url) status=\((response as? HTTPURLResponse)?.statusCode ?? -1) bytes=\(data.count) canceled=\(Task.isCancelled)")
 			guard let http = response as? HTTPURLResponse, (200 ..< 300).contains(http.statusCode) else {
 				throw URLError(.badServerResponse)
 			}
@@ -477,6 +480,7 @@ final class TyfloAPI: ObservableObject {
 			do {
 				items = try decoder.decode([Item].self, from: data)
 			} catch {
+				CategoryLoadTrace.emit("api.page.decode.error", "url=\(url) error=\(CategoryLoadTrace.describe(error))")
 				throw URLError(.cannotDecodeContentData)
 			}
 
@@ -487,6 +491,7 @@ final class TyfloAPI: ObservableObject {
 				await self.noStoreCache.set(url, data: data, wpTotal: total, wpTotalPages: totalPages)
 			}
 
+			CategoryLoadTrace.emit("api.page.decoded", "url=\(url) items=\(items.count)")
 			return WPPage(items: items, total: total, totalPages: totalPages)
 		}
 	}
