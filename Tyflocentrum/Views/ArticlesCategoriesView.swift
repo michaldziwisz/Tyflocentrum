@@ -169,6 +169,7 @@ struct AllArticlesView: View {
 		.task {
 			await viewModel.loadIfNeeded(fetchPage: fetchPage)
 		}
+		.contentTimes(viewModel.items.map { ContentTimeRequest($0, kind: .posts) }, refreshing: viewModel.isLoading)
 		.navigationTitle("Wszystkie artykuły")
 		.navigationBarTitleDisplayMode(.inline)
 	}
@@ -231,7 +232,11 @@ private struct TyfloSwiatMagazineView: View {
 
 	private func fetchIssues() async throws -> [WPPostSummary] {
 		do {
-			let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100)
+			let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: magazineRootPageID, perPage: 100).map { item in
+				var marked = item
+				marked.isMagazineIssue = true
+				return marked
+			}
 			if !issues.isEmpty {
 				storeCachedIssues(issues)
 				return issues
@@ -242,7 +247,11 @@ private struct TyfloSwiatMagazineView: View {
 
 		let roots = try await api.fetchTyfloswiatPages(slug: "czasopismo", perPage: 1)
 		let rootID = roots.first?.id ?? magazineRootPageID
-		let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100)
+		let issues = try await api.fetchTyfloswiatPageSummaries(parentPageID: rootID, perPage: 100).map { item in
+			var marked = item
+			marked.isMagazineIssue = true
+			return marked
+		}
 		if !issues.isEmpty {
 			storeCachedIssues(issues)
 		}
@@ -365,6 +374,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 							}
 						}
 					}
+					.contentTimes(tocItems.map { ContentTimeRequest($0, kind: .pages) }, refreshing: isLoading)
 					.accessibilityIdentifier("magazine.toc.list")
 				}
 			} else if let errorMessage {

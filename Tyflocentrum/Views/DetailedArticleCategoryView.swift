@@ -61,6 +61,7 @@ struct DetailedArticleCategoryView: View {
 				}
 			}
 		}
+		.contentTimes(viewModel.items.map { ContentTimeRequest($0, kind: .posts) }, refreshing: viewModel.isLoading)
 		.accessibilityIdentifier("categoryArticles.list")
 		.refreshable {
 			await viewModel.refresh(fetchPage: fetchPage)

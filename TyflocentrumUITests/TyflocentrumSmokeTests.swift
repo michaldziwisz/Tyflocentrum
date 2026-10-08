@@ -152,6 +152,101 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(settingsView.waitForExistence(timeout: limitUI))
 	}
 
+	private func checkContentTime(_ app: XCUIApplication, id: String, time: String, screen: String) -> XCUIElement {
+		let row = app.descendants(matching: .any).matching(identifier: id).firstMatch
+		XCTAssertTrue(row.waitForExistence(timeout: limitUI))
+		let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label CONTAINS %@", time), object: row)
+		XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: limitUI), .completed)
+		XCTAssertEqual(row.label.components(separatedBy: time).count, 2, "Czas dokładnie raz w nazwie wiersza")
+		let label = XCTAttachment(string: "\(screen): \(row.label)\nvalue: \(String(describing: row.value))")
+		label.name = "czas-\(screen)-etykieta"
+		label.lifetime = .keepAlways
+		add(label)
+		let image = XCTAttachment(screenshot: app.screenshot())
+		image.name = "czas-\(screen)"
+		image.lifetime = .keepAlways
+		add(image)
+		return row
+	}
+
+	func testContentTimesAcrossAllLists() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES"])
+		app.launch()
+		let audio = "Czas trwania: 1 godzina 23 minuty 4 sekundy"
+		let reading = "Czytanie: około 6 minut"
+		_ = checkContentTime(app, id: "article.row.2", time: reading, screen: "nowosci-artykul")
+		let podcast = checkContentTime(app, id: "podcast.row.1", time: audio, screen: "nowosci-podcast")
+		podcast.tap()
+		let favorite = app.descendants(matching: .any).matching(identifier: "podcastDetail.favorite").firstMatch
+		XCTAssertTrue(favorite.waitForExistence(timeout: limitUI))
+		favorite.tap()
+		openFavoritesFromMenu(in: app)
+		_ = checkContentTime(app, id: "podcast.row.1", time: audio, screen: "ulubione-podcast")
+		tapBackButton(in: app)
+		let article = checkContentTime(app, id: "article.row.2", time: reading, screen: "nowosci-po-powrocie")
+		article.press(forDuration: 1)
+		let addButton = app.buttons["Dodaj do ulubionych"].firstMatch
+		if addButton.waitForExistence(timeout: 2) { addButton.tap() }
+		else { app.menuItems["Dodaj do ulubionych"].firstMatch.tap() }
+		openFavoritesFromMenu(in: app)
+		_ = checkContentTime(app, id: "article.row.2", time: reading, screen: "ulubione-artykul")
+		tapBackButton(in: app)
+
+		app.tabBars.buttons["Podcasty"].tap()
+		let allPodcasts = app.descendants(matching: .any).matching(identifier: "podcastCategories.all").firstMatch
+		XCTAssertTrue(allPodcasts.waitForExistence(timeout: limitUI)); allPodcasts.tap()
+		_ = checkContentTime(app, id: "podcast.row.1", time: audio, screen: "wszystkie-podcasty")
+		tapBackButton(in: app)
+		app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch.tap()
+		_ = checkContentTime(app, id: "podcast.row.1", time: audio, screen: "kategoria-podcastow")
+		tapBackButton(in: app)
+
+		app.tabBars.buttons["Artykuły"].tap()
+		let allArticles = app.descendants(matching: .any).matching(identifier: "articleCategories.all").firstMatch
+		XCTAssertTrue(allArticles.waitForExistence(timeout: limitUI)); allArticles.tap()
+		_ = checkContentTime(app, id: "podcast.row.2", time: reading, screen: "wszystkie-artykuly")
+		tapBackButton(in: app)
+		app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch.tap()
+		_ = checkContentTime(app, id: "podcast.row.2", time: reading, screen: "kategoria-artykulow")
+		tapBackButton(in: app)
+		app.descendants(matching: .any).matching(identifier: "articleCategories.magazine").firstMatch.tap()
+		let year = app.descendants(matching: .any).matching(identifier: "magazine.year.2025").firstMatch
+		XCTAssertTrue(year.waitForExistence(timeout: limitUI)); year.tap()
+		let issue = app.descendants(matching: .any).matching(identifier: "magazine.issue.7772").firstMatch
+		XCTAssertTrue(issue.waitForExistence(timeout: limitUI))
+		XCTAssertFalse(issue.label.contains("Czytanie:"))
+		XCTAssertFalse(issue.label.contains("Czas niedostępny"))
+		issue.tap()
+		_ = checkContentTime(app, id: "magazine.article.7774", time: reading, screen: "artykul-numeru")
+
+		app.tabBars.buttons["Szukaj"].tap()
+		let field = app.descendants(matching: .any).matching(identifier: "search.field").firstMatch
+		XCTAssertTrue(field.waitForExistence(timeout: limitUI)); field.tap(); field.typeText("Test")
+		app.descendants(matching: .any).matching(identifier: "search.button").firstMatch.tap()
+		_ = checkContentTime(app, id: "article.row.2", time: reading, screen: "szukaj-artykul")
+		_ = checkContentTime(app, id: "podcast.row.1", time: audio, screen: "szukaj-podcast")
+	}
+
+	func testMetadataOutageKeepsRealArticleAndPlaybackReachable() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_METADATA_FAILURE"])
+		app.launch()
+		let article = checkContentTime(app, id: "article.row.2", time: "Czas niedostępny", screen: "awaria-lista")
+		article.tap()
+		let paragraph = app.webViews.firstMatch.staticTexts.containing(NSPredicate(format: "label CONTAINS[c] %@", "Kontrolny akapit artykułu Tyfloświata.")).firstMatch
+		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI))
+		let text = XCTAttachment(string: paragraph.label)
+		text.name = "awaria-rzeczywisty-akapit-WebKit"; text.lifetime = .keepAlways; add(text)
+		let image = XCTAttachment(screenshot: app.screenshot())
+		image.name = "awaria-artykul-WebKit"; image.lifetime = .keepAlways; add(image)
+		tapBackButton(in: app)
+		let podcast = checkContentTime(app, id: "podcast.row.1", time: "Czas niedostępny", screen: "awaria-podcast")
+		podcast.tap()
+		let listen = app.descendants(matching: .any).matching(identifier: "podcastDetail.listen").firstMatch
+		XCTAssertTrue(listen.waitForExistence(timeout: limitUI))
+		listen.tap()
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "player.playPause").firstMatch.waitForExistence(timeout: limitUI))
+	}
+
 	func testAppLaunchesAndShowsTabs() {
 		let app = makeApp()
 		app.launch()
@@ -657,7 +752,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let podcastRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
 		XCTAssertTrue(podcastRow.waitForExistence(timeout: limitUI))
-		XCTAssertEqual(podcastRow.label, "Podcast. Test podcast")
+		XCTAssertEqual(podcastRow.label, "Podcast. Test podcast. Czas niedostępny")
 		podcastRow.tap()
 
 		let content = app.descendants(matching: .any).matching(identifier: "podcastDetail.content").firstMatch
@@ -672,7 +767,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let initialRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
 		XCTAssertTrue(initialRow.waitForExistence(timeout: limitUI))
-		XCTAssertEqual(initialRow.label, "Podcast. Test podcast")
+		XCTAssertEqual(initialRow.label, "Podcast. Test podcast. Czas niedostępny")
 
 		openSettingsFromMenu(in: app)
 
@@ -688,7 +783,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let updatedRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
 		XCTAssertTrue(updatedRow.waitForExistence(timeout: limitUI))
 
-		let expectedLabel = "Test podcast. Podcast"
+		let expectedLabel = "Test podcast. Podcast. Czas niedostępny"
 		let predicate = NSPredicate(format: "label == %@", expectedLabel)
 		let waitExpectation = expectation(for: predicate, evaluatedWith: updatedRow)
 		let result = XCTWaiter().wait(for: [waitExpectation], timeout: limitUI)
@@ -718,7 +813,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 
 		let articleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
 		XCTAssertTrue(articleRow.waitForExistence(timeout: limitUI))
-		XCTAssertEqual(articleRow.label, "Artykuł. Test artykuł")
+		XCTAssertEqual(articleRow.label, "Artykuł. Test artykuł. Czas niedostępny")
 		articleRow.tap()
 
 		let content = app.descendants(matching: .any).matching(identifier: "articleDetail.content").firstMatch
@@ -808,11 +903,11 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(newsList.waitForExistence(timeout: limitUI))
 		let initialNewsRow = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
 		XCTAssertTrue(initialNewsRow.waitForExistence(timeout: limitUI))
-		XCTAssertEqual(initialNewsRow.label, "Podcast. Test podcast")
+		XCTAssertEqual(initialNewsRow.label, "Podcast. Test podcast. Czas niedostępny")
 
 		let initialArticleRow = app.descendants(matching: .any).matching(identifier: "article.row.2").firstMatch
 		XCTAssertTrue(initialArticleRow.waitForExistence(timeout: limitUI))
-		XCTAssertEqual(initialArticleRow.label, "Artykuł. Test artykuł")
+		XCTAssertEqual(initialArticleRow.label, "Artykuł. Test artykuł. Czas niedostępny")
 
 		app.tabBars.buttons["Podcasty"].tap()
 		let podcastCategoriesList = app.descendants(matching: .any).matching(identifier: "podcastCategories.list").firstMatch
@@ -833,7 +928,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(initialCategoryPodcast.waitForExistence(timeout: limitUI))
 		let refreshedCategoryPodcast = app.descendants(matching: .any).matching(identifier: "podcast.row.4").firstMatch
 		pullToRefresh(categoryPodcastsList, untilExists: refreshedCategoryPodcast)
-		XCTAssertEqual(refreshedCategoryPodcast.label, "Test podcast w kategorii 2")
+		XCTAssertEqual(refreshedCategoryPodcast.label, "Test podcast w kategorii 2. Czas niedostępny")
 
 		app.tabBars.buttons["Artykuły"].tap()
 		let articleCategoriesList = app.descendants(matching: .any).matching(identifier: "articleCategories.list").firstMatch
@@ -854,7 +949,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(initialCategoryArticle.waitForExistence(timeout: limitUI))
 		let refreshedCategoryArticle = app.descendants(matching: .any).matching(identifier: "podcast.row.5").firstMatch
 		pullToRefresh(categoryArticlesList, untilExists: refreshedCategoryArticle)
-		XCTAssertEqual(refreshedCategoryArticle.label, "Test artykuł 2")
+		XCTAssertEqual(refreshedCategoryArticle.label, "Test artykuł 2. Czas niedostępny")
 	}
 
 	/// Klika „Spróbuj ponownie”, jeśli lista pokazała komunikat o błędzie.

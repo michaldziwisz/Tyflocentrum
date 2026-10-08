@@ -216,6 +216,14 @@ struct Podcast: Codable, Hashable, Identifiable {
 	var excerpt: PodcastTitle
 	var content: PodcastTitle
 	var guid: PodcastTitle
+	var modifiedGMT: String? = nil
+	var tyflocentrum: ContentTimeMetadata? = nil
+	var isMagazineIssue: Bool? = nil
+
+	enum CodingKeys: String, CodingKey {
+		case id, date, title, excerpt, content, guid, tyflocentrum, isMagazineIssue
+		case modifiedGMT = "modified_gmt"
+	}
 
 	private static let dateParser: DateFormatter = {
 		let formatter = DateFormatter()
@@ -240,5 +248,20 @@ struct Podcast: Codable, Hashable, Identifiable {
 
 		guard let parsed = Self.dateParser.date(from: date) else { return date }
 		return Self.dateOutputFormatter.string(from: parsed)
+	}
+}
+
+extension Podcast {
+	init(from decoder: Decoder) throws {
+		let c = try decoder.container(keyedBy: CodingKeys.self)
+		id = try c.decode(Int.self, forKey: .id)
+		date = try c.decode(String.self, forKey: .date)
+		title = try c.decode(PodcastTitle.self, forKey: .title)
+		excerpt = try c.decode(PodcastTitle.self, forKey: .excerpt)
+		content = try c.decode(PodcastTitle.self, forKey: .content)
+		guid = try c.decode(PodcastTitle.self, forKey: .guid)
+		modifiedGMT = try? c.decode(String.self, forKey: .modifiedGMT)
+		tyflocentrum = try? c.decode(ContentTimeMetadata.self, forKey: .tyflocentrum)
+		isMagazineIssue = try? c.decode(Bool.self, forKey: .isMagazineIssue)
 	}
 }

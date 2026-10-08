@@ -44,6 +44,14 @@ FAZA_TESTY = "8ECB299EE7AD56B928399C9E"         # Sources targetu TyflocentrumTe
 
 # Pliki do wpiecia: sciezka wzgledem repo -> (grupa, faza Sources).
 PLIKI = [
+    ("Tyflocentrum/Models/ContentTime.swift", "BEA9ECD22920401000718254", FAZA_APLIKACJA),
+    ("Tyflocentrum/ContentTimeClient.swift", GRUPA_GLOWNA, FAZA_APLIKACJA),
+    ("Tyflocentrum/ContentTimeUITestData.swift", GRUPA_GLOWNA, FAZA_APLIKACJA),
+    ("Tyflocentrum/Views/ContentTimeList.swift", GRUPA_VIEWS, FAZA_APLIKACJA),
+    ("TyflocentrumTests/ContentTimeTests.swift", GRUPA_TESTY, FAZA_TESTY),
+    ("TyflocentrumTests/ContentTimeContractTests.swift", GRUPA_TESTY, FAZA_TESTY),
+    ("TyflocentrumTests/ContentTimeClientTests.swift", GRUPA_TESTY, FAZA_TESTY),
+    ("TyflocentrumTests/ContentTimeIntegrationTests.swift", GRUPA_TESTY, FAZA_TESTY),
     ("Tyflocentrum/StrategiaOdswiezania.swift", GRUPA_GLOWNA, FAZA_APLIKACJA),
     ("Tyflocentrum/ScalanieNowosci.swift", GRUPA_GLOWNA, FAZA_APLIKACJA),
     ("Tyflocentrum/Views/ZakladkaAplikacji.swift", GRUPA_VIEWS, FAZA_APLIKACJA),

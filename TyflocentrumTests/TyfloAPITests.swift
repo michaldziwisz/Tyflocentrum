@@ -63,7 +63,7 @@ final class TyfloAPITests: XCTestCase {
 			XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
 			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
 			XCTAssertEqual(items.first(where: { $0.name == "search" })?.value, "Ala ma kota")
-			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt,modified_gmt,tyflocentrum")
 
 			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
 			return (response, Data("[]".utf8))
@@ -95,7 +95,7 @@ final class TyfloAPITests: XCTestCase {
 			XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
 			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "100")
 			XCTAssertEqual(items.first(where: { $0.name == "search" })?.value, "Test")
-			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt,modified_gmt,tyflocentrum")
 
 			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
 			return (response, Data("[]".utf8))
@@ -127,7 +127,7 @@ final class TyfloAPITests: XCTestCase {
 			XCTAssertEqual(items.first(where: { $0.name == "context" })?.value, "embed")
 			XCTAssertEqual(items.first(where: { $0.name == "per_page" })?.value, "1")
 			XCTAssertEqual(items.first(where: { $0.name == "slug" })?.value, "czasopismo")
-			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt,modified_gmt,tyflocentrum")
 
 			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
 			return (response, Data("[]".utf8))
@@ -161,7 +161,7 @@ final class TyfloAPITests: XCTestCase {
 			XCTAssertEqual(items.first(where: { $0.name == "parent" })?.value, "1409")
 			XCTAssertEqual(items.first(where: { $0.name == "orderby" })?.value, "date")
 			XCTAssertEqual(items.first(where: { $0.name == "order" })?.value, "desc")
-			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,link,title,excerpt,modified_gmt,tyflocentrum")
 
 			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
 			return (response, Data("[]".utf8))
@@ -190,7 +190,7 @@ final class TyfloAPITests: XCTestCase {
 
 			let components = try XCTUnwrap(URLComponents(url: url, resolvingAgainstBaseURL: false))
 			let items = components.queryItems ?? []
-			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,title,excerpt,content,guid")
+			XCTAssertEqual(items.first(where: { $0.name == "_fields" })?.value, "id,date,title,excerpt,content,guid,modified_gmt,tyflocentrum")
 
 			let response = HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!
 			let payload = #"""
