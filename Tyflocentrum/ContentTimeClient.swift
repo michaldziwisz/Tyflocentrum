@@ -99,7 +99,7 @@ actor ContentTimeClient {
 							: record?.readingTime(now: received, sourceModified: nil) != .unavailable && record != nil
 						let ttl = valid ? 300.0 : 30.0
 						var expires = received.addingTimeInterval(ttl)
-						if key.kind != .podcast, let deadline = record?.expiresAt { expires = min(expires, deadline) }
+						if valid, key.kind != .podcast, let deadline = record?.expiresAt { expires = min(expires, deadline) }
 						cache[key] = Entry(record: record, expires: expires)
 					}
 					active.stored = true

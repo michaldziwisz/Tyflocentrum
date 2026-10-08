@@ -14,9 +14,10 @@ final class ContentTimeClientTests: XCTestCase {
 		var failure = false
 		var duplicate = false
 		var hold = false
+		var checkedOffset: TimeInterval = 0
 		var continuations: [CheckedContinuation<Void, Never>] = []
-		func configure(status: Int = 200, failure: Bool = false, duplicate: Bool = false, hold: Bool = false) {
-			self.status = status; self.failure = failure; self.duplicate = duplicate; self.hold = hold
+		func configure(status: Int = 200, failure: Bool = false, duplicate: Bool = false, hold: Bool = false, checkedOffset: TimeInterval = 0) {
+			self.status = status; self.failure = failure; self.duplicate = duplicate; self.hold = hold; self.checkedOffset = checkedOffset
 		}
 
 		func release() { hold = false; let pending = continuations; continuations = []; pending.forEach { $0.resume() } }
@@ -27,7 +28,7 @@ final class ContentTimeClientTests: XCTestCase {
 			let url = request.url!
 			let query = Dictionary(uniqueKeysWithValues: URLComponents(url: url, resolvingAgainstBaseURL: false)!.queryItems!.map { ($0.name, $0.value!) })
 			let ids = (query["ids"] ?? query["include"]!).split(separator: ",").compactMap { Int($0) }
-			let now = ISO8601DateFormatter().string(from: Date())
+			let now = ISO8601DateFormatter().string(from: Date().addingTimeInterval(checkedOffset))
 			var items: [[String: Any]] = ids.reversed().map { id in
 				["id": id, "freshness": "fresh", "checked_at": now, "modified_gmt": "2026-10-07T10:00:00", "tyflocentrum": ["schema_version": 1, "text_status": "ready", "word_count": id * 200, "reading_minutes": id, "audio_status": "ready", "duration_seconds": 60.1]]
 			}
@@ -46,6 +47,19 @@ final class ContentTimeClientTests: XCTestCase {
 		private var date = Date()
 		func now() -> Date { lock.lock(); defer { lock.unlock() }; return date }
 		func advance(_ interval: TimeInterval) { lock.lock(); defer { lock.unlock() }; date.addTimeInterval(interval) }
+	}
+
+	func testExpiredRecordUsesNegativeCacheInsteadOfRetryStorm() async {
+		let server = Server()
+		await server.configure(checkedOffset: -86401)
+		let client = ContentTimeClient(transport: { try await server.receive($0) })
+		let key = ContentTimeKey(kind: .posts, id: 1)
+		for _ in 0 ..< 3 {
+			let result = await client.fetch([key])
+			XCTAssertEqual(result[key]?.readingTime(now: Date(), sourceModified: nil), .unavailable)
+		}
+		let count = await server.count
+		XCTAssertEqual(count, 1)
 	}
 
 	func testCacheAndUnknownTTLExpireWithoutRestart() async {
