@@ -177,8 +177,16 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		for (id, _) in rows {
 			_ = checkContentTime(app, id: id, time: "Czas niedostępny", screen: screen + "-missing")
 		}
-		let list = app.descendants(matching: .any).matching(identifier: listID).firstMatch
-		XCTAssertTrue(list.exists)
+		// Identyfikator bywa dziedziczony przez ukryte tło SwiftUI. Gest
+		// kierujemy do rzeczywistego kontenera przewijania, nie pierwszego .any.
+		let containers = [app.scrollViews.matching(identifier: listID).firstMatch,
+		                  app.collectionViews.matching(identifier: listID).firstMatch,
+		                  app.tables.matching(identifier: listID).firstMatch]
+		let target = containers.first { $0.exists && $0.frame.height > 100 && $0.frame.minY.isFinite }
+		XCTAssertNotNil(target, "Rzeczywisty kontener listy \(listID)")
+		guard let list = target else { return }
+		let container = XCTAttachment(string: list.debugDescription)
+		container.name = "\(screen)-scroll-container"; container.lifetime = .keepAlways; add(container)
 		for stage in 1 ... 4 {
 			let before = rows.map { app.descendants(matching: .any).matching(identifier: $0.0).firstMatch.label }
 			server.tap()
