@@ -11,9 +11,14 @@ actor ContentTimeClient {
 		let expires: Date
 	}
 
+	private struct Response {
+		var records: [ContentTimeKey: ContentTimeRecord] = [:]
+		var retryAfter: String?
+	}
+
 	private struct Flight {
 		let keys: [ContentTimeKey]
-		let task: Task<[ContentTimeKey: ContentTimeRecord], Never>
+		let task: Task<Response, Never>
 		var waiters: Set<UUID>
 		var stored = false
 	}
@@ -22,6 +27,7 @@ actor ContentTimeClient {
 	private let clock: @Sendable () -> Date
 	private let capacity: Int
 	private let timeout: TimeInterval
+	private var retryUntil: [String: Date] = [:]
 	private var cache: [ContentTimeKey: Entry] = [:]
 	private var flights: [UUID: Flight] = [:]
 	private var keyFlights: [ContentTimeKey: UUID] = [:]
@@ -62,7 +68,7 @@ actor ContentTimeClient {
 			} else if let id = keyFlights[key] {
 				flights[id]?.waiters.insert(waiter)
 				flightIDs.insert(id)
-			} else {
+			} else if (retryUntil[key.source] ?? .distantPast) <= now {
 				needed.append(key)
 			}
 		}
@@ -86,12 +92,26 @@ actor ContentTimeClient {
 			defer { release(waiter, from: ids) }
 			for id in ids {
 				guard let flight = flights[id] else { continue }
-				let records = await flight.task.value
+				let response = await flight.task.value
+				let records = response.records
 				guard !Task.isCancelled else { return [:] }
 				// Odpowiedź po anulowaniu/odświeżeniu nie odtwarza skasowanego cache.
 				guard var active = flights[id], active.waiters.contains(waiter) else { continue }
 				if !active.stored {
 					let received = clock()
+					if let header = response.retryAfter, let source = active.keys.first?.source {
+						let deadline: Date
+						if let seconds = TimeInterval(header), seconds.isFinite, seconds >= 0 {
+							deadline = received.addingTimeInterval(seconds)
+						} else {
+							let parser = DateFormatter()
+							parser.locale = Locale(identifier: "en_US_POSIX")
+							parser.timeZone = TimeZone(secondsFromGMT: 0)
+							parser.dateFormat = "EEE, dd MMM yyyy HH:mm:ss zzz"
+							deadline = parser.date(from: header) ?? received.addingTimeInterval(30)
+						}
+						retryUntil[source] = max(retryUntil[source] ?? .distantPast, deadline)
+					}
 					for key in active.keys {
 						let record = records[key]
 						let valid = key.kind == .podcast
@@ -147,13 +167,13 @@ actor ContentTimeClient {
 		let items: [ContentTimeRecord]
 	}
 
-	private static func request(_ keys: [ContentTimeKey], timeout: TimeInterval, transport: @escaping Transport) async -> [ContentTimeKey: ContentTimeRecord] {
-		guard let first = keys.first else { return [:] }
+	private static func request(_ keys: [ContentTimeKey], timeout: TimeInterval, transport: @escaping Transport) async -> Response {
+		guard let first = keys.first else { return Response() }
 		let ids = keys.map { String($0.id) }.joined(separator: ",")
 		let base = first.kind == .podcast
 			? "https://tyflopodcast.net/wp-json/wp/v2/posts"
 			: "https://tyflocentrum.tyflo.eu.org/v1/metadata"
-		guard var url = URLComponents(string: base) else { return [:] }
+		guard var url = URLComponents(string: base) else { return Response() }
 		url.queryItems = first.kind == .podcast ? [
 			URLQueryItem(name: "include", value: ids),
 			URLQueryItem(name: "per_page", value: "50"),
@@ -164,7 +184,7 @@ actor ContentTimeClient {
 			URLQueryItem(name: "type", value: first.kind.rawValue),
 			URLQueryItem(name: "ids", value: ids),
 		]
-		guard let address = url.url else { return [:] }
+		guard let address = url.url else { return Response() }
 		var request = URLRequest(url: address, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: timeout)
 		request.setValue("application/json", forHTTPHeaderField: "Accept")
 		do {
@@ -172,13 +192,17 @@ actor ContentTimeClient {
 			let prepared = request
 			let (data, response) = try await withTimeout(timeout) { try await transport(prepared) }
 			try Task.checkCancellation()
-			guard let http = response as? HTTPURLResponse, http.statusCode == 200, data.count <= 256 * 1024 else { return [:] }
+			guard let http = response as? HTTPURLResponse else { return Response() }
+			if http.statusCode == 429 || http.statusCode == 503 {
+				return Response(retryAfter: http.value(forHTTPHeaderField: "Retry-After") ?? "30")
+			}
+			guard http.statusCode == 200, data.count <= 256 * 1024 else { return Response() }
 			let records: [ContentTimeRecord]
 			if first.kind == .podcast {
 				records = try JSONDecoder().decode([ContentTimeRecord].self, from: data)
 			} else {
 				let batch = try JSONDecoder().decode(Batch.self, from: data)
-				guard batch.schema_version == 1, batch.source == first.source, batch.type == first.kind.rawValue else { return [:] }
+				guard batch.schema_version == 1, batch.source == first.source, batch.type == first.kind.rawValue else { return Response() }
 				records = batch.items
 			}
 			let allowed = Set(keys)
@@ -195,7 +219,7 @@ actor ContentTimeClient {
 			for key in duplicated {
 				result[key] = nil
 			}
-			return result
-		} catch { return [:] }
+			return Response(records: result)
+		} catch { return Response() }
 	}
 }

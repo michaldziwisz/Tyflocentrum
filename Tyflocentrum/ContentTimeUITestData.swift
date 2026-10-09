@@ -19,6 +19,20 @@
 			guard enabled, let url = request.url,
 			      let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems else { return nil }
 			if refreshScenario { NSLog("TIME_REFRESH stage=%d url=%@", stage, url.absoluteString) }
+			if refreshScenario, url.path == "/wp-json/wp/v2/posts",
+			   !query.contains(where: { $0.name == "include" }),
+			   url.host == "tyflopodcast.net" || url.host == "tyfloswiat.pl"
+			{
+				// Nie korzystamy z dawnych fixture zmieniających ID według liczby żądań.
+				let podcast = url.host == "tyflopodcast.net"
+				let id = podcast ? 1 : 2
+				let item: [String: Any] = ["id": id, "date": "2026-01-20T00:59:40",
+				                           "modified_gmt": "2026-01-20T00:59:40", "title": ["rendered": podcast ? "Test podcast" : "Test artykuł"],
+				                           "excerpt": ["rendered": "Excerpt"], "link": "https://\(url.host!)/?p=\(id)",
+				                           "tyflocentrum": metadata]
+				let page = Int(query.first { $0.name == "page" }?.value ?? "1") ?? 1
+				return (200, (try? JSONSerialization.data(withJSONObject: page == 1 ? [item] : [])) ?? Data())
+			}
 			let isReading = url.host == "tyflocentrum.tyflo.eu.org"
 			let include = query.first { $0.name == "include" }?.value
 			guard isReading || (url.host == "tyflopodcast.net" && include != nil) else { return nil }

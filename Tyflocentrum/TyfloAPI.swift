@@ -771,7 +771,7 @@ final class TyfloAPI: ObservableObject {
 		return try await fetch(url)
 	}
 
-	func fetchPodcastSearchSummaries(matching searchString: String) async throws -> [WPPostSummary] {
+	func fetchPodcastSearchSummaries(matching searchString: String, cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy) async throws -> [WPPostSummary] {
 		let trimmed = searchString.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard let url = makeWPURL(
 			baseURL: tyfloPodcastBaseURL,
@@ -787,10 +787,10 @@ final class TyfloAPI: ObservableObject {
 		) else {
 			throw URLError(.badURL)
 		}
-		return try await fetch(url)
+		return try await fetch(url, cachePolicy: cachePolicy)
 	}
 
-	func fetchArticleSearchSummaries(matching searchString: String) async throws -> [WPPostSummary] {
+	func fetchArticleSearchSummaries(matching searchString: String, cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy) async throws -> [WPPostSummary] {
 		let trimmed = searchString.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard let url = makeWPURL(
 			baseURL: tyfloWorldBaseURL,
@@ -806,7 +806,7 @@ final class TyfloAPI: ObservableObject {
 		) else {
 			throw URLError(.badURL)
 		}
-		return try await fetch(url)
+		return try await fetch(url, cachePolicy: cachePolicy)
 	}
 
 	func fetchTyfloswiatPages(slug: String, perPage: Int = 100) async throws -> [WPPostSummary] {

@@ -234,6 +234,55 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		exerciseTimeRefresh(app, rows: [("podcast.row.1", true), ("article.row.2", false)], listID: "search.list", screen: "search")
 	}
 
+	func testTimeRefreshMagazinePagesSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Artykuły"].tap()
+		let magazine = app.descendants(matching: .any).matching(identifier: "articleCategories.magazine").firstMatch
+		XCTAssertTrue(magazine.waitForExistence(timeout: limitUI)); magazine.tap()
+		let year = app.descendants(matching: .any).matching(identifier: "magazine.year.2025").firstMatch
+		XCTAssertTrue(year.waitForExistence(timeout: limitUI)); year.tap()
+		let issue = app.descendants(matching: .any).matching(identifier: "magazine.issue.7772").firstMatch
+		XCTAssertTrue(issue.waitForExistence(timeout: limitUI)); issue.tap()
+		exerciseTimeRefresh(app, rows: [("magazine.article.7774", false)], listID: "magazine.toc.list", screen: "magazine-pages")
+	}
+
+	private func exerciseTimeResume(_ app: XCUIApplication, rows: [(String, Bool)], screen: String) {
+		let server = app.buttons["timeTest.server"]
+		XCTAssertTrue(server.waitForExistence(timeout: limitUI))
+		let process = server.label.components(separatedBy: "proces: ").last!
+		for (id, _) in rows {
+			_ = checkContentTime(app, id: id, time: "Czas niedostępny", screen: screen + "-start")
+		}
+		server.tap()
+		XCUIDevice.shared.press(.home)
+		app.activate()
+		for (id, _) in rows {
+			_ = checkContentTime(app, id: id, time: "Czas niedostępny", screen: screen + "-early")
+		}
+		XCUIDevice.shared.press(.home)
+		// Realny próg produkcyjny. Nie zmieniamy zegara ani polityki aplikacji.
+		Thread.sleep(forTimeInterval: 121)
+		app.activate()
+		XCTAssertTrue(server.label.hasSuffix(process), "Wznowienie, nie nowy proces")
+		for (id, audio) in rows {
+			_ = checkContentTime(app, id: id, time: audio ? "Czas trwania: 1 godzina 23 minuty 4 sekundy" : "Czytanie: około 6 minut", screen: screen + "-resumed")
+		}
+	}
+
+	func testTimeResumeNewsWithoutNewIDs() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		exerciseTimeResume(app, rows: [("podcast.row.1", true), ("article.row.2", false)], screen: "resume-news")
+	}
+
+	func testTimeResumeFavoritesWithoutRecreation() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		openFavoritesFromMenu(in: app)
+		exerciseTimeResume(app, rows: [("podcast.row.1", true), ("article.row.2", false), ("article.row.400", false)], screen: "resume-favorites")
+	}
+
 	func testContentTimesAcrossAllLists() {
 		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES"])
 		app.launch()

@@ -104,7 +104,7 @@ struct SearchView: View {
 	}
 
 	@MainActor
-	private func search(query: String) async {
+	private func search(query: String, announce: Bool = true) async {
 		let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
 		guard !trimmed.isEmpty else { return }
 		lastSearchQuery = trimmed
@@ -113,20 +113,21 @@ struct SearchView: View {
 			let items: [SearchItem]
 			switch searchScope {
 			case .podcasts:
-				let podcasts = try await api.fetchPodcastSearchSummaries(matching: trimmed)
+				let podcasts = try await api.fetchPodcastSearchSummaries(matching: trimmed, cachePolicy: .reloadIgnoringLocalCacheData)
 				items = podcasts.map { SearchItem(kind: .podcast, post: $0) }
 			case .articles:
-				let articles = try await api.fetchArticleSearchSummaries(matching: trimmed)
+				let articles = try await api.fetchArticleSearchSummaries(matching: trimmed, cachePolicy: .reloadIgnoringLocalCacheData)
 				items = articles.map { SearchItem(kind: .article, post: $0) }
 			case .all:
-				async let podcasts = api.fetchPodcastSearchSummaries(matching: trimmed)
-				async let articles = api.fetchArticleSearchSummaries(matching: trimmed)
+				async let podcasts = api.fetchPodcastSearchSummaries(matching: trimmed, cachePolicy: .reloadIgnoringLocalCacheData)
+				async let articles = api.fetchArticleSearchSummaries(matching: trimmed, cachePolicy: .reloadIgnoringLocalCacheData)
 				let (podcastPosts, articlePosts) = try await(podcasts, articles)
 				items = podcastPosts.map { SearchItem(kind: .podcast, post: $0) }
 					+ articlePosts.map { SearchItem(kind: .article, post: $0) }
 			}
 			return SearchItem.sortedByRelevance(items, query: trimmed)
 		}
+		guard announce else { return }
 		let announcement = viewModel.errorMessage
 			?? (viewModel.items.isEmpty ? "Brak wyników wyszukiwania." : "Znaleziono \(viewModel.items.count) wyników.")
 		UIAccessibility.post(
@@ -186,7 +187,7 @@ struct SearchView: View {
 					retryHint: "Ponawia ostatnie wyszukiwanie."
 				)
 
-				if viewModel.errorMessage == nil && !viewModel.items.isEmpty {
+				if !viewModel.items.isEmpty {
 					Section {
 						ForEach(viewModel.items) { item in
 							let stubPodcast = item.post.asPodcastStub()
@@ -220,12 +221,13 @@ struct SearchView: View {
 					}
 				}
 			}
-			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading)
+			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision, automatic: false)
+			.contentListResume(revision: viewModel.contentTimeRevision, succeeded: viewModel.hasLoaded && viewModel.errorMessage == nil) { await search(query: lastSearchQuery, announce: false) }
 			.accessibilityIdentifier("search.list")
 			.refreshable {
 				let query = lastSearchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
 				guard !query.isEmpty else { return }
-				await search(query: query)
+				await search(query: query, announce: false)
 			}
 			.id(settings.contentKindLabelPosition)
 			.withAppMenu()
@@ -238,7 +240,7 @@ struct SearchView: View {
 						if query.isEmpty {
 							performSearch()
 						} else {
-							Task { await search(query: query) }
+							Task { await search(query: query, announce: false) }
 						}
 					} label: {
 						Image(systemName: "arrow.clockwise")
