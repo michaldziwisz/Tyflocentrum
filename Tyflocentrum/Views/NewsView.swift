@@ -330,9 +330,9 @@ final class NewsFeedViewModel: ObservableObject {
 			                           "generation": generation?.uuidString ?? "nil", "refreshTicket": refreshTicket.uuidString,
 			                           "ticket": ticket?.uuidString ?? "nil", "loading": isLoading, "loaded": hasLoaded,
 			                           "hadItems": hadItems.map(String.init) ?? "nil", "revision": contentTimeRevision,
-			                           "items": items.map { "\($0.id):\(String(describing: $0.post.tyflocentrum))" },
+			                           "items": items.prefix(40).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" },
 			                           "scratch": scratch.map { String(describing: ObjectIdentifier($0)) } ?? "nil",
-			                           "scratchItems": scratch?.items.map { "\($0.id):\(String(describing: $0.post.tyflocentrum))" } ?? []]
+			                           "scratchItems": scratch?.items.prefix(40).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" } ?? []]
 			if let bytes = try? JSONSerialization.data(withJSONObject: data, options: .sortedKeys), let text = String(data: bytes, encoding: .utf8) {
 				NSLog("TIME_NEWS %@", text)
 			}
@@ -1104,7 +1104,6 @@ struct NewsView: View {
 					}
 				}
 			}
-			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision, automatic: false)
 			.accessibilityIdentifier("news.list")
 			.scrollIndicators(.visible)
 			.scrollTargetLayout()
@@ -1114,6 +1113,7 @@ struct NewsView: View {
 				await viewModel.refresh(api: api)
 				viewModel.traceRefresh("gesture.exit")
 			}
+			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision, automatic: false)
 			.task {
 				viewModel.traceRefresh("view.task.enter")
 				await viewModel.loadIfNeeded(api: api)

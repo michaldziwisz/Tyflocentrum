@@ -194,10 +194,98 @@ final class TyflocentrumSmokeTests: XCTestCase {
 					: stage == 2 ? (audio ? "Czas trwania: 1 minuta" : "Czytanie: około 7 minut") : "Czas niedostępny"
 				_ = checkContentTime(app, id: id, time: time, screen: "\(screen)-stage\(stage)")
 			}
+			if stage == 2 {
+				let unchanged = rows.map { app.descendants(matching: .any).matching(identifier: $0.0).firstMatch.label }
+				start.press(forDuration: 0.05, thenDragTo: end)
+				XCTAssertEqual(rows.map { app.descendants(matching: .any).matching(identifier: $0.0).firstMatch.label }, unchanged)
+				let attachment = XCTAttachment(string: unchanged.joined(separator: "\n"))
+				attachment.name = "\(screen)-unchanged"; attachment.lifetime = .keepAlways; add(attachment)
+			}
 		}
 		server.tap() // missing dla następnej listy, bez restartu aplikacji
 		XCTAssertTrue(server.label.contains("Serwer: 0,"))
 		XCTAssertTrue(server.label.hasSuffix(process))
+	}
+
+	private func samplePlayback(_ app: XCUIApplication, screen: String) -> [String: String] {
+		let sample = app.buttons["timeTest.sample"]
+		sample.tap()
+		let text = sample.value as? String ?? ""
+		let attachment = XCTAttachment(string: text)
+		attachment.name = screen; attachment.lifetime = .keepAlways; add(attachment)
+		let values = Dictionary(uniqueKeysWithValues: text.split(separator: ";").compactMap { part -> (String, String)? in
+			let pair = part.split(separator: "=", maxSplits: 1)
+			return pair.count == 2 ? (String(pair[0]), String(pair[1])) : nil
+		})
+		XCTAssertEqual(values["playing"], "true")
+		XCTAssertEqual(values["changes"], "0")
+		XCTAssertEqual(values["interruptions"], "0")
+		XCTAssertEqual(values["regressions"], "0")
+		return values
+	}
+
+	private func startMeasuredAudio(_ app: XCUIApplication) -> [String: String] {
+		app.buttons["timeTest.audio"].tap()
+		let playing = app.staticTexts["timeTest.playing"]
+		let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", "Gra"), object: playing)
+		XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: limitUI), .completed)
+		app.buttons["timeTest.measure"].tap()
+		return samplePlayback(app, screen: "audio-before")
+	}
+
+	private func comparePlayback(_ before: [String: String], _ after: [String: String]) {
+		XCTAssertEqual(before["item"], after["item"])
+		XCTAssertGreaterThan(Double(after["time"] ?? "") ?? -1, (Double(before["time"] ?? "") ?? 0) + 1)
+		XCTAssertGreaterThan(Int(after["ticks"] ?? "") ?? 0, 4)
+	}
+
+	func testTimeRefreshWhileRealAudioContinues() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH", "UI_TESTING_TIME_PLAYBACK"])
+		app.launch()
+		let before = startMeasuredAudio(app)
+		exerciseTimeRefresh(app, rows: [("podcast.row.1", true), ("article.row.2", false)], listID: "news.list", screen: "audio-news")
+		comparePlayback(before, samplePlayback(app, screen: "audio-after-gestures"))
+	}
+
+	func testTimeResumePreservesScrolledPositionActionsAndAudio() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH", "UI_TESTING_TIME_PLAYBACK", "UI_TESTING_TIME_LONG_LIST"])
+		app.launch()
+		let before = startMeasuredAudio(app)
+		let list = app.scrollViews["news.list"]
+		let row = app.descendants(matching: .any).matching(identifier: "podcast.row.140").firstMatch
+		for _ in 0 ..< 6 {
+			if row.exists, row.isHittable, row.frame.midY > 150, row.frame.midY < 650 { break }
+			list.swipeUp()
+		}
+		XCTAssertTrue(row.isHittable)
+		let frame = row.frame
+		XCTAssertGreaterThan(frame.minY, 80)
+		XCTAssertLessThan(frame.maxY, app.frame.maxY - 100)
+		_ = checkContentTime(app, id: "podcast.row.140", time: "Czas niedostępny", screen: "scrolled-before")
+		let server = app.buttons["timeTest.server"]
+		let process = server.label.components(separatedBy: "proces: ").last!
+		server.tap()
+		XCUIDevice.shared.press(.home)
+		Thread.sleep(forTimeInterval: 121)
+		app.activate()
+		XCTAssertTrue(server.label.hasSuffix(process))
+		_ = checkContentTime(app, id: "podcast.row.140", time: "Czas trwania: 1 godzina 23 minuty 4 sekundy", screen: "scrolled-after")
+		XCTAssertEqual(row.frame.minY, frame.minY, accuracy: 2)
+		let geometry = XCTAttachment(string: "before=\(frame);after=\(row.frame)")
+		geometry.name = "scrolled-geometry"; geometry.lifetime = .keepAlways; add(geometry)
+		comparePlayback(before, samplePlayback(app, screen: "audio-after-scrolled-resume"))
+		row.press(forDuration: 1)
+		let copy = app.buttons["Skopiuj link"].firstMatch
+		if copy.waitForExistence(timeout: 2) { copy.tap() }
+		else {
+			let menuCopy = app.menuItems["Skopiuj link"].firstMatch
+			XCTAssertTrue(menuCopy.waitForExistence(timeout: limitUI)); menuCopy.tap()
+		}
+		XCTAssertTrue(row.isHittable)
+		row.tap()
+		let favorite = app.descendants(matching: .any).matching(identifier: "podcastDetail.favorite").firstMatch
+		XCTAssertTrue(favorite.waitForExistence(timeout: limitUI)); favorite.tap()
+		comparePlayback(before, samplePlayback(app, screen: "audio-after-row-actions"))
 	}
 
 	func testTimeRefreshOldFavoritesSameProcess() {
@@ -299,6 +387,65 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
 		app.launch()
 		exerciseTimeResume(app, rows: [("podcast.row.1", true), ("article.row.2", false)], screen: "resume-news")
+	}
+
+	func testTimeResumeAllPodcastsSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Podcasty"].tap()
+		let link = app.descendants(matching: .any).matching(identifier: "podcastCategories.all").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
+		exerciseTimeResume(app, rows: [("podcast.row.1", true)], screen: "resume-all-podcasts")
+	}
+
+	func testTimeResumePodcastCategorySameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Podcasty"].tap()
+		let link = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
+		exerciseTimeResume(app, rows: [("podcast.row.1", true)], screen: "resume-category-podcasts")
+	}
+
+	func testTimeResumeAllArticlesSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Artykuły"].tap()
+		let link = app.descendants(matching: .any).matching(identifier: "articleCategories.all").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
+		exerciseTimeResume(app, rows: [("podcast.row.2", false)], screen: "resume-all-articles")
+	}
+
+	func testTimeResumeArticleCategorySameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Artykuły"].tap()
+		let link = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
+		exerciseTimeResume(app, rows: [("podcast.row.2", false)], screen: "resume-category-articles")
+	}
+
+	func testTimeResumeSearchSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Szukaj"].tap()
+		let field = app.textFields["search.field"]
+		XCTAssertTrue(field.waitForExistence(timeout: limitUI)); field.tap(); field.typeText("test")
+		app.buttons["search.button"].tap()
+		exerciseTimeResume(app, rows: [("podcast.row.1", true), ("article.row.2", false)], screen: "resume-search")
+	}
+
+	func testTimeResumeMagazinePagesSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Artykuły"].tap()
+		let magazine = app.descendants(matching: .any).matching(identifier: "articleCategories.magazine").firstMatch
+		XCTAssertTrue(magazine.waitForExistence(timeout: limitUI)); magazine.tap()
+		let year = app.descendants(matching: .any).matching(identifier: "magazine.year.2025").firstMatch
+		XCTAssertTrue(year.waitForExistence(timeout: limitUI)); year.tap()
+		let issue = app.descendants(matching: .any).matching(identifier: "magazine.issue.7772").firstMatch
+		XCTAssertTrue(issue.waitForExistence(timeout: limitUI)); issue.tap()
+		exerciseTimeResume(app, rows: [("magazine.article.7774", false)], screen: "resume-magazine-pages")
 	}
 
 	func testTimeResumeFavoritesWithoutRecreation() {
