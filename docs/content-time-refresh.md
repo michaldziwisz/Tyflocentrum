@@ -8,6 +8,8 @@ Nowości aktualizują także obiekty znanych ID podczas scalenia po powrocie z t
 
 Ulubione i spis treści numeru mają gest odświeżenia oraz dostępny przycisk „Odśwież”. Odświeżają opcjonalne metadane, nie przepisują zapisanych ulubionych ani całego numeru. Kategorie i wszystkie podcasty omijają cache pierwszej strony; wyszukiwanie ma jawne pominięcie cache. Odświeżenie istniejących wyników wyszukiwania nie ogłasza ponownie liczby wyników.
 
+W `ScrollView` Nowości publikacja stanu podczas gestu potrafi anulować zadanie `refreshable`, mimo niezmienionej generacji i modelu. Osobny właściciel ekranu przechowuje pojedynczą operację, a gest czeka na jej wynik. Równoczesny gest dołącza do już trwającej pracy. Wyjście z ekranu, przełączenie zakładki i przejście do tła anulują ją jawnie. Model nadal odrzuca anulowane i spóźnione odpowiedzi; nie ma odłączonej pracy pozbawionej właściciela.
+
 ## Granice
 
 Zachowane: porcje do 50 ID, cache do 512 pozycji, dodatni TTL 300 s, ujemny TTL 30 s, timeout metadanych 3 s, ważność danych tekstowych do 24 h oraz walidacja wersji/statusu/liczb/modified_gmt. Audio inline nie dostaje sztucznego `checked_at`.
@@ -21,6 +23,7 @@ Powrót z tła pyta ponownie dopiero po progu 120 s od danych albo po 30 s od ni
 - `testTimeRefreshMagazinePagesSameProcess`: artykuły numeru.
 - Niezależne testy `testTimeResume…` wszystkich ośmiu powierzchni: rzeczywiste Home/activate bez launch/terminate, najpierw przed progiem, następnie po 121 s. Kontrolują PID. Osobny scenariusz przewija długą listę, porównuje prostokąt tego samego wiersza przed/po wznowieniu i wykonuje jego akcje.
 - Każdy scenariusz ręczny: missing, ready, nowsze ready, powtórny gest bez zmiany danych, wycofane dane, błędne typy. Jawna kontrolka zmienia odpowiedź atrapy PRZED pojedynczym gestem; sama nie dotyka cache ani listy. W trybie odświeżania atrapa nie zmienia ID według liczby żądań.
+- `NewsRefreshOperationTests`: anulowanie chwilowego zadania gestu, jawne anulowanie właściciela, spóźniony koniec po powrocie, współbieżne gesty oraz już anulowane wejście.
 - `ContentTimeRefreshTests`: rewizje, próg wieku, ujemny cache, późny callback, anulowanie, Retry-After, 600 wpisów i ograniczony cache.
 - `PagedFeedViewModelTests`: zachowanie wierszy podczas transportu, spóźniona paginacja, ręczne odświeżenie w trakcie pobierania oraz dotychczasowe testy przejęcia anulowanego ładowania.
 
