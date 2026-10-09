@@ -55,22 +55,6 @@ jobs:
             macos-version.txt
           if-no-files-found: ignore
 
-      - name: Kontrolny RED na bazie bez zmiany ID
-        run: python3 tools/native_refresh_red.py --out "$PWD/red-native"
-
-      - name: Zachowaj kontrolny RED
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: kontrolny-red
-          path: |
-            red-native/*.json
-            red-native/xcodebuild.log
-            red-native/red.xcresult
-            red-native/attachments
-            red-native/diagnostics
-          if-no-files-found: ignore
-
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -106,4 +90,28 @@ jobs:
         with:
           name: wynik-testow-xcresult
           path: WynikTestow.xcresult
+          if-no-files-found: ignore
+
+  control-red:
+    name: Kontrolny RED niezmiennej bazy
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Kontrolny RED na bazie bez zmiany ID
+        run: python3 tools/native_refresh_red.py --out "$PWD/red-native"
+
+      - name: Zachowaj kontrolny RED
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kontrolny-red
+          path: |
+            red-native/*.json
+            red-native/xcodebuild.log
+            red-native/red.xcresult
+            red-native/attachments
+            red-native/diagnostics
           if-no-files-found: ignore

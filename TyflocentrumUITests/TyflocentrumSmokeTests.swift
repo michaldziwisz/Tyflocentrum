@@ -261,9 +261,14 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let before = startMeasuredAudio(app)
 		let list = app.scrollViews["news.list"]
 		let row = app.descendants(matching: .any).matching(identifier: "podcast.row.140").firstMatch
-		for _ in 0 ..< 6 {
+		// Krótkie przeciągnięcie z przytrzymaniem końca nie wykonuje flicka.
+		// Szybkie swipeUp na iOS26.5 przeskakiwało wiersz140 aż do końca listy.
+		for _ in 0 ..< 12 {
 			if row.exists, row.isHittable, row.frame.midY > 150, row.frame.midY < 650 { break }
-			list.swipeUp()
+			let targetAbove = row.exists && row.frame.midY.isFinite && row.frame.midY < 150
+			let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+			let end = start.withOffset(CGVector(dx: 0, dy: targetAbove ? 140 : -140))
+			start.press(forDuration: 0.05, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.2)
 		}
 		XCTAssertTrue(row.isHittable)
 		let frame = row.frame
