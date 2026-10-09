@@ -207,26 +207,51 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		exerciseTimeRefresh(app, rows: [("podcast.row.1", true), ("article.row.2", false), ("article.row.400", false)], listID: "favorites.list", screen: "favorites")
 	}
 
-	func testTimeRefreshInlineAndReadingSameProcess() {
+	func testTimeRefreshNewsSameProcess() {
 		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
 		app.launch()
 		exerciseTimeRefresh(app, rows: [("podcast.row.1", true), ("article.row.2", false)], listID: "news.list", screen: "news")
+	}
+
+	func testTimeRefreshAllPodcastsSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
 		app.tabBars.buttons["Podcasty"].tap()
-		let allPodcasts = app.descendants(matching: .any).matching(identifier: "podcastCategories.all").firstMatch
-		XCTAssertTrue(allPodcasts.waitForExistence(timeout: limitUI)); allPodcasts.tap()
+		let link = app.descendants(matching: .any).matching(identifier: "podcastCategories.all").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
 		exerciseTimeRefresh(app, rows: [("podcast.row.1", true)], listID: "allPodcasts.list", screen: "all-podcasts")
-		tapBackButton(in: app)
-		app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch.tap()
+	}
+
+	func testTimeRefreshPodcastCategorySameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Podcasty"].tap()
+		let link = app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
 		exerciseTimeRefresh(app, rows: [("podcast.row.1", true)], listID: "categoryPodcasts.list", screen: "category-podcasts")
-		tapBackButton(in: app)
+	}
+
+	func testTimeRefreshAllArticlesSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
 		app.tabBars.buttons["Artykuły"].tap()
-		let allArticles = app.descendants(matching: .any).matching(identifier: "articleCategories.all").firstMatch
-		XCTAssertTrue(allArticles.waitForExistence(timeout: limitUI)); allArticles.tap()
+		let link = app.descendants(matching: .any).matching(identifier: "articleCategories.all").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
 		exerciseTimeRefresh(app, rows: [("podcast.row.2", false)], listID: "allArticles.list", screen: "all-articles")
-		tapBackButton(in: app)
-		app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch.tap()
+	}
+
+	func testTimeRefreshArticleCategorySameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		app.tabBars.buttons["Artykuły"].tap()
+		let link = app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch
+		XCTAssertTrue(link.waitForExistence(timeout: limitUI)); link.tap()
 		exerciseTimeRefresh(app, rows: [("podcast.row.2", false)], listID: "categoryArticles.list", screen: "category-articles")
-		tapBackButton(in: app)
+	}
+
+	func testTimeRefreshSearchSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
 		app.tabBars.buttons["Szukaj"].tap()
 		let field = app.textFields["search.field"]
 		XCTAssertTrue(field.waitForExistence(timeout: limitUI)); field.tap(); field.typeText("test")

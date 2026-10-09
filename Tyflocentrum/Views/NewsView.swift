@@ -269,7 +269,9 @@ final class NewsFeedViewModel: ObservableObject {
 			initialBatchSize: sourcePerPage,
 			loadMoreBatchSize: loadMoreBatchSize
 		)
+		traceRefresh("resume.await.before", generation: generation, scratch: porcja)
 		await porcja.performRefreshInPlace(api: api)
+		traceRefresh("resume.await.after", generation: generation, scratch: porcja)
 
 		guard requestGeneration == generation, !Task.isCancelled else { return }
 
@@ -320,7 +322,25 @@ final class NewsFeedViewModel: ObservableObject {
 		komunikatDostepnosci = nil
 	}
 
+	func traceRefresh(_ phase: String, generation: UUID? = nil, ticket: UUID? = nil, scratch: NewsFeedViewModel? = nil, hadItems: Bool? = nil) {
+		#if DEBUG
+			guard ProcessInfo.processInfo.arguments.contains("UI_TESTING_TIME_REFRESH") else { return }
+			let data: [String: Any] = ["phase": phase, "model": String(describing: ObjectIdentifier(self)),
+			                           "cancelled": Task.isCancelled, "requestGeneration": requestGeneration.uuidString,
+			                           "generation": generation?.uuidString ?? "nil", "refreshTicket": refreshTicket.uuidString,
+			                           "ticket": ticket?.uuidString ?? "nil", "loading": isLoading, "loaded": hasLoaded,
+			                           "hadItems": hadItems.map(String.init) ?? "nil", "revision": contentTimeRevision,
+			                           "items": items.map { "\($0.id):\(String(describing: $0.post.tyflocentrum))" },
+			                           "scratch": scratch.map { String(describing: ObjectIdentifier($0)) } ?? "nil",
+			                           "scratchItems": scratch?.items.map { "\($0.id):\(String(describing: $0.post.tyflocentrum))" } ?? []]
+			if let bytes = try? JSONSerialization.data(withJSONObject: data, options: .sortedKeys), let text = String(data: bytes, encoding: .utf8) {
+				NSLog("TIME_NEWS %@", text)
+			}
+		#endif
+	}
+
 	func refresh(api: TyfloAPI) async {
+		traceRefresh("refresh.enter")
 		guard !Task.isCancelled else { return }
 		let ticket = UUID()
 		refreshTicket = ticket
@@ -342,7 +362,9 @@ final class NewsFeedViewModel: ObservableObject {
 
 		let previousHasLoaded = hasLoaded
 		let hadItemsBeforeRefresh = !items.isEmpty
+		traceRefresh("refresh.owned", generation: generation, ticket: ticket, hadItems: hadItemsBeforeRefresh)
 		defer {
+			traceRefresh("refresh.defer.before", generation: generation, ticket: ticket, hadItems: hadItemsBeforeRefresh)
 			if requestGeneration == generation {
 				hasLoaded = previousHasLoaded || hasLoaded
 				isLoading = false
@@ -362,7 +384,9 @@ final class NewsFeedViewModel: ObservableObject {
 			initialBatchSize: initialBatchSize,
 			loadMoreBatchSize: loadMoreBatchSize
 		)
+		traceRefresh("refresh.await.before", generation: generation, ticket: ticket, scratch: scratch, hadItems: hadItemsBeforeRefresh)
 		await scratch.performRefreshInPlace(api: api)
+		traceRefresh("refresh.await.after", generation: generation, ticket: ticket, scratch: scratch, hadItems: hadItemsBeforeRefresh)
 
 		guard requestGeneration == generation else { return }
 		if Task.isCancelled {
@@ -394,6 +418,8 @@ final class NewsFeedViewModel: ObservableObject {
 				seenIDs = scratch.seenIDs
 			}
 		}
+
+		traceRefresh("refresh.published", generation: generation, ticket: ticket, scratch: scratch, hadItems: hadItemsBeforeRefresh)
 
 		// If the user triggers "load more" during refresh, `loadMore(api:)` will wait for `isLoading` to clear
 		// instead of scheduling a separate follow-up task here. This avoids flakey overlaps and keeps the state
@@ -1084,10 +1110,14 @@ struct NewsView: View {
 			.scrollTargetLayout()
 			.scrollPosition(id: $pozycjaListy, anchor: .top)
 			.refreshable {
+				viewModel.traceRefresh("gesture.enter")
 				await viewModel.refresh(api: api)
+				viewModel.traceRefresh("gesture.exit")
 			}
 			.task {
+				viewModel.traceRefresh("view.task.enter")
 				await viewModel.loadIfNeeded(api: api)
+				viewModel.traceRefresh("view.task.exit")
 			}
 			// POWRÓT APLIKACJI DO PIERWSZEGO PLANU. To jest sedno naprawy: bez tego
 			// `.task` powyżej nie odpala się ponownie (widok nie został odmontowany),

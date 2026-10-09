@@ -43,6 +43,7 @@ jobs:
         run: |
           if [[ -d WynikTestow.xcresult ]]; then
             xcrun xcresulttool export attachments --path WynikTestow.xcresult --output-path test-attachments
+            xcrun xcresulttool export diagnostics --path WynikTestow.xcresult --output-path test-diagnostics
             xcrun xcresulttool get test-results summary --path WynikTestow.xcresult > test-attachments/summary.json
             xcrun xcresulttool get test-results tests --path WynikTestow.xcresult > test-attachments/tests.json
           fi
@@ -52,7 +53,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wynik-testow-zalaczniki
-          path: test-attachments
+          path: |
+            test-attachments
+            test-diagnostics
           if-no-files-found: ignore
 
       # Zrzuty ekranu z PADAJACYCH testow UI. if: always(), bo najbardziej
