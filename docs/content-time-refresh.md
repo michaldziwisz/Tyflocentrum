@@ -17,12 +17,14 @@ Powrót z tła pyta ponownie dopiero po progu 120 s od danych albo po 30 s od ni
 ## Testy
 
 - `testTimeRefreshOldFavoritesSameProcess`: podcast batch i tekst posts/pages zapisanych wcześniej ulubionych.
-- `testTimeRefreshInlineAndReadingSameProcess`: Nowości, wszystkie podcasty, kategoria podcastów, wszystkie artykuły, kategoria artykułów, wyszukiwanie.
+- Niezależne `testTimeRefreshNews/AllPodcasts/PodcastCategory/AllArticles/ArticleCategory/SearchSameProcess`: Nowości, wszystkie podcasty, kategoria podcastów, wszystkie artykuły, kategoria artykułów i wyszukiwanie. Porażka jednej listy nie ucina pozostałych.
 - `testTimeRefreshMagazinePagesSameProcess`: artykuły numeru.
-- Dwa testy `testTimeResume…`: rzeczywiste Home/activate bez launch/terminate, najpierw przed progiem, następnie po 121 s. Kontrolują PID.
-- Każdy scenariusz ręczny: missing, ready, nowsze ready, wycofane dane, błędne typy. Jawna kontrolka zmienia odpowiedź atrapy PRZED pojedynczym gestem; sama nie dotyka cache ani listy. W trybie odświeżania atrapa nie zmienia ID według liczby żądań.
+- Niezależne testy `testTimeResume…` wszystkich ośmiu powierzchni: rzeczywiste Home/activate bez launch/terminate, najpierw przed progiem, następnie po 121 s. Kontrolują PID. Osobny scenariusz przewija długą listę, porównuje prostokąt tego samego wiersza przed/po wznowieniu i wykonuje jego akcje.
+- Każdy scenariusz ręczny: missing, ready, nowsze ready, powtórny gest bez zmiany danych, wycofane dane, błędne typy. Jawna kontrolka zmienia odpowiedź atrapy PRZED pojedynczym gestem; sama nie dotyka cache ani listy. W trybie odświeżania atrapa nie zmienia ID według liczby żądań.
 - `ContentTimeRefreshTests`: rewizje, próg wieku, ujemny cache, późny callback, anulowanie, Retry-After, 600 wpisów i ograniczony cache.
 - `PagedFeedViewModelTests`: zachowanie wierszy podczas transportu, spóźniona paginacja, ręczne odświeżenie w trakcie pobierania oraz dotychczasowe testy przejęcia anulowanego ładowania.
+
+Aparatura `UI_TESTING_TIME_PLAYBACK` generuje lokalny PCM WAV i przekazuje rzeczywisty AVPlayer do niezmienionego AudioPlayer. KVO liczy zmianę elementu i przejścia poza playing, obserwator czasu wykrywa cofnięcie. XCTest porównuje tożsamość elementu, postęp zegara i brak przerw podczas gestów oraz wznowienia przewiniętej listy. To pomiar silnika na symulatorze, nie odsłuch dźwięku z fizycznego iPhone.
 
 Kontrolka serwera oraz logi TIME_ROW/TIME_STATE/TIME_REFRESH istnieją tylko w DEBUG z `UI_TESTING_TIME_REFRESH`. TIME_ROW zapisuje rzeczywisty tekst widoczny/dostępny i UUID stanu wiersza; TIME_STATE zapisuje tożsamość stanu i klienta. Nie dodają zastępczego elementu AX z kopią etykiety. XCTest odczytuje istniejący wiersz, sprawdza czas dokładnie raz i zapisuje jego nazwę oraz zrzut ekranu. Wynik symulatora nie potwierdza mowy ani fokusu fizycznego VoiceOver.
 

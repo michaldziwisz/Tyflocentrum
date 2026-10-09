@@ -329,10 +329,10 @@ final class NewsFeedViewModel: ObservableObject {
 			                           "cancelled": Task.isCancelled, "requestGeneration": requestGeneration.uuidString,
 			                           "generation": generation?.uuidString ?? "nil", "refreshTicket": refreshTicket.uuidString,
 			                           "ticket": ticket?.uuidString ?? "nil", "loading": isLoading, "loaded": hasLoaded,
-			                           "hadItems": hadItems.map(String.init) ?? "nil", "revision": contentTimeRevision,
-			                           "items": items.prefix(40).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" },
+			                           "hadItems": hadItems.map(String.init) ?? "nil", "revision": contentTimeRevision, "count": items.count, "scratchCount": scratch?.items.count ?? 0,
+			                           "items": items.prefix(4).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" },
 			                           "scratch": scratch.map { String(describing: ObjectIdentifier($0)) } ?? "nil",
-			                           "scratchItems": scratch?.items.prefix(40).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" } ?? []]
+			                           "scratchItems": scratch?.items.prefix(4).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" } ?? []]
 			if let bytes = try? JSONSerialization.data(withJSONObject: data, options: .sortedKeys), let text = String(data: bytes, encoding: .utf8) {
 				NSLog("TIME_NEWS %@", text)
 			}

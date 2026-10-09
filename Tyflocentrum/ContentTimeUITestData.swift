@@ -122,11 +122,11 @@
 			if let samples { player.removeTimeObserver(samples) }
 			samples = player.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.25, preferredTimescale: 600), queue: .main) { [weak self] time in
 				Task { @MainActor in
-					guard let self, measuring else { return }
+					guard let probe = self, probe.measuring else { return }
 					let current = time.seconds
-					if current < lastTime { regressions += 1 }
-					maxGap = max(maxGap, current - lastTime)
-					lastTime = current; ticks += 1
+					if current < probe.lastTime { probe.regressions += 1 }
+					probe.maxGap = max(probe.maxGap, current - probe.lastTime)
+					probe.lastTime = current; probe.ticks += 1
 				}
 			}
 		}
