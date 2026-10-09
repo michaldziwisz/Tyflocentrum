@@ -33,6 +33,9 @@ names = re.findall(r'func (test\w+)\(\) async(?: throws)?', tests)
 paged_tests = declaration((root/'TyflocentrumTests/PagedFeedViewModelTests.swift').read_text(), '@MainActor\nfinal class PagedFeedViewModelTests:')
 paged_model = declaration((root/'Tyflocentrum/Views/NewsView.swift').read_text(), '@MainActor\nfinal class PagedFeedViewModel')
 paged_names = re.findall(r'func (test\w+)\(\) async(?: throws)?', paged_tests)
+owner = declaration((root/'Tyflocentrum/Views/NewsView.swift').read_text(), '@MainActor\nfinal class NewsRefreshOperation:')
+owner_tests = declaration((root/'TyflocentrumTests/ContentTimeIntegrationTests.swift').read_text(), '@MainActor\nfinal class NewsRefreshOperationTests:')
+owner_names = re.findall(r'func (test\w+)\(\) async(?: throws)?', owner_tests)
 adapter = '''import Foundation
 import FoundationNetworking
 import XCTest
@@ -48,9 +51,9 @@ struct WPPostSummary {
     var modifiedGMT: String? = nil
 }
 '''
-main = '\n@main struct Run { @MainActor static func main() {\nXCTMain([testCase([\n' + ',\n'.join(f'("{n}", asyncTest(ContentTimeRefreshTests.{n}))' for n in names) + '\n]), testCase([\n' + ',\n'.join(f'("{n}", asyncTest(PagedFeedViewModelTests.{n}))' for n in paged_names) + '\n])])\n} }'
+main = '\n@main struct Run { @MainActor static func main() {\nXCTMain([testCase([\n' + ',\n'.join(f'("{n}", asyncTest(ContentTimeRefreshTests.{n}))' for n in names) + '\n]), testCase([\n' + ',\n'.join(f'("{n}", asyncTest(PagedFeedViewModelTests.{n}))' for n in paged_names) + '\n]), testCase([\n' + ',\n'.join(f'("{n}", asyncTest(NewsRefreshOperationTests.{n}))' for n in owner_names) + '\n])])\n} }'
 source = a.out/'tests.swift'
-source.write_text(adapter + declaration(state,'struct ContentTimeRequest:') + '\n' + declaration(state,'@MainActor\nfinal class ContentTimeListState:') + '\n' + tests + '\n' + paged_model + '\n' + paged_tests + main)
+source.write_text(adapter + declaration(state,'struct ContentTimeRequest:') + '\n' + declaration(state,'@MainActor\nfinal class ContentTimeListState:') + '\n' + tests + '\n' + paged_model + '\n' + paged_tests + '\n' + owner + '\n' + owner_tests + main)
 cmd = [os.environ.get('SWIFTC','/home/ubuntu/.local/opt/swift-6.2.1/usr/bin/swiftc'), '-swift-version','5','-module-cache-path',str(a.out/'module-cache'), *[str(root/'Tyflocentrum'/f) for f in ['Models/ContentTime.swift','ContentTimeClient.swift','AsyncTimeout.swift','StrategiaOdswiezania.swift']],str(source),'-o',str(a.out/'tests')]
 (a.out/'command.json').write_text(json.dumps(cmd,indent=2))
 r = subprocess.run(cmd,capture_output=True,text=True,timeout=120)

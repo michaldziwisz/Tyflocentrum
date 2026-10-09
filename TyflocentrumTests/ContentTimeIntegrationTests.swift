@@ -329,3 +329,107 @@ final class ContentTimeRefreshTests: XCTestCase {
 		XCTAssertEqual(count, 24)
 	}
 }
+
+@MainActor
+final class NewsRefreshOperationTests: XCTestCase {
+	func testRedrawCancellationDoesNotCancelOwnedWork() async {
+		let owner = NewsRefreshOperation()
+		let entered = expectation(description: "Właściciel uruchomił pracę")
+		var gate: CheckedContinuation<Void, Never>?
+		var completed = false
+		var cancelled = true
+		let waiter = Task {
+			await owner.run {
+				entered.fulfill()
+				await withCheckedContinuation { gate = $0 }
+				cancelled = Task.isCancelled
+				completed = true
+			}
+		}
+		await fulfillment(of: [entered], timeout: 2)
+		waiter.cancel()
+		gate?.resume()
+		await waiter.value
+		XCTAssertTrue(completed)
+		XCTAssertFalse(cancelled)
+	}
+
+	func testScreenExitCancelsWorkAndOldCompletionDoesNotClearNewOwner() async {
+		let owner = NewsRefreshOperation()
+		let firstEntered = expectation(description: "Pierwsza praca")
+		let secondEntered = expectation(description: "Praca po powrocie")
+		var firstGate: CheckedContinuation<Void, Never>?
+		var secondGate: CheckedContinuation<Void, Never>?
+		var firstCancelled = false
+		var secondCancelled = false
+		let first = Task {
+			await owner.run {
+				firstEntered.fulfill()
+				await withCheckedContinuation { firstGate = $0 }
+				firstCancelled = Task.isCancelled
+			}
+		}
+		await fulfillment(of: [firstEntered], timeout: 2)
+		owner.cancel()
+		let second = Task {
+			await owner.run {
+				secondEntered.fulfill()
+				await withCheckedContinuation { secondGate = $0 }
+				secondCancelled = Task.isCancelled
+			}
+		}
+		await fulfillment(of: [secondEntered], timeout: 2)
+		firstGate?.resume()
+		await first.value
+		owner.cancel()
+		secondGate?.resume()
+		await second.value
+		XCTAssertTrue(firstCancelled)
+		XCTAssertTrue(secondCancelled, "Stary koniec nie może usunąć nowego uchwytu")
+		var recovered = false
+		await owner.run { recovered = !Task.isCancelled }
+		XCTAssertTrue(recovered)
+	}
+
+	func testConcurrentGesturesCoalesceWithoutExtraWork() async {
+		let owner = NewsRefreshOperation()
+		let entered = expectation(description: "Pierwsze pobranie")
+		let joined = expectation(description: "Drugie wejście")
+		var gate: CheckedContinuation<Void, Never>?
+		var calls = 0
+		let first = Task {
+			await owner.run {
+				calls += 1
+				entered.fulfill()
+				await withCheckedContinuation { gate = $0 }
+			}
+		}
+		await fulfillment(of: [entered], timeout: 2)
+		let second = Task {
+			joined.fulfill()
+			await owner.run { calls += 1 }
+		}
+		await fulfillment(of: [joined], timeout: 2)
+		gate?.resume()
+		await first.value
+		await second.value
+		XCTAssertEqual(calls, 1)
+	}
+
+	func testAlreadyCancelledGestureDoesNotStartWork() async {
+		let owner = NewsRefreshOperation()
+		let entered = expectation(description: "Oczekujący gest")
+		var gate: CheckedContinuation<Void, Never>?
+		var calls = 0
+		let waiter = Task {
+			entered.fulfill()
+			await withCheckedContinuation { gate = $0 }
+			await owner.run { calls += 1 }
+		}
+		await fulfillment(of: [entered], timeout: 2)
+		waiter.cancel()
+		gate?.resume()
+		await waiter.value
+		XCTAssertEqual(calls, 0)
+	}
+}

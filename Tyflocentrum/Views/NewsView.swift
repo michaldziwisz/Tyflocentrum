@@ -1014,10 +1014,38 @@ struct AsyncListStatusSection: View {
 	}
 }
 
+/// Właścicielem pracy jest ekran, nie chwilowe zadanie gestu ScrollView.
+/// Przerysowanie nie przerywa pobrania, ale zniknięcie ekranu jawnie je anuluje.
+@MainActor
+final class NewsRefreshOperation: ObservableObject {
+	private var current: (id: UUID, task: Task<Void, Never>)?
+
+	func run(_ action: @escaping @MainActor () async -> Void) async {
+		guard !Task.isCancelled else { return }
+		if let current {
+			await current.task.value
+			return
+		}
+		let id = UUID()
+		let task = Task { await action() }
+		current = (id, task)
+		await task.value
+		if current?.id == id { current = nil }
+	}
+
+	func cancel() {
+		current?.task.cancel()
+		current = nil
+	}
+
+	deinit { current?.task.cancel() }
+}
+
 struct NewsView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var settings: SettingsStore
 	@StateObject private var viewModel = NewsFeedViewModel()
+	@StateObject private var manualRefresh = NewsRefreshOperation()
 	@State private var playerPodcast: Podcast?
 
 	/// Bramka na zakładkę: `TabView` trzyma odwiedzone widoki zamontowane, więc bez
@@ -1109,11 +1137,9 @@ struct NewsView: View {
 			.scrollIndicators(.visible)
 			.scrollTargetLayout()
 			.scrollPosition(id: $pozycjaListy, anchor: .top)
-			.refreshable { [viewModel, api] in
-				// Akcja zależy od trwałych referencji, nie wartości NewsView
-				// zmieniającej się razem ze stanem przewijania i ładowania.
+			.refreshable {
 				viewModel.traceRefresh("gesture.enter")
-				await viewModel.refresh(api: api)
+				await manualRefresh.run { await viewModel.refresh(api: api) }
 				viewModel.traceRefresh("gesture.exit")
 			}
 			.task {
@@ -1132,8 +1158,9 @@ struct NewsView: View {
 				guard viewModel.hasLoaded else { return }
 				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .wejscieNaEkran) }
 			}
-			.onDisappear { visible = false }
+			.onDisappear { visible = false; manualRefresh.cancel() }
 			.onChange(of: scenePhase) { staraFaza, nowaFaza in
+				if nowaFaza == .background { manualRefresh.cancel() }
 				guard nowaFaza == .active, staraFaza != .active, visible else { return }
 				guard aktywnaZakladka == ZakladkaAplikacji.nowosci else { return }
 				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .powrotZTla) }
@@ -1142,6 +1169,7 @@ struct NewsView: View {
 			// być na wierzchu godzinami, a użytkownik wraca na Nowości z innej zakładki
 			// — wtedy scenePhase się nie zmienia i bez tego warunku dane zostałyby stare.
 			.onChange(of: aktywnaZakladka) { _, nowa in
+				if nowa != ZakladkaAplikacji.nowosci { manualRefresh.cancel() }
 				guard nowa == ZakladkaAplikacji.nowosci, visible else { return }
 				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .wejscieNaEkran) }
 			}
