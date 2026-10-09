@@ -38,6 +38,13 @@ struct TyflocentrumApp: App {
 			let suiteName = "TyflocentrumUITests"
 			let defaults = UserDefaults(suiteName: suiteName)!
 			defaults.removePersistentDomain(forName: suiteName)
+			#if DEBUG
+				if ContentTimeUITestData.refreshScenario {
+					// Dawne ulubione, zapisane przed wprowadzeniem metadanych.
+					let raw = #"[{"type":"podcast","summary":{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Dawny podcast"},"link":"https://tyflopodcast.net/?p=1"}},{"type":"article","origin":"post","summary":{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Dawny artykuł"},"link":"https://tyfloswiat.pl/?p=2"}},{"type":"article","origin":"page","summary":{"id":400,"date":"2026-01-20T00:59:40","title":{"rendered":"Dawna strona"},"link":"https://tyfloswiat.pl/czasopismo/numer/artykul/"}}]"#
+					defaults.set(Data(raw.utf8), forKey: "favorites.v1")
+				}
+			#endif
 			let settings = SettingsStore(userDefaults: defaults)
 			_settingsStore = StateObject(wrappedValue: settings)
 			_audioPlayer = StateObject(
@@ -75,6 +82,9 @@ struct TyflocentrumApp: App {
 					}
 				}
 			)
+			#if DEBUG
+			.overlay(alignment: .bottom) { ContentTimeServerControl() }
+			#endif
 			.onAppear {
 				appDelegate.pushNotifications = pushNotifications
 			}

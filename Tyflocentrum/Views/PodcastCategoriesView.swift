@@ -147,6 +147,7 @@ struct AllPodcastsView: View {
 		.task {
 			await viewModel.loadIfNeeded(fetchPage: fetchPage)
 		}
+		.accessibilityIdentifier("allPodcasts.list")
 		.navigationTitle("Wszystkie podcasty")
 		.navigationBarTitleDisplayMode(.inline)
 		.navigationDestination(item: $playerPodcast) { podcast in

@@ -170,6 +170,7 @@ struct AllArticlesView: View {
 			await viewModel.loadIfNeeded(fetchPage: fetchPage)
 		}
 		.contentTimes(viewModel.items.map { ContentTimeRequest($0, kind: .posts) }, refreshing: viewModel.isLoading)
+		.accessibilityIdentifier("allArticles.list")
 		.navigationTitle("Wszystkie artykuły")
 		.navigationBarTitleDisplayMode(.inline)
 	}

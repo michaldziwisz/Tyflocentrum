@@ -169,6 +169,71 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		return row
 	}
 
+	/// Ten sam proces i ekran, zmiana serwera jawnie PRZED pojedynczym gestem.
+	private func exerciseTimeRefresh(_ app: XCUIApplication, rows: [(String, Bool)], listID: String, screen: String) {
+		let server = app.buttons["timeTest.server"]
+		XCTAssertTrue(server.waitForExistence(timeout: limitUI))
+		let process = server.label.components(separatedBy: "proces: ").last!
+		for (id, _) in rows {
+			_ = checkContentTime(app, id: id, time: "Czas niedostępny", screen: screen + "-missing")
+		}
+		let list = app.descendants(matching: .any).matching(identifier: listID).firstMatch
+		XCTAssertTrue(list.exists)
+		for stage in 1 ... 4 {
+			let before = rows.map { app.descendants(matching: .any).matching(identifier: $0.0).firstMatch.label }
+			server.tap()
+			XCTAssertTrue(server.label.contains("Serwer: \(stage),"))
+			XCTAssertTrue(server.label.hasSuffix(process))
+			// Sama kontrola serwera nie zmienia danych wierszy.
+			XCTAssertEqual(rows.map { app.descendants(matching: .any).matching(identifier: $0.0).firstMatch.label }, before)
+			let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+			let end = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+			start.press(forDuration: 0.05, thenDragTo: end)
+			for (id, audio) in rows {
+				let time = stage == 1 ? (audio ? "Czas trwania: 1 godzina 23 minuty 4 sekundy" : "Czytanie: około 6 minut")
+					: stage == 2 ? (audio ? "Czas trwania: 1 minuta" : "Czytanie: około 7 minut") : "Czas niedostępny"
+				_ = checkContentTime(app, id: id, time: time, screen: "\(screen)-stage\(stage)")
+			}
+		}
+		server.tap() // missing dla następnej listy, bez restartu aplikacji
+		XCTAssertTrue(server.label.contains("Serwer: 0,"))
+		XCTAssertTrue(server.label.hasSuffix(process))
+	}
+
+	func testTimeRefreshOldFavoritesSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		openFavoritesFromMenu(in: app)
+		exerciseTimeRefresh(app, rows: [("podcast.row.1", true), ("article.row.2", false), ("article.row.400", false)], listID: "favorites.list", screen: "favorites")
+	}
+
+	func testTimeRefreshInlineAndReadingSameProcess() {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES", "UI_TESTING_TIME_REFRESH"])
+		app.launch()
+		exerciseTimeRefresh(app, rows: [("podcast.row.1", true), ("article.row.2", false)], listID: "news.list", screen: "news")
+		app.tabBars.buttons["Podcasty"].tap()
+		let allPodcasts = app.descendants(matching: .any).matching(identifier: "podcastCategories.all").firstMatch
+		XCTAssertTrue(allPodcasts.waitForExistence(timeout: limitUI)); allPodcasts.tap()
+		exerciseTimeRefresh(app, rows: [("podcast.row.1", true)], listID: "allPodcasts.list", screen: "all-podcasts")
+		tapBackButton(in: app)
+		app.descendants(matching: .any).matching(identifier: "category.row.10").firstMatch.tap()
+		exerciseTimeRefresh(app, rows: [("podcast.row.1", true)], listID: "categoryPodcasts.list", screen: "category-podcasts")
+		tapBackButton(in: app)
+		app.tabBars.buttons["Artykuły"].tap()
+		let allArticles = app.descendants(matching: .any).matching(identifier: "articleCategories.all").firstMatch
+		XCTAssertTrue(allArticles.waitForExistence(timeout: limitUI)); allArticles.tap()
+		exerciseTimeRefresh(app, rows: [("podcast.row.2", false)], listID: "allArticles.list", screen: "all-articles")
+		tapBackButton(in: app)
+		app.descendants(matching: .any).matching(identifier: "category.row.20").firstMatch.tap()
+		exerciseTimeRefresh(app, rows: [("podcast.row.2", false)], listID: "categoryArticles.list", screen: "category-articles")
+		tapBackButton(in: app)
+		app.tabBars.buttons["Szukaj"].tap()
+		let field = app.textFields["search.field"]
+		XCTAssertTrue(field.waitForExistence(timeout: limitUI)); field.tap(); field.typeText("test")
+		app.buttons["search.button"].tap()
+		exerciseTimeRefresh(app, rows: [("podcast.row.1", true), ("article.row.2", false)], listID: "search.list", screen: "search")
+	}
+
 	func testContentTimesAcrossAllLists() {
 		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_CONTENT_TIMES"])
 		app.launch()
