@@ -1109,7 +1109,9 @@ struct NewsView: View {
 			.scrollIndicators(.visible)
 			.scrollTargetLayout()
 			.scrollPosition(id: $pozycjaListy, anchor: .top)
-			.refreshable {
+			.refreshable { [viewModel, api] in
+				// Akcja zależy od trwałych referencji, nie wartości NewsView
+				// zmieniającej się razem ze stanem przewijania i ładowania.
 				viewModel.traceRefresh("gesture.enter")
 				await viewModel.refresh(api: api)
 				viewModel.traceRefresh("gesture.exit")
