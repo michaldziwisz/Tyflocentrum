@@ -141,21 +141,28 @@ private struct ContentTimeListModifier: ViewModifier {
 	func body(content: Content) -> some View {
 		content
 			.environment(\.contentTimeValues, state.values(requests, now: now))
-			.task(id: Identity(requests: requests, refreshing: refreshing, revision: revision, activation: activation)) {
-				now = Date()
-				guard !refreshing else { return }
-				await state.update(requests, revision: revision, activation: activation, client: api.contentTimes)
-			}
-			// Dokładne wygaśnięcie także przy godzinami otwartym ekranie.
-			.task(id: state.records) {
-				now = Date()
-				while let expiry = state.records.values.compactMap(\.expiresAt).filter({ $0 >= now && $0 <= now.addingTimeInterval(86401) }).min() {
-					let delay = max(0.01, expiry.timeIntervalSinceNow + 0.01)
-					do {
-						try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+			.background {
+				// Zadania metadanych mają własny węzeł cyklu życia. Zmiana
+				// ich identyfikatora nie może anulować gestu samej listy.
+				Color.clear
+					.frame(width: 0, height: 0)
+					.accessibilityHidden(true)
+					.task(id: Identity(requests: requests, refreshing: refreshing, revision: revision, activation: activation)) {
 						now = Date()
-					} catch { return }
-				}
+						guard !refreshing else { return }
+						await state.update(requests, revision: revision, activation: activation, client: api.contentTimes)
+					}
+					// Dokładne wygaśnięcie także przy godzinami otwartym ekranie.
+					.task(id: state.records) {
+						now = Date()
+						while let expiry = state.records.values.compactMap(\.expiresAt).filter({ $0 >= now && $0 <= now.addingTimeInterval(86401) }).min() {
+							let delay = max(0.01, expiry.timeIntervalSinceNow + 0.01)
+							do {
+								try await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+								now = Date()
+							} catch { return }
+						}
+					}
 			}
 			.onAppear { visible = true }
 			.onDisappear { visible = false }

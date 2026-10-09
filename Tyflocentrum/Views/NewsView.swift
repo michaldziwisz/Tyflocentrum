@@ -1104,6 +1104,7 @@ struct NewsView: View {
 					}
 				}
 			}
+			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision, automatic: false)
 			.accessibilityIdentifier("news.list")
 			.scrollIndicators(.visible)
 			.scrollTargetLayout()
@@ -1113,7 +1114,6 @@ struct NewsView: View {
 				await viewModel.refresh(api: api)
 				viewModel.traceRefresh("gesture.exit")
 			}
-			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision, automatic: false)
 			.task {
 				viewModel.traceRefresh("view.task.enter")
 				await viewModel.loadIfNeeded(api: api)

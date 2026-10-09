@@ -275,12 +275,11 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		geometry.name = "scrolled-geometry"; geometry.lifetime = .keepAlways; add(geometry)
 		comparePlayback(before, samplePlayback(app, screen: "audio-after-scrolled-resume"))
 		row.press(forDuration: 1)
-		let copy = app.buttons["Skopiuj link"].firstMatch
-		if copy.waitForExistence(timeout: 2) { copy.tap() }
-		else {
-			let menuCopy = app.menuItems["Skopiuj link"].firstMatch
-			XCTAssertTrue(menuCopy.waitForExistence(timeout: limitUI)); menuCopy.tap()
-		}
+		let addFavorite = app.buttons["Dodaj do ulubionych"].firstMatch
+		XCTAssertTrue(addFavorite.waitForExistence(timeout: limitUI)); addFavorite.tap()
+		row.press(forDuration: 1)
+		let removeFavorite = app.buttons["Usuń z ulubionych"].firstMatch
+		XCTAssertTrue(removeFavorite.waitForExistence(timeout: limitUI)); removeFavorite.tap()
 		XCTAssertTrue(row.isHittable)
 		row.tap()
 		let favorite = app.descendants(matching: .any).matching(identifier: "podcastDetail.favorite").firstMatch
