@@ -38,4 +38,8 @@ bez osłabienia końcowej asercji zniknięcia i bez zmiany timeoutu. Kontrolki D
 są w jednym wierszu, aby nie nachodziły na pasek kart.
 To obsługa dotykowa XCUI, nie test gestu VoiceOver.
 
-Granica pomiaru: SwiftUI/XCUI i obiekty UIAccessibility na symulatorze, nie odsłuch fizycznego VoiceOver. Poprawka nie zmienia wersji i nie publikuje aplikacji.
+Granica pomiaru: SwiftUI/XCUI i obiekty UIAccessibility na symulatorze, nie odsłuch fizycznego VoiceOver.
+
+## Wydanie testowe 1.0.3 (6)
+
+Build 6 przygotowano do wewnętrznego TestFlight po odbiorze PR6. Pełny przebieg `38041566378` na `b3c8914e79ea6ef752a2e12e77e970b18f5b869f` zaliczył 268 testów bez porażek i pominięć. Drzewo scalenia jest identyczne z odebranym; zmiana wydawnicza obejmuje wyłącznie numer buildu w obu konfiguracjach oraz tę dokumentację. Nie powtarzamy pełnych testów niezmienionego kodu. Osobny workflow `ios-testflight.yml` buduje, podpisuje, waliduje i wysyła aplikację do Apple. Dostępność wymaga dodatkowego potwierdzenia przetworzenia i obecności dokładnego buildu w grupie wewnętrznej. Wydanie do TestFlight nie zgłasza wersji do App Store.
