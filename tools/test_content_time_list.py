@@ -40,7 +40,7 @@ def declaration(marker):
 
 blocks = [declaration('struct ContentTimeRequest:'),
           declaration('@MainActor\nfinal class ContentTimeListState:'),
-          declaration('extension View {')]
+          declaration('func contentTimes(')]
 adapters = r'''
 import Foundation
 #if canImport(FoundationNetworking)
@@ -49,7 +49,7 @@ import FoundationNetworking
 struct WPPostSummary { let id: Int; let modifiedGMT: String? }
 protocol ObservableObject {}
 @propertyWrapper struct Published<Value> { var wrappedValue: Value }
-struct ContentTimeListModifier { let requests: [ContentTimeRequest]; let refreshing: Bool }
+struct ContentTimeListModifier { let requests: [ContentTimeRequest]; let refreshing: Bool; var revision: Int = 0; var automatic: Bool = true }
 protocol View { var measured: ContentTimeListModifier { get } }
 struct ProbeView: View { let measured = ContentTimeListModifier(requests: [], refreshing: false) }
 struct ModifiedProbeView: View { let measured: ContentTimeListModifier }
@@ -145,11 +145,12 @@ if not args.zapisz:
     sys.exit(0)
 args.out.mkdir(parents=True, exist_ok=True)
 probe = args.out / 'probe.swift'
-probe.write_text(adapters + '\n'.join(blocks) + program)
+probe.write_text(adapters + '\n'.join(blocks[:2]) + '\nextension View {\n' + blocks[2] + '\n}\n' + program)
 exe = args.out / 'probe'
 command = [str(compiler), '-swift-version', '5', '-module-cache-path', str(args.out / 'module-cache'),
            str(repo / 'Tyflocentrum/Models/ContentTime.swift'),
            str(repo / 'Tyflocentrum/ContentTimeClient.swift'),
+           str(repo / 'Tyflocentrum/StrategiaOdswiezania.swift'),
            str(repo / 'Tyflocentrum/AsyncTimeout.swift'), str(probe), '-o', str(exe)]
 if sys.platform == 'darwin':
     # Uruchamiamy sondę na hoście macOS, nie w symulatorze iOS. Sama ścieżka

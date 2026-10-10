@@ -78,6 +78,55 @@ final class PagedFeedViewModelTests: XCTestCase {
 		XCTAssertEqual(viewModel.loadMoreErrorMessage, "Nie udało się pobrać kolejnych treści. Spróbuj ponownie.")
 	}
 
+	func testTimeOnlyRefreshRetainsRowsAndRejectsOldPagination() async {
+		let model = PagedFeedViewModel<StubItem>(perPage: 1)
+		await model.loadIfNeeded { _, _ in TyfloAPI.WPPage(items: [StubItem(id: 1)], total: 3, totalPages: 3) }
+		let entered = expectation(description: "Stara druga strona oczekuje")
+		var release: CheckedContinuation<Void, Never>?
+		let old = Task {
+			await model.loadMore { _, _ in
+				await withCheckedContinuation { release = $0; entered.fulfill() }
+				return TyfloAPI.WPPage(items: [StubItem(id: 99)], total: 3, totalPages: 3)
+			}
+		}
+		await fulfillment(of: [entered], timeout: 5)
+		await model.refresh { _, _ in
+			XCTAssertEqual(model.items.map(\.id), [1], "Wiersz pozostaje na ekranie podczas transportu")
+			return TyfloAPI.WPPage(items: [StubItem(id: 1)], total: 3, totalPages: 3)
+		}
+		release?.resume()
+		await old.value
+		XCTAssertEqual(model.items.map(\.id), [1])
+		XCTAssertNil(model.loadMoreErrorMessage)
+		await model.loadMore { page, _ in
+			XCTAssertEqual(page, 2)
+			return TyfloAPI.WPPage(items: [StubItem(id: 2)], total: 3, totalPages: 3)
+		}
+		XCTAssertEqual(model.items.map(\.id), [1, 2])
+	}
+
+	func testManualRefreshDuringLoadIsCoalescedNotLost() async {
+		let model = PagedFeedViewModel<StubItem>(perPage: 1)
+		let gate = FirstPageGate()
+		let initial = Task { await model.loadIfNeeded(fetchPage: gate.fetch) }
+		await fulfillment(of: [gate.started], timeout: 5)
+		let entered = expectation(description: "Ręczne odświeżenia weszły")
+		entered.expectedFulfillmentCount = 3
+		let pending = (0 ..< 3).map { _ in Task {
+			entered.fulfill()
+			await model.refresh(fetchPage: gate.fetch)
+		} }
+		await fulfillment(of: [entered], timeout: 5)
+		XCTAssertEqual(gate.requestedPages, [1])
+		gate.finish(.success(TyfloAPI.WPPage(items: [StubItem(id: 7)], total: nil, totalPages: 1)))
+		await initial.value
+		for task in pending {
+			await task.value
+		}
+		XCTAssertEqual(gate.requestedPages, [1, 1], "Jedno wspólne ponowienie po starym żądaniu")
+		XCTAssertEqual(model.items.map(\.id), [20])
+	}
+
 	// MARK: - Przejęcie pierwszego ładowania po anulowaniu
 
 	@MainActor

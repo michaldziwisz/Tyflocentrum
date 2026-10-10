@@ -43,6 +43,10 @@ jobs:
             exit 1
           fi
           echo "symulator: $SIM_ID"
+          # Dwa pierwsze uruchomienia D1 padły przed scenariuszem. Poczekaj
+          # na gotowość rozruchu zamiast podnosić timeouty asercji aplikacji.
+          xcrun simctl boot "$SIM_ID" || true
+          xcrun simctl bootstatus "$SIM_ID" -b
 
           ARGS=""
           IFS=',' read -ra LISTA <<< "${{ inputs.testy }}"
@@ -64,6 +68,7 @@ jobs:
               -sdk iphonesimulator \
               -destination "platform=iOS Simulator,id=$SIM_ID" \
               -derivedDataPath "$RUNNER_TEMP/DD-$i" \
+              -resultBundlePath "$PWD/diagnostic-$i.xcresult" \
               -parallel-testing-enabled NO \
               -parallel-testing-worker-count 1 \
               $ARGS \
@@ -74,6 +79,13 @@ jobs:
               echo "przebieg $i: PADL"
               nieudane=$((nieudane + 1))
               grep -E "error:|XCTAssert|Failing tests:" -A2 "$RUNNER_TEMP/przebieg-$i.log" | head -30 || true
+            fi
+            mkdir -p "diagnostic-$i"
+            if [[ -d "diagnostic-$i.xcresult" ]]; then
+              xcrun xcresulttool export attachments --path "diagnostic-$i.xcresult" --output-path "diagnostic-$i/attachments"
+              xcrun xcresulttool export diagnostics --path "diagnostic-$i.xcresult" --output-path "diagnostic-$i/diagnostics"
+              xcrun xcresulttool get test-results summary --path "diagnostic-$i.xcresult" > "diagnostic-$i/summary.json"
+              xcrun xcresulttool get test-results tests --path "diagnostic-$i.xcresult" > "diagnostic-$i/tests.json"
             fi
             echo "::endgroup::"
           done
@@ -89,4 +101,6 @@ jobs:
         if: always()
         with:
           name: logi-powtarzalnosci
-          path: ${{ runner.temp }}/przebieg-*.log
+          path: |
+            ${{ runner.temp }}/przebieg-*.log
+            diagnostic-*

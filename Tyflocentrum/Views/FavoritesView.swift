@@ -4,6 +4,7 @@ import UIKit
 struct FavoritesView: View {
 	@EnvironmentObject private var favorites: FavoritesStore
 
+	@State private var timeRevision = 0
 	@State private var filter: FavoritesFilter = .all
 	@State private var playerPodcast: Podcast?
 	@State private var selectedTopic: FavoriteTopic?
@@ -57,7 +58,14 @@ struct FavoritesView: View {
 				}
 			}
 		}
-		.contentTimes(visibleItems.compactMap(\.contentTimeRequest))
+		.contentTimes(visibleItems.compactMap(\.contentTimeRequest), revision: timeRevision)
+		.refreshable { timeRevision += 1 }
+		.toolbar {
+			ToolbarItem(placement: .navigationBarTrailing) {
+				Button("Odśwież") { timeRevision += 1 }
+					.accessibilityIdentifier("favorites.refresh")
+			}
+		}
 		.accessibilityIdentifier("favorites.list")
 		.navigationTitle("Ulubione")
 		.navigationBarTitleDisplayMode(.inline)

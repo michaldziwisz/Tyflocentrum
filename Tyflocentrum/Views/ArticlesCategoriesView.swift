@@ -169,13 +169,14 @@ struct AllArticlesView: View {
 		.task {
 			await viewModel.loadIfNeeded(fetchPage: fetchPage)
 		}
-		.contentTimes(viewModel.items.map { ContentTimeRequest($0, kind: .posts) }, refreshing: viewModel.isLoading)
+		.contentTimes(viewModel.items.map { ContentTimeRequest($0, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision)
+		.accessibilityIdentifier("allArticles.list")
 		.navigationTitle("Wszystkie artykuły")
 		.navigationBarTitleDisplayMode(.inline)
 	}
 
 	private func fetchPage(page: Int, perPage: Int) async throws -> TyfloAPI.WPPage<WPPostSummary> {
-		try await api.fetchArticleSummariesPage(page: page, perPage: perPage)
+		try await api.fetchArticleSummariesPage(page: page, perPage: perPage, cachePolicy: page == 1 ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy)
 	}
 }
 
@@ -335,6 +336,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 	@Environment(\.openURL) private var openURL
 
 	@State private var issue: Podcast?
+	@State private var timeRevision = 0
 	@State private var tocItems: [WPPostSummary] = []
 	@State private var pdfURL: URL?
 	@State private var isLoading = false
@@ -374,8 +376,15 @@ private struct TyfloSwiatMagazineIssueView: View {
 							}
 						}
 					}
-					.contentTimes(tocItems.map { ContentTimeRequest($0, kind: .pages) }, refreshing: isLoading)
+					.contentTimes(tocItems.map { ContentTimeRequest($0, kind: .pages) }, refreshing: isLoading, revision: timeRevision)
 					.accessibilityIdentifier("magazine.toc.list")
+					.refreshable { timeRevision += 1 }
+					.toolbar {
+						ToolbarItem(placement: .navigationBarTrailing) {
+							Button("Odśwież") { timeRevision += 1 }
+								.accessibilityIdentifier("magazine.toc.refresh")
+						}
+					}
 				}
 			} else if let errorMessage {
 				AsyncListStatusSection(

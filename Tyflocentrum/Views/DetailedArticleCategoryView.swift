@@ -61,7 +61,7 @@ struct DetailedArticleCategoryView: View {
 				}
 			}
 		}
-		.contentTimes(viewModel.items.map { ContentTimeRequest($0, kind: .posts) }, refreshing: viewModel.isLoading)
+		.contentTimes(viewModel.items.map { ContentTimeRequest($0, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision)
 		.accessibilityIdentifier("categoryArticles.list")
 		.refreshable {
 			await viewModel.refresh(fetchPage: fetchPage)
@@ -74,6 +74,6 @@ struct DetailedArticleCategoryView: View {
 	}
 
 	private func fetchPage(page: Int, perPage: Int) async throws -> TyfloAPI.WPPage<WPPostSummary> {
-		try await api.fetchArticleSummariesPage(page: page, perPage: perPage, categoryID: category.id)
+		try await api.fetchArticleSummariesPage(page: page, perPage: perPage, categoryID: category.id, cachePolicy: page == 1 ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy)
 	}
 }

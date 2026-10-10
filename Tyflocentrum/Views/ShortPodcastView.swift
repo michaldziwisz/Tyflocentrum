@@ -18,6 +18,16 @@ struct ShortPodcastView: View {
 	var accessibilityIdentifierOverride: String? = nil
 	var favoriteItem: FavoriteItem? = nil
 
+	#if DEBUG
+		@State private var timeTraceID = UUID()
+		private func traceTime(_ event: String) {
+			guard ContentTimeUITestData.refreshScenario else { return }
+			NSLog("TIME_ROW event=%@ key=%@ instance=%@ stage=%d visible=%@ accessible=%@",
+			      event, accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)", timeTraceID.uuidString,
+			      ContentTimeUITestData.stage, contentTime?.visible ?? "", contentTime?.accessible ?? "")
+		}
+	#endif
+
 	@EnvironmentObject private var favorites: FavoritesStore
 	@EnvironmentObject private var settings: SettingsStore
 	@Environment(\.contentTimeValues) private var contentTimeValues
@@ -91,6 +101,11 @@ struct ShortPodcastView: View {
 		.accessibilityHint(hint)
 		.accessibilityIdentifier(accessibilityIdentifierOverride ?? "podcast.row.\(podcast.id)")
 		.id(refreshID)
+		#if DEBUG
+			.onAppear { traceTime("appear") }
+			.onDisappear { traceTime("disappear") }
+			.onChange(of: contentTime, initial: true) { _, _ in traceTime("value") }
+		#endif
 
 		Group {
 			if showsListenAction {

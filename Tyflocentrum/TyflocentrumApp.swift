@@ -5,6 +5,7 @@
 //  Created by Arkadiusz Świętnicki on 02/10/2022.
 //
 
+import AVFoundation
 import Foundation
 import SwiftUI
 import UIKit
@@ -38,10 +39,23 @@ struct TyflocentrumApp: App {
 			let suiteName = "TyflocentrumUITests"
 			let defaults = UserDefaults(suiteName: suiteName)!
 			defaults.removePersistentDomain(forName: suiteName)
+			#if DEBUG
+				if ContentTimeUITestData.refreshScenario {
+					// Dawne ulubione, zapisane przed wprowadzeniem metadanych.
+					let raw = #"[{"type":"podcast","summary":{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Dawny podcast"},"link":"https://tyflopodcast.net/?p=1"}},{"type":"article","origin":"post","summary":{"id":2,"date":"2026-01-20T00:59:40","title":{"rendered":"Dawny artykuł"},"link":"https://tyfloswiat.pl/?p=2"}},{"type":"article","origin":"page","summary":{"id":400,"date":"2026-01-20T00:59:40","title":{"rendered":"Dawna strona"},"link":"https://tyfloswiat.pl/czasopismo/numer/artykul/"}}]"#
+					defaults.set(Data(raw.utf8), forKey: "favorites.v1")
+				}
+			#endif
 			let settings = SettingsStore(userDefaults: defaults)
 			_settingsStore = StateObject(wrappedValue: settings)
+			#if DEBUG
+				let testPlayer = ContentTimeUITestData.playback ? ContentTimePlaybackProbe.shared.player : AVPlayer()
+			#else
+				let testPlayer = AVPlayer()
+			#endif
 			_audioPlayer = StateObject(
 				wrappedValue: AudioPlayer(
+					player: testPlayer,
 					userDefaults: defaults,
 					playbackRateModeProvider: { settings.playbackRateRememberMode }
 				)
@@ -75,15 +89,23 @@ struct TyflocentrumApp: App {
 					}
 				}
 			)
-			.onAppear {
-				appDelegate.pushNotifications = pushNotifications
-			}
-			.task {
-				guard !isUITesting else { return }
-				await pushNotifications.refreshAuthorizationStatus()
-			}
 			#if DEBUG
-			.onChange(of: settingsStore.pushNotificationPreferences) { _, prefs in
+			.overlay(alignment: .bottom) {
+					VStack {
+						ContentTimePlaybackControl(audio: audioPlayer)
+						ContentTimeServerControl()
+					}
+				}
+			#endif
+				.onAppear {
+					appDelegate.pushNotifications = pushNotifications
+				}
+				.task {
+					guard !isUITesting else { return }
+					await pushNotifications.refreshAuthorizationStatus()
+				}
+			#if DEBUG
+				.onChange(of: settingsStore.pushNotificationPreferences) { _, prefs in
 					guard !isUITesting else { return }
 					Task {
 						await pushNotifications.onPreferencesChanged(prefs: prefs)

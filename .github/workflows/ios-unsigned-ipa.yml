@@ -29,11 +29,34 @@ jobs:
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Zapisz dokładne źródło i narzędzia
+        run: |
+          python3 -c 'import pathlib,subprocess; data=subprocess.check_output(["git","status","--porcelain"]); pathlib.Path("checkout-status.txt").write_bytes(data)'
+          git rev-parse HEAD > checkout-sha.txt
+          xcodebuild -version > xcode-version.txt
+          sw_vers > macos-version.txt
 
       - name: Lint, test and build unsigned IPA
         run: bash scripts/build-unsigned-ipa.sh
 
+      - name: Zachowaj archiwum Release i źródło przebiegu
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: archiwum-release
+          path: |
+            build/Tyflocentrum.xcarchive
+            checkout-sha.txt
+            checkout-status.txt
+            xcode-version.txt
+            macos-version.txt
+          if-no-files-found: ignore
+
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: Tyflocentrum-unsigned-ipa
           path: tyflocentrum.ipa
@@ -43,6 +66,7 @@ jobs:
         run: |
           if [[ -d WynikTestow.xcresult ]]; then
             xcrun xcresulttool export attachments --path WynikTestow.xcresult --output-path test-attachments
+            xcrun xcresulttool export diagnostics --path WynikTestow.xcresult --output-path test-diagnostics
             xcrun xcresulttool get test-results summary --path WynikTestow.xcresult > test-attachments/summary.json
             xcrun xcresulttool get test-results tests --path WynikTestow.xcresult > test-attachments/tests.json
           fi
@@ -52,7 +76,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wynik-testow-zalaczniki
-          path: test-attachments
+          path: |
+            test-attachments
+            test-diagnostics
           if-no-files-found: ignore
 
       # Zrzuty ekranu z PADAJACYCH testow UI. if: always(), bo najbardziej
@@ -64,4 +90,28 @@ jobs:
         with:
           name: wynik-testow-xcresult
           path: WynikTestow.xcresult
+          if-no-files-found: ignore
+
+  control-red:
+    name: Kontrolny RED niezmiennej bazy
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Kontrolny RED na bazie bez zmiany ID
+        run: python3 tools/native_refresh_red.py --out "$PWD/red-native"
+
+      - name: Zachowaj kontrolny RED
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kontrolny-red
+          path: |
+            red-native/*.json
+            red-native/xcodebuild.log
+            red-native/red.xcresult
+            red-native/attachments
+            red-native/diagnostics
           if-no-files-found: ignore

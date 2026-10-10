@@ -62,8 +62,10 @@ struct NewsItem: Identifiable {
 
 @MainActor
 final class AsyncListViewModel<Item>: ObservableObject {
+	private var refreshTicket = UUID()
 	@Published private(set) var items: [Item] = []
 	@Published private(set) var hasLoaded = false
+	@Published private(set) var contentTimeRevision = 0
 	@Published private(set) var isLoading = false
 	@Published private(set) var errorMessage: String?
 
@@ -83,9 +85,18 @@ final class AsyncListViewModel<Item>: ObservableObject {
 	}
 
 	func refresh(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 45) async {
+		guard !Task.isCancelled else { return }
+		let ticket = UUID()
+		refreshTicket = ticket
+		while isLoading {
+			do { try await Task.sleep(nanoseconds: 20_000_000) } catch { return }
+		}
+		guard refreshTicket == ticket, !Task.isCancelled else { return }
+		let hadItems = !items.isEmpty
 		hasLoaded = false
 		errorMessage = nil
 		await load(fetch, timeoutSeconds: timeoutSeconds)
+		if hadItems, !Task.isCancelled { contentTimeRevision += 1 }
 	}
 
 	func load(_ fetch: @escaping () async throws -> [Item], timeoutSeconds: TimeInterval = 45) async {
@@ -161,6 +172,7 @@ final class NewsFeedViewModel: ObservableObject {
 
 	@Published private(set) var items: [NewsItem] = []
 	@Published private(set) var hasLoaded = false
+	@Published private(set) var contentTimeRevision = 0
 	@Published private(set) var isLoading = false
 	@Published private(set) var isLoadingMore = false
 	@Published private(set) var errorMessage: String?
@@ -180,6 +192,7 @@ final class NewsFeedViewModel: ObservableObject {
 	private let initialBatchSize: Int
 	private let loadMoreBatchSize: Int
 	private var requestGeneration = UUID()
+	private var refreshTicket = UUID()
 
 	private var podcasts = SourceState(kind: .podcast)
 	private var articles = SourceState(kind: .article)
@@ -202,16 +215,18 @@ final class NewsFeedViewModel: ObservableObject {
 	}
 
 	func loadIfNeeded(api: TyfloAPI) async {
-		guard !hasLoaded else { return }
+		while isLoading {
+			do { try await Task.sleep(nanoseconds: 20_000_000) } catch { return }
+		}
+		guard !hasLoaded, !Task.isCancelled else { return }
 		await refresh(api: api)
 	}
 
 	/// Odświeżenie, które NIE psuje pozycji czytania ani fokusu czytnika ekranu.
 	///
-	/// Różnica wobec `refresh(api:)` jest zasadnicza, nie kosmetyczna:
-	/// `refresh` buduje listę OD NOWA (użytkownik sam o to poprosił, więc skok na
-	/// początek listy jest zrozumiały), a ta metoda dokłada wyłącznie wpisy, których
-	/// wcześniej nie było, i zostawia resztę listy nietkniętą. Wywołuje ją powrót
+	/// Znane ID otrzymują świeże wartości bez zmiany kolejności i kotwicy.
+	/// Nowe wpisy są dokładane na górze. Pełny ręczny refresh także zachowuje
+	/// istniejącą listę, gdy zmieniły się wyłącznie wartości znanych wpisów. Wywołuje ją powrót
 	/// aplikacji z tła i wejście na zakładkę, czyli sytuacje, w których użytkownik
 	/// NIE prosił o przebudowę ekranu — a osoba czytająca listę czytnikiem straciłaby
 	/// wtedy miejsce, w którym była.
@@ -254,7 +269,9 @@ final class NewsFeedViewModel: ObservableObject {
 			initialBatchSize: sourcePerPage,
 			loadMoreBatchSize: loadMoreBatchSize
 		)
+		traceRefresh("resume.await.before", generation: generation, scratch: porcja)
 		await porcja.performRefreshInPlace(api: api)
+		traceRefresh("resume.await.after", generation: generation, scratch: porcja)
 
 		guard requestGeneration == generation, !Task.isCancelled else { return }
 
@@ -278,13 +295,17 @@ final class NewsFeedViewModel: ObservableObject {
 		// listę od nowa, mimo kosztu utraty pozycji: pokazanie niepełnej historii
 		// jako ciągłej jest gorsze niż jednorazowy skok na początek.
 		if wynik.liczbaNowych == porcja.items.count {
+			isLoading = false
 			await refresh(api: api)
 			return
 		}
 
+		// Znane ID też niosą świeże audio inline. Aktualizacja wartości nie jest
+		// nowym wpisem: kolejność i kotwica zostają, nie ogłaszamy nowości.
+		let fresh = Dictionary(porcja.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+		items = wynik.elementy.map { fresh[$0.id] ?? $0 }
+		contentTimeRevision += 1
 		guard wynik.maNowe else { return }
-
-		items = wynik.elementy
 		// Kursory paginacji odnoszą się do stanu sprzed scalenia, więc kolejne
 		// „załaduj starsze” mogłoby zwrócić wpisy, które właśnie doklejiliśmy.
 		// Dopisanie ich do `seenIDs` sprawia, że zostaną odfiltrowane.
@@ -301,8 +322,35 @@ final class NewsFeedViewModel: ObservableObject {
 		komunikatDostepnosci = nil
 	}
 
+	func traceRefresh(_ phase: String, generation: UUID? = nil, ticket: UUID? = nil, scratch: NewsFeedViewModel? = nil, hadItems: Bool? = nil) {
+		#if DEBUG
+			guard ProcessInfo.processInfo.arguments.contains("UI_TESTING_TIME_REFRESH") else { return }
+			let data: [String: Any] = ["phase": phase, "model": String(describing: ObjectIdentifier(self)),
+			                           "cancelled": Task.isCancelled, "requestGeneration": requestGeneration.uuidString,
+			                           "generation": generation?.uuidString ?? "nil", "refreshTicket": refreshTicket.uuidString,
+			                           "ticket": ticket?.uuidString ?? "nil", "loading": isLoading, "loaded": hasLoaded,
+			                           "hadItems": hadItems.map(String.init) ?? "nil", "revision": contentTimeRevision, "count": items.count, "scratchCount": scratch?.items.count ?? 0,
+			                           "items": items.prefix(4).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" },
+			                           "scratch": scratch.map { String(describing: ObjectIdentifier($0)) } ?? "nil",
+			                           "scratchItems": scratch?.items.prefix(4).map { "\($0.id):\(String(describing: $0.post.tyflocentrum?.audioSeconds))" } ?? []]
+			if let bytes = try? JSONSerialization.data(withJSONObject: data, options: .sortedKeys), let text = String(data: bytes, encoding: .utf8) {
+				NSLog("TIME_NEWS %@", text)
+			}
+		#endif
+	}
+
 	func refresh(api: TyfloAPI) async {
-		guard !isLoading else { return }
+		traceRefresh("refresh.enter")
+		guard !Task.isCancelled else { return }
+		let ticket = UUID()
+		refreshTicket = ticket
+		if isLoading {
+			while isLoading {
+				do { try await Task.sleep(nanoseconds: 20_000_000) } catch { return }
+			}
+			guard !Task.isCancelled else { return }
+		}
+		guard refreshTicket == ticket else { return }
 
 		let generation = UUID()
 		requestGeneration = generation
@@ -314,10 +362,13 @@ final class NewsFeedViewModel: ObservableObject {
 
 		let previousHasLoaded = hasLoaded
 		let hadItemsBeforeRefresh = !items.isEmpty
+		traceRefresh("refresh.owned", generation: generation, ticket: ticket, hadItems: hadItemsBeforeRefresh)
 		defer {
+			traceRefresh("refresh.defer.before", generation: generation, ticket: ticket, hadItems: hadItemsBeforeRefresh)
 			if requestGeneration == generation {
 				hasLoaded = previousHasLoaded || hasLoaded
 				isLoading = false
+				if hadItemsBeforeRefresh, !Task.isCancelled { contentTimeRevision += 1 }
 
 				// Never leave the user on an empty state without a retry path – in practice, the feed should never
 				// be truly empty, and cancellations/errors would otherwise surface as “Brak nowych treści.”
@@ -333,7 +384,9 @@ final class NewsFeedViewModel: ObservableObject {
 			initialBatchSize: initialBatchSize,
 			loadMoreBatchSize: loadMoreBatchSize
 		)
+		traceRefresh("refresh.await.before", generation: generation, ticket: ticket, scratch: scratch, hadItems: hadItemsBeforeRefresh)
 		await scratch.performRefreshInPlace(api: api)
+		traceRefresh("refresh.await.after", generation: generation, ticket: ticket, scratch: scratch, hadItems: hadItemsBeforeRefresh)
 
 		guard requestGeneration == generation else { return }
 		if Task.isCancelled {
@@ -348,19 +401,25 @@ final class NewsFeedViewModel: ObservableObject {
 			errorMessage = scratch.errorMessage ?? "Nie udało się pobrać danych. Spróbuj ponownie."
 			hasLoaded = true
 		} else {
-			items = scratch.items
+			let onlyKnown = !items.isEmpty && scratch.items.allSatisfy { seenIDs.contains($0.id) }
+			let fresh = Dictionary(scratch.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+			items = onlyKnown ? items.map { fresh[$0.id] ?? $0 } : scratch.items
 			hasLoaded = true
-			canLoadMore = scratch.canLoadMore
+			if !onlyKnown { canLoadMore = scratch.canLoadMore }
 			loadMoreErrorMessage = scratch.loadMoreErrorMessage
 			// Znacznik świeżości aktualizuje TAKŻE pełne odświeżenie, inaczej próg
 			// z `StrategiaOdswiezania` liczyłby wiek od zimnego startu i strzelał
 			// zaraz po tym, jak użytkownik sam odświeżył listę.
 			swiezosc.zanotujSukces()
 
-			podcasts = scratch.podcasts
-			articles = scratch.articles
-			seenIDs = scratch.seenIDs
+			if !onlyKnown {
+				podcasts = scratch.podcasts
+				articles = scratch.articles
+				seenIDs = scratch.seenIDs
+			}
 		}
+
+		traceRefresh("refresh.published", generation: generation, ticket: ticket, scratch: scratch, hadItems: hadItemsBeforeRefresh)
 
 		// If the user triggers "load more" during refresh, `loadMore(api:)` will wait for `isLoading` to clear
 		// instead of scheduling a separate follow-up task here. This avoids flakey overlaps and keeps the state
@@ -606,6 +665,7 @@ final class NewsFeedViewModel: ObservableObject {
 final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject where Item.ID: Hashable {
 	@Published private(set) var items: [Item] = []
 	@Published private(set) var hasLoaded = false
+	@Published private(set) var contentTimeRevision = 0
 	@Published private(set) var isLoading = false
 	@Published private(set) var isLoadingMore = false
 	@Published private(set) var errorMessage: String?
@@ -616,6 +676,8 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	private var nextPage = 1
 	private var totalPages: Int?
 	private var seenIDs = Set<Item.ID>()
+	private var requestGeneration = UUID()
+	private var refreshTicket = UUID()
 	private var refreshWaiters: [UUID: CheckedContinuation<Void, Never>] = [:]
 
 	init(perPage: Int = 50) {
@@ -658,7 +720,47 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 	}
 
 	func refresh(fetchPage: @escaping (Int, Int) async throws -> TyfloAPI.WPPage<Item>) async {
-		guard !Task.isCancelled, !isLoading else { return }
+		guard !Task.isCancelled else { return }
+		let ticket = UUID()
+		refreshTicket = ticket
+		while isLoading {
+			await waitForCurrentRefresh()
+			guard !Task.isCancelled else { return }
+		}
+		guard refreshTicket == ticket else { return }
+		if !items.isEmpty {
+			let token = UUID()
+			requestGeneration = token
+			isLoading = true
+			defer {
+				isLoading = false
+				let waiters = Array(refreshWaiters.values)
+				refreshWaiters.removeAll()
+				for waiter in waiters {
+					waiter.resume()
+				}
+			}
+			let scratch = PagedFeedViewModel<Item>(perPage: perPage)
+			await scratch.refresh(fetchPage: fetchPage)
+			guard !Task.isCancelled, requestGeneration == token else { return }
+			contentTimeRevision += 1
+			guard !scratch.items.isEmpty else {
+				errorMessage = scratch.errorMessage
+				return
+			}
+			let onlyKnown = scratch.items.allSatisfy { seenIDs.contains($0.id) }
+			let fresh = Dictionary(scratch.items.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+			items = onlyKnown ? items.map { fresh[$0.id] ?? $0 } : scratch.items
+			if !onlyKnown {
+				seenIDs = scratch.seenIDs
+				nextPage = scratch.nextPage
+				totalPages = scratch.totalPages
+				canLoadMore = scratch.canLoadMore
+			}
+			errorMessage = nil
+			loadMoreErrorMessage = nil
+			return
+		}
 		reset()
 
 		isLoading = true
@@ -728,7 +830,7 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 			await loadIfNeeded(fetchPage: fetchPage)
 			return
 		}
-		guard canLoadMore else { return }
+		guard canLoadMore, !isLoading else { return }
 		guard !isLoadingMore else { return }
 
 		isLoadingMore = true
@@ -737,14 +839,15 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 		loadMoreErrorMessage = nil
 
 		let initialCount = items.count
+		let generation = requestGeneration
 		do {
 			_ = try await appendNextPage(fetchPage: fetchPage)
-			guard !Task.isCancelled else { return }
+			guard !Task.isCancelled, generation == requestGeneration else { return }
 			if items.count == initialCount, canLoadMore {
 				loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
 			}
 		} catch {
-			guard !Task.isCancelled else { return }
+			guard !Task.isCancelled, generation == requestGeneration else { return }
 			loadMoreErrorMessage = "Nie udało się pobrać kolejnych treści. Spróbuj ponownie."
 		}
 	}
@@ -766,7 +869,9 @@ final class PagedFeedViewModel<Item: Identifiable & Decodable>: ObservableObject
 			return 0
 		}
 
+		let generation = requestGeneration
 		let page = try await fetchPage(nextPage, perPage)
+		guard generation == requestGeneration else { return 0 }
 		// Transport może oddać dane mimo anulowania. Nie publikujemy ich
 		// ani nie przesuwamy numeru strony opuszczonego zadania.
 		try Task.checkCancellation()
@@ -909,10 +1014,38 @@ struct AsyncListStatusSection: View {
 	}
 }
 
+/// Właścicielem pracy jest ekran, nie chwilowe zadanie gestu ScrollView.
+/// Przerysowanie nie przerywa pobrania, ale zniknięcie ekranu jawnie je anuluje.
+@MainActor
+final class NewsRefreshOperation: ObservableObject {
+	private var current: (id: UUID, task: Task<Void, Never>)?
+
+	func run(_ action: @escaping @MainActor () async -> Void) async {
+		guard !Task.isCancelled else { return }
+		if let current {
+			await current.task.value
+			return
+		}
+		let id = UUID()
+		let task = Task { await action() }
+		current = (id, task)
+		await task.value
+		if current?.id == id { current = nil }
+	}
+
+	func cancel() {
+		current?.task.cancel()
+		current = nil
+	}
+
+	deinit { current?.task.cancel() }
+}
+
 struct NewsView: View {
 	@EnvironmentObject var api: TyfloAPI
 	@EnvironmentObject private var settings: SettingsStore
 	@StateObject private var viewModel = NewsFeedViewModel()
+	@StateObject private var manualRefresh = NewsRefreshOperation()
 	@State private var playerPodcast: Podcast?
 
 	/// Bramka na zakładkę: `TabView` trzyma odwiedzone widoki zamontowane, więc bez
@@ -924,6 +1057,7 @@ struct NewsView: View {
 	/// Identyfikator wpisu, na którym trzymamy widok. Bez tego doklejenie nowości
 	/// na górę przesunęłoby treść pod palcem czytającego.
 	@State private var pozycjaListy: String?
+	@State private var visible = false
 
 	var body: some View {
 		NavigationStack {
@@ -998,16 +1132,20 @@ struct NewsView: View {
 					}
 				}
 			}
-			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading)
+			.contentTimes(viewModel.items.filter { $0.kind == .article }.map { ContentTimeRequest($0.post, kind: .posts) }, refreshing: viewModel.isLoading, revision: viewModel.contentTimeRevision, automatic: false)
 			.accessibilityIdentifier("news.list")
 			.scrollIndicators(.visible)
 			.scrollTargetLayout()
 			.scrollPosition(id: $pozycjaListy, anchor: .top)
 			.refreshable {
-				await viewModel.refresh(api: api)
+				viewModel.traceRefresh("gesture.enter")
+				await manualRefresh.run { await viewModel.refresh(api: api) }
+				viewModel.traceRefresh("gesture.exit")
 			}
 			.task {
+				viewModel.traceRefresh("view.task.enter")
 				await viewModel.loadIfNeeded(api: api)
+				viewModel.traceRefresh("view.task.exit")
 			}
 			// POWRÓT APLIKACJI DO PIERWSZEGO PLANU. To jest sedno naprawy: bez tego
 			// `.task` powyżej nie odpala się ponownie (widok nie został odmontowany),
@@ -1015,8 +1153,15 @@ struct NewsView: View {
 			//
 			// Reagujemy na PRZEJŚCIE do `.active`, nie na sam fakt bycia aktywnym, i
 			// tylko na widocznej zakładce. Próg czasu pilnuje `StrategiaOdswiezania`.
+			.onAppear {
+				visible = true
+				guard viewModel.hasLoaded else { return }
+				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .wejscieNaEkran) }
+			}
+			.onDisappear { visible = false; manualRefresh.cancel() }
 			.onChange(of: scenePhase) { staraFaza, nowaFaza in
-				guard nowaFaza == .active, staraFaza != .active else { return }
+				if nowaFaza == .background { manualRefresh.cancel() }
+				guard nowaFaza == .active, staraFaza != .active, visible else { return }
 				guard aktywnaZakladka == ZakladkaAplikacji.nowosci else { return }
 				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .powrotZTla) }
 			}
@@ -1024,7 +1169,8 @@ struct NewsView: View {
 			// być na wierzchu godzinami, a użytkownik wraca na Nowości z innej zakładki
 			// — wtedy scenePhase się nie zmienia i bez tego warunku dane zostałyby stare.
 			.onChange(of: aktywnaZakladka) { _, nowa in
-				guard nowa == ZakladkaAplikacji.nowosci else { return }
+				if nowa != ZakladkaAplikacji.nowosci { manualRefresh.cancel() }
+				guard nowa == ZakladkaAplikacji.nowosci, visible else { return }
 				Task { await viewModel.odswiezPoPowrocie(api: api, powod: .wejscieNaEkran) }
 			}
 			// Zakotwiczenie widoku na wpisie, który był pierwszy przed doklejeniem.

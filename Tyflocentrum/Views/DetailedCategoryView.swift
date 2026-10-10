@@ -71,6 +71,7 @@ struct DetailedCategoryView: View {
 		.task {
 			await viewModel.loadIfNeeded(fetchPage: fetchPage)
 		}
+		.contentListResume(revision: viewModel.contentTimeRevision, succeeded: viewModel.hasLoaded && viewModel.errorMessage == nil) { await viewModel.refresh(fetchPage: fetchPage) }
 		.navigationTitle(category.name)
 		.navigationBarTitleDisplayMode(.inline)
 		.navigationDestination(item: $playerPodcast) { podcast in
@@ -79,6 +80,6 @@ struct DetailedCategoryView: View {
 	}
 
 	private func fetchPage(page: Int, perPage: Int) async throws -> TyfloAPI.WPPage<WPPostSummary> {
-		try await api.fetchPodcastSummariesPage(page: page, perPage: perPage, categoryID: category.id)
+		try await api.fetchPodcastSummariesPage(page: page, perPage: perPage, categoryID: category.id, cachePolicy: page == 1 ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy)
 	}
 }
