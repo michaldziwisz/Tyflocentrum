@@ -406,6 +406,18 @@ struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 		static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("UI_TESTING_ARTICLE_TITLE") }
 		static var longTitle: Bool { ProcessInfo.processInfo.arguments.contains("UI_TESTING_LONG_ARTICLE_TITLE") }
 		static var emptyIssue: Bool { ProcessInfo.processInfo.arguments.contains("UI_TESTING_EMPTY_ISSUE") }
+		private static let errorLock = NSLock()
+		private static var didReturnError = false
+		static func errorResponse(_ request: URLRequest) -> (Int, Data)? {
+			guard enabled, ProcessInfo.processInfo.arguments.contains("UI_TESTING_TITLE_DETAIL_ERROR"),
+			      request.url?.host == "tyfloswiat.pl", request.url?.path == "/wp-json/wp/v2/posts/2" else { return nil }
+			errorLock.lock(); defer { errorLock.unlock() }
+			guard !didReturnError else { return nil }
+			didReturnError = true
+			// 404 nie podlega automatycznemu retry. Kolejne ręczne żądanie dostaje treść.
+			return (404, Data("{}".utf8))
+		}
+
 		static let longRendered = "Zażółć gęślą jaźń &amp; dostępność: pełny, bardzo długi tytuł artykułu o czytaniu, nawigacji i zachowaniu polskich znaków na ekranie telefonu"
 		static func decorate(_ data: Data, request: URLRequest) -> Data {
 			guard enabled, request.url?.host == "tyfloswiat.pl",
@@ -592,6 +604,7 @@ private final class UITestURLProtocol: URLProtocol {
 
 	private static func response(for request: URLRequest) -> (Int, Data) {
 		#if DEBUG
+			if let response = ArticleTitleUITestData.errorResponse(request) { return response }
 			if let response = ContentTimeUITestData.response(request) { return response }
 		#endif
 		guard let url = request.url else { return (400, Data()) }

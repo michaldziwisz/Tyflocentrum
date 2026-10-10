@@ -91,10 +91,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		return (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [[String: Any]] ?? []
 	}
 
-	private func checkSingleArticleTitle(_ app: XCUIApplication, title: String, route: String, actions: Bool = true) {
-		let paragraph = app.webViews.staticTexts[articleTitleParagraph].firstMatch
-		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI), "Rzeczywisty akapit WKWebView")
-		let traits = saveTitleEvidence(app, route: route)
+	private func checkArticleHeader(_ app: XCUIApplication, title: String, route: String, traits: [[String: Any]]) {
 		let header = app.descendants(matching: .any).matching(identifier: "articleDetail.header").firstMatch
 		XCTAssertTrue(header.exists)
 		// Liczymy użytkowe miejsca, nie powtarzające etykietę kontenery AX.
@@ -109,14 +106,27 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let date = app.staticTexts["articleDetail.date"]
 		XCTAssertTrue(date.exists, "Data jest osobnym elementem")
 		XCTAssertFalse(date.label.isEmpty)
-		let titleNodes = traits.filter { ($0["id"] as? String) == "articleDetail.header" }
-		let dateNodes = traits.filter { ($0["id"] as? String) == "articleDetail.date" }
+		// AccessibilityNode nie eksportuje identyfikatora przez protokół UIKit (pomiar F1).
+		// Wiążemy odczyt cech z pełną, unikalną etykietą i niezależnym ID w XCUI.
+		let titleNodes = traits.filter { ($0["label"] as? String) == title }
+		let dateNodes = traits.filter { ($0["label"] as? String) == date.label }
 		XCTAssertEqual(titleNodes.count, 1, "Jeden rzeczywisty element UIAccessibility tytułu")
 		XCTAssertEqual(titleNodes.first?["header"] as? Bool, true)
 		XCTAssertEqual(dateNodes.count, 1)
 		XCTAssertEqual(dateNodes.first?["header"] as? Bool, false)
+	}
+
+	private func checkSingleArticleTitle(_ app: XCUIApplication, title: String, route: String, actions: Bool = true) {
+		let paragraph = app.webViews.staticTexts[articleTitleParagraph].firstMatch
+		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI), "Rzeczywisty akapit WKWebView")
+		let traits = saveTitleEvidence(app, route: route)
+		checkArticleHeader(app, title: title, route: route, traits: traits)
 		XCTAssertTrue(app.webViews.staticTexts[title + " w praktyce"].exists, "Podobny śródtytuł pozostaje")
 		XCTAssertTrue(app.webViews.staticTexts["Dalsze wskazówki"].exists)
+		let h2 = app.webViews.otherElements.matching(NSPredicate(format: "label == %@", title + " w praktyce")).firstMatch
+		let h3 = app.webViews.otherElements.matching(NSPredicate(format: "label == %@", "Dalsze wskazówki")).firstMatch
+		XCTAssertEqual(String(describing: h2.value ?? ""), "2", "Poziom nagłówka h2 w AX WebKita")
+		XCTAssertEqual(String(describing: h3.value ?? ""), "3", "Poziom nagłówka h3 w AX WebKita")
 		XCTAssertTrue(app.webViews.staticTexts["Drugi akapit pozostaje bez zmian."].exists)
 		XCTAssertTrue(app.buttons["articleDetail.favorite"].isHittable)
 		XCTAssertTrue(app.buttons["articleDetail.share"].isHittable)
@@ -128,14 +138,17 @@ final class TyflocentrumSmokeTests: XCTestCase {
 			let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", changed), object: favorite)
 			XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: limitUI), .completed)
 			favorite.tap()
-			XCTAssertEqual(favorite.label, initial)
+			let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", initial), object: favorite)
+			XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: limitUI), .completed)
 			app.buttons["articleDetail.share"].tap()
-			let close = app.buttons["Close"].firstMatch
-			let closePL = app.buttons["Zamknij"].firstMatch
-			XCTAssertTrue(close.waitForExistence(timeout: 3) || closePL.waitForExistence(timeout: 3) || app.otherElements["ActivityListView"].exists, "Systemowy arkusz udostępniania")
-			if close.exists { close.tap() }
-			else if closePL.exists { closePL.tap() }
-			else { app.swipeDown() }
+			let close = app.buttons.matching(NSPredicate(format: "label IN %@", ["Close", "Zamknij"])).firstMatch
+			let sheetReady = close.waitForExistence(timeout: limitUI)
+			let sheetAX = XCTAttachment(string: app.debugDescription)
+			sheetAX.name = "\(route)-share-xcui"; sheetAX.lifetime = .keepAlways; add(sheetAX)
+			let sheetImage = XCTAttachment(screenshot: app.screenshot())
+			sheetImage.name = "\(route)-share"; sheetImage.lifetime = .keepAlways; add(sheetImage)
+			XCTAssertTrue(sheetReady, "Systemowy arkusz udostępniania ma przycisk zamknięcia")
+			close.tap()
 			XCTAssertTrue(app.buttons["articleDetail.share"].waitForExistence(timeout: limitUI))
 		}
 	}
@@ -157,7 +170,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapTitleRow(app, "article.row.2")
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-news")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["news.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "news.list").firstMatch.exists)
 		tapTitleRow(app, "article.row.2")
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-news-reentry", actions: false)
 	}
@@ -169,7 +182,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapTitleRow(app, "podcast.row.2")
 		checkSingleArticleTitle(app, title: articleLongTitle, route: "title-all-long")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["allArticles.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "allArticles.list").firstMatch.exists)
 	}
 
 	func testSingleArticleTitleCategory() {
@@ -179,7 +192,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapTitleRow(app, "podcast.row.2")
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-category")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["categoryArticles.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "categoryArticles.list").firstMatch.exists)
 	}
 
 	func testSingleArticleTitleSearch() {
@@ -192,7 +205,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapTitleRow(app, "article.row.2")
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-search")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["search.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "search.list").firstMatch.exists)
 		XCTAssertEqual(field.value as? String, "test")
 	}
 
@@ -206,7 +219,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapTitleRow(app, "article.row.2")
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-favorites-post")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["favorites.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "favorites.list").firstMatch.exists)
 	}
 
 	private func openTitleIssue(_ app: XCUIApplication) {
@@ -223,13 +236,13 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		checkSingleArticleTitle(app, title: articleLongTitle, route: "title-magazine-page")
 		app.buttons["articleDetail.favorite"].tap()
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["magazine.toc.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "magazine.toc.list").firstMatch.exists)
 		tapBackButton(in: app); tapBackButton(in: app); tapBackButton(in: app)
 		openFavoritesFromMenu(in: app)
 		tapTitleRow(app, "article.row.7774")
 		checkSingleArticleTitle(app, title: articleLongTitle, route: "title-favorites-page")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["favorites.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "favorites.list").firstMatch.exists)
 	}
 
 	func testSingleArticleTitleMagazineWithoutContents() {
@@ -237,19 +250,32 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		openTitleIssue(app)
 		checkSingleArticleTitle(app, title: "Tyfloświat 4/2025", route: "title-magazine-fallback")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["magazine.issues.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "magazine.issues.list").firstMatch.exists)
+	}
+
+	func testSingleArticleTitleLoadingAndBack() {
+		let app = titleApp(["UI_TESTING_STALL_DETAIL_REQUESTS"])
+		tapTitleRow(app, "article.row.2")
+		XCTAssertTrue(app.progressIndicators.firstMatch.waitForExistence(timeout: limitUI))
+		let traits = saveTitleEvidence(app, route: "title-loading")
+		checkArticleHeader(app, title: "Test artykuł", route: "title-loading", traits: traits)
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "news.list").firstMatch.exists)
+		tapTitleRow(app, "article.row.2")
+		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-after-loading-back")
 	}
 
 	func testSingleArticleTitleRetry() {
-		let app = titleApp(["UI_TESTING_STALL_DETAIL_REQUESTS", "UI_TESTING_FAST_TIMEOUTS"])
+		let app = titleApp(["UI_TESTING_TITLE_DETAIL_ERROR"])
 		tapTitleRow(app, "article.row.2")
 		let retry = app.buttons["postDetail.retry"]
 		XCTAssertTrue(retry.waitForExistence(timeout: limitUI))
-		_ = saveTitleEvidence(app, route: "title-error")
+		let traits = saveTitleEvidence(app, route: "title-error")
+		checkArticleHeader(app, title: "Test artykuł", route: "title-error", traits: traits)
 		retry.tap()
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-after-retry")
 		tapBackButton(in: app)
-		XCTAssertTrue(app.descendants(matching: .any)["news.list"].exists)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "news.list").firstMatch.exists)
 	}
 
 	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
