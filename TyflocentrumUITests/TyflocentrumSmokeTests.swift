@@ -74,6 +74,184 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		return app
 	}
 
+	private let articleTitleParagraph = "Kontrolny akapit pełnej treści z polskimi znakami: żółw i źdźbło."
+	private let articleLongTitle = "Zażółć gęślą jaźń & dostępność: pełny, bardzo długi tytuł artykułu o czytaniu, nawigacji i zachowaniu polskich znaków na ekranie telefonu"
+
+	private func saveTitleEvidence(_ app: XCUIApplication, route: String) -> [[String: Any]] {
+		let capture = app.buttons["titleTest.capture"]
+		XCTAssertTrue(capture.waitForExistence(timeout: limitUI))
+		capture.tap()
+		let raw = capture.value as? String ?? "[]"
+		for (name, text) in [("\(route)-xcui", app.debugDescription), ("\(route)-traits", raw)] {
+			let attachment = XCTAttachment(string: text)
+			attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+		}
+		let screenshot = XCTAttachment(screenshot: app.screenshot())
+		screenshot.name = route; screenshot.lifetime = .keepAlways; add(screenshot)
+		return (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [[String: Any]] ?? []
+	}
+
+	private func checkSingleArticleTitle(_ app: XCUIApplication, title: String, route: String, actions: Bool = true) {
+		let paragraph = app.webViews.staticTexts[articleTitleParagraph].firstMatch
+		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI), "Rzeczywisty akapit WKWebView")
+		let traits = saveTitleEvidence(app, route: route)
+		let header = app.descendants(matching: .any).matching(identifier: "articleDetail.header").firstMatch
+		XCTAssertTrue(header.exists)
+		// Liczymy użytkowe miejsca, nie powtarzające etykietę kontenery AX.
+		let bodyTitleCount = header.label.contains(title) ? 1 : 0
+		let navigationTitleCount = app.navigationBars.staticTexts.matching(NSPredicate(format: "label == %@", title)).count
+		let htmlTitleCount = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", title)).count
+		let counts = "body=\(bodyTitleCount);navigation=\(navigationTitleCount);html=\(htmlTitleCount)"
+		let attachment = XCTAttachment(string: counts)
+		attachment.name = "\(route)-counts"; attachment.lifetime = .keepAlways; add(attachment)
+		XCTAssertEqual(bodyTitleCount + navigationTitleCount + htmlTitleCount, 1, "SINGLE_ARTICLE_TITLE: \(counts)")
+		XCTAssertEqual(header.label, title, "Pełny tytuł bez daty")
+		let date = app.staticTexts["articleDetail.date"]
+		XCTAssertTrue(date.exists, "Data jest osobnym elementem")
+		XCTAssertFalse(date.label.isEmpty)
+		let titleNodes = traits.filter { ($0["id"] as? String) == "articleDetail.header" }
+		let dateNodes = traits.filter { ($0["id"] as? String) == "articleDetail.date" }
+		XCTAssertEqual(titleNodes.count, 1, "Jeden rzeczywisty element UIAccessibility tytułu")
+		XCTAssertEqual(titleNodes.first?["header"] as? Bool, true)
+		XCTAssertEqual(dateNodes.count, 1)
+		XCTAssertEqual(dateNodes.first?["header"] as? Bool, false)
+		XCTAssertTrue(app.webViews.staticTexts[title + " w praktyce"].exists, "Podobny śródtytuł pozostaje")
+		XCTAssertTrue(app.webViews.staticTexts["Dalsze wskazówki"].exists)
+		XCTAssertTrue(app.webViews.staticTexts["Drugi akapit pozostaje bez zmian."].exists)
+		XCTAssertTrue(app.buttons["articleDetail.favorite"].isHittable)
+		XCTAssertTrue(app.buttons["articleDetail.share"].isHittable)
+		if actions {
+			let favorite = app.buttons["articleDetail.favorite"]
+			let initial = favorite.label
+			favorite.tap()
+			let changed = initial == "Dodaj do ulubionych" ? "Usuń z ulubionych" : "Dodaj do ulubionych"
+			let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", changed), object: favorite)
+			XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: limitUI), .completed)
+			favorite.tap()
+			XCTAssertEqual(favorite.label, initial)
+			app.buttons["articleDetail.share"].tap()
+			let close = app.buttons["Close"].firstMatch
+			let closePL = app.buttons["Zamknij"].firstMatch
+			XCTAssertTrue(close.waitForExistence(timeout: 3) || closePL.waitForExistence(timeout: 3) || app.otherElements["ActivityListView"].exists, "Systemowy arkusz udostępniania")
+			if close.exists { close.tap() }
+			else if closePL.exists { closePL.tap() }
+			else { app.swipeDown() }
+			XCTAssertTrue(app.buttons["articleDetail.share"].waitForExistence(timeout: limitUI))
+		}
+	}
+
+	private func titleApp(_ extra: [String] = []) -> XCUIApplication {
+		let app = makeApp(additionalLaunchArguments: ["UI_TESTING_ARTICLE_TITLE"] + extra)
+		app.launch()
+		return app
+	}
+
+	private func tapTitleRow(_ app: XCUIApplication, _ id: String) {
+		let row = app.descendants(matching: .any).matching(identifier: id).firstMatch
+		XCTAssertTrue(row.waitForExistence(timeout: limitUI), id)
+		row.tap()
+	}
+
+	func testSingleArticleTitleNews() {
+		let app = titleApp()
+		tapTitleRow(app, "article.row.2")
+		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-news")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["news.list"].exists)
+		tapTitleRow(app, "article.row.2")
+		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-news-reentry", actions: false)
+	}
+
+	func testSingleArticleTitleAllLong() {
+		let app = titleApp(["UI_TESTING_LONG_ARTICLE_TITLE"])
+		app.tabBars.buttons["Artykuły"].tap()
+		tapTitleRow(app, "articleCategories.all")
+		tapTitleRow(app, "podcast.row.2")
+		checkSingleArticleTitle(app, title: articleLongTitle, route: "title-all-long")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["allArticles.list"].exists)
+	}
+
+	func testSingleArticleTitleCategory() {
+		let app = titleApp()
+		app.tabBars.buttons["Artykuły"].tap()
+		tapTitleRow(app, "category.row.20")
+		tapTitleRow(app, "podcast.row.2")
+		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-category")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["categoryArticles.list"].exists)
+	}
+
+	func testSingleArticleTitleSearch() {
+		let app = titleApp()
+		app.tabBars.buttons["Szukaj"].tap()
+		let field = app.textFields["search.field"]
+		XCTAssertTrue(field.waitForExistence(timeout: limitUI))
+		field.tap(); field.typeText("test")
+		app.buttons["search.button"].tap()
+		tapTitleRow(app, "article.row.2")
+		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-search")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["search.list"].exists)
+		XCTAssertEqual(field.value as? String, "test")
+	}
+
+	func testSingleArticleTitleFavoritesPost() {
+		let app = titleApp()
+		tapTitleRow(app, "article.row.2")
+		let favorite = app.buttons["articleDetail.favorite"]
+		XCTAssertTrue(favorite.waitForExistence(timeout: limitUI)); favorite.tap()
+		tapBackButton(in: app)
+		openFavoritesFromMenu(in: app)
+		tapTitleRow(app, "article.row.2")
+		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-favorites-post")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["favorites.list"].exists)
+	}
+
+	private func openTitleIssue(_ app: XCUIApplication) {
+		app.tabBars.buttons["Artykuły"].tap()
+		tapTitleRow(app, "articleCategories.magazine")
+		tapTitleRow(app, "magazine.year.2025")
+		tapTitleRow(app, "magazine.issue.7772")
+	}
+
+	func testSingleArticleTitleMagazineAndFavoritesPage() {
+		let app = titleApp(["UI_TESTING_LONG_ARTICLE_TITLE"])
+		openTitleIssue(app)
+		tapTitleRow(app, "magazine.article.7774")
+		checkSingleArticleTitle(app, title: articleLongTitle, route: "title-magazine-page")
+		app.buttons["articleDetail.favorite"].tap()
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["magazine.toc.list"].exists)
+		tapBackButton(in: app); tapBackButton(in: app); tapBackButton(in: app)
+		openFavoritesFromMenu(in: app)
+		tapTitleRow(app, "article.row.7774")
+		checkSingleArticleTitle(app, title: articleLongTitle, route: "title-favorites-page")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["favorites.list"].exists)
+	}
+
+	func testSingleArticleTitleMagazineWithoutContents() {
+		let app = titleApp(["UI_TESTING_EMPTY_ISSUE"])
+		openTitleIssue(app)
+		checkSingleArticleTitle(app, title: "Tyfloświat 4/2025", route: "title-magazine-fallback")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["magazine.issues.list"].exists)
+	}
+
+	func testSingleArticleTitleRetry() {
+		let app = titleApp(["UI_TESTING_STALL_DETAIL_REQUESTS", "UI_TESTING_FAST_TIMEOUTS"])
+		tapTitleRow(app, "article.row.2")
+		let retry = app.buttons["postDetail.retry"]
+		XCTAssertTrue(retry.waitForExistence(timeout: limitUI))
+		_ = saveTitleEvidence(app, route: "title-error")
+		retry.tap()
+		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-after-retry")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any)["news.list"].exists)
+	}
+
 	private func pullToRefresh(_ list: XCUIElement, untilExists element: XCUIElement, scrollToReveal: Bool = false) {
 		func dragDown() {
 			let start = list.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))

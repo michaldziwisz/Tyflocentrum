@@ -94,6 +94,7 @@ struct TyflocentrumApp: App {
 					VStack {
 						ContentTimePlaybackControl(audio: audioPlayer)
 						ContentTimeServerControl()
+						ArticleTitleAXControl()
 					}
 				}
 			#endif
@@ -399,6 +400,94 @@ struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 	}
 }
 
+#if DEBUG
+	/// Wyłącznie syntetyczna próbka UI. Publiczne źródła są osobnym dowodem.
+	private enum ArticleTitleUITestData {
+		static var enabled: Bool { ProcessInfo.processInfo.arguments.contains("UI_TESTING_ARTICLE_TITLE") }
+		static var longTitle: Bool { ProcessInfo.processInfo.arguments.contains("UI_TESTING_LONG_ARTICLE_TITLE") }
+		static var emptyIssue: Bool { ProcessInfo.processInfo.arguments.contains("UI_TESTING_EMPTY_ISSUE") }
+		static let longRendered = "Zażółć gęślą jaźń &amp; dostępność: pełny, bardzo długi tytuł artykułu o czytaniu, nawigacji i zachowaniu polskich znaków na ekranie telefonu"
+		static func decorate(_ data: Data, request: URLRequest) -> Data {
+			guard enabled, request.url?.host == "tyfloswiat.pl",
+			      let object = try? JSONSerialization.jsonObject(with: data) else { return data }
+			let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+			if emptyIssue, request.url?.path == "/wp-json/wp/v2/pages", query.contains(where: { $0.name == "parent" && $0.value == "7772" }) {
+				return Data("[]".utf8)
+			}
+			func item(_ value: [String: Any]) -> [String: Any] {
+				guard let id = value["id"] as? Int, [2, 7774, 7772].contains(id) else { return value }
+				if id == 7772, !emptyIssue { return value }
+				var result = value
+				if longTitle, id != 7772 { result["title"] = ["rendered": longRendered] }
+				let title = (result["title"] as? [String: String])?["rendered"] ?? ""
+				// Podobny śródtytuł nie jest duplikatem. Pozostaje h2 i nie wolno go usuwać.
+				result["content"] = ["rendered": "<h2>\(title) w praktyce</h2><p>Kontrolny akapit pełnej treści z polskimi znakami: żółw i źdźbło.</p><h3>Dalsze wskazówki</h3><p>Drugi akapit pozostaje bez zmian.</p>"]
+				return result
+			}
+			let result: Any
+			if let items = object as? [[String: Any]] { result = items.map(item) }
+			else if let value = object as? [String: Any] { result = item(value) }
+			else { return data }
+			return (try? JSONSerialization.data(withJSONObject: result)) ?? data
+		}
+	}
+
+	/// Odczyt rzeczywistych obiektów UIAccessibility w działającym UI SwiftUI.
+	/// Nie konstruuje zastępczych etykiet ani nagłówków i nie symuluje VoiceOver.
+	private struct ArticleTitleAXControl: View {
+		@State private var snapshot = "[]"
+		var body: some View {
+			if ArticleTitleUITestData.enabled {
+				Button("Pomiar AX") { snapshot = Self.capture() }
+					.accessibilityIdentifier("titleTest.capture")
+					.accessibilityValue(snapshot)
+					.font(.caption)
+			}
+		}
+
+		@MainActor
+		private static func capture() -> String {
+			var visited = Set<ObjectIdentifier>()
+			var rows: [[String: Any]] = []
+			func visit(_ object: NSObject, depth: Int) {
+				guard depth < 60, visited.count < 5000, visited.insert(ObjectIdentifier(object)).inserted else { return }
+				if let view = object as? UIView, view.isHidden || view.alpha == 0 { return }
+				if object.isAccessibilityElement {
+					let frame = object.accessibilityFrame
+					rows.append(["class": String(describing: type(of: object)), "label": object.accessibilityLabel ?? "",
+					             "id": (object as? UIAccessibilityIdentification)?.accessibilityIdentifier ?? "",
+					             "header": object.accessibilityTraits.contains(.header),
+					             "traits": object.accessibilityTraits.rawValue,
+					             "frame": NSStringFromCGRect(frame)])
+				}
+				if let elements = object.accessibilityElements {
+					for case let child as NSObject in elements {
+						visit(child, depth: depth + 1)
+					}
+				} else {
+					let count = object.accessibilityElementCount()
+					if count > 0, count < 1000 {
+						for i in 0 ..< count {
+							if let child = object.accessibilityElement(at: i) as? NSObject { visit(child, depth: depth + 1) }
+						}
+					}
+				}
+				if let view = object as? UIView { for child in view.subviews {
+					visit(child, depth: depth + 1)
+				} }
+			}
+			for scene in UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }) {
+				for window in scene.windows where window.isKeyWindow {
+					visit(window, depth: 0)
+				}
+			}
+			guard let data = try? JSONSerialization.data(withJSONObject: rows, options: [.sortedKeys]),
+			      let text = String(data: data, encoding: .utf8) else { return "[]" }
+			return text
+		}
+	}
+#endif
+
 private final class UITestURLProtocol: URLProtocol {
 	private static let stateLock = NSLock()
 	private static var tyflopodcastLatestPostsRequestCount = 0
@@ -452,7 +541,7 @@ private final class UITestURLProtocol: URLProtocol {
 		// Bez flagi UI_TESTING_SCREENSHOTS zwraca dane bez zmian, czyli
 		// wszystkie istniejące testy widzą dokładnie to co dotąd.
 		#if DEBUG
-			let data = ContentTimeUITestData.decorate(Self.daneDoZrzutu(rawData), request: request)
+			let data = ArticleTitleUITestData.decorate(ContentTimeUITestData.decorate(Self.daneDoZrzutu(rawData), request: request), request: request)
 		#else
 			let data = Self.daneDoZrzutu(rawData)
 		#endif
