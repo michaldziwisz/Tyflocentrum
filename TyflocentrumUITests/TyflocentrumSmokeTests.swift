@@ -121,7 +121,7 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(paragraph.waitForExistence(timeout: limitUI), "Rzeczywisty akapit WKWebView")
 		let traits = saveTitleEvidence(app, route: route)
 		checkArticleHeader(app, title: title, route: route, traits: traits)
-		XCTAssertTrue(app.webViews.staticTexts[title + " w praktyce"].exists, "Podobny śródtytuł pozostaje")
+		XCTAssertTrue(app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", title + " w praktyce")).firstMatch.exists, "Pełny podobny śródtytuł pozostaje")
 		XCTAssertTrue(app.webViews.staticTexts["Dalsze wskazówki"].exists)
 		let h2 = app.webViews.otherElements.matching(NSPredicate(format: "label == %@", title + " w praktyce")).firstMatch
 		let h3 = app.webViews.otherElements.matching(NSPredicate(format: "label == %@", "Dalsze wskazówki")).firstMatch
@@ -141,15 +141,35 @@ final class TyflocentrumSmokeTests: XCTestCase {
 			let restored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", initial), object: favorite)
 			XCTAssertEqual(XCTWaiter.wait(for: [restored], timeout: limitUI), .completed)
 			app.buttons["articleDetail.share"].tap()
-			let close = app.buttons.matching(NSPredicate(format: "label IN %@", ["Close", "Zamknij"])).firstMatch
-			let sheetReady = close.waitForExistence(timeout: limitUI)
+			let sheet = app.otherElements["ActivityListView"].firstMatch
+			let sheetReady = sheet.waitForExistence(timeout: limitUI)
 			let sheetAX = XCTAttachment(string: app.debugDescription)
 			sheetAX.name = "\(route)-share-xcui"; sheetAX.lifetime = .keepAlways; add(sheetAX)
 			let sheetImage = XCTAttachment(screenshot: app.screenshot())
 			sheetImage.name = "\(route)-share"; sheetImage.lifetime = .keepAlways; add(sheetImage)
-			XCTAssertTrue(sheetReady, "Systemowy arkusz udostępniania ma przycisk zamknięcia")
-			close.tap()
-			XCTAssertTrue(app.buttons["articleDetail.share"].waitForExistence(timeout: limitUI))
+			XCTAssertTrue(sheetReady, "Rzeczywisty systemowy arkusz udostępniania")
+			let dismiss = app.otherElements["PopoverDismissRegion"].firstMatch
+			if dismiss.exists {
+				// Region obejmuje też popover. Punkt wybieramy nad aktualnym arkuszem,
+				// wewnątrz rzeczywistego regionu zamknięcia, nie ze stałych ekranu.
+				let region = dismiss.frame
+				let frame = sheet.frame
+				let point = CGPoint(x: frame.midX, y: (region.minY + frame.minY) / 2)
+				XCTAssertTrue(region.contains(point) && !frame.contains(point))
+				let origin = dismiss.coordinate(withNormalizedOffset: .zero)
+				origin.withOffset(CGVector(dx: point.x - region.minX, dy: point.y - region.minY)).tap()
+			} else {
+				// Wariant prezentacji arkusza zamiast popovera, gest na jego nagłówku.
+				let top = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
+				let bottom = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.95))
+				top.press(forDuration: 0.05, thenDragTo: bottom)
+			}
+			let dismissed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: sheet)
+			XCTAssertEqual(XCTWaiter.wait(for: [dismissed], timeout: limitUI), .completed, "Arkusz faktycznie zniknął")
+			XCTAssertFalse(dismiss.exists)
+			XCTAssertTrue(app.buttons["articleDetail.share"].isHittable)
+			let after = XCTAttachment(string: app.debugDescription)
+			after.name = "\(route)-share-dismissed-xcui"; after.lifetime = .keepAlways; add(after)
 		}
 	}
 
@@ -253,16 +273,32 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "magazine.issues.list").firstMatch.exists)
 	}
 
+	private func checkTitleGate(_ app: XCUIApplication, expected: String, route: String) {
+		let probe = app.buttons["titleTest.gateSnapshot"]
+		XCTAssertTrue(probe.waitForExistence(timeout: limitUI))
+		probe.tap()
+		let ready = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", expected), object: probe)
+		XCTAssertEqual(XCTWaiter.wait(for: [ready], timeout: limitUI), .completed)
+		let record = XCTAttachment(string: "\(probe.value ?? "")\n" + app.debugDescription)
+		record.name = route; record.lifetime = .keepAlways; add(record)
+	}
+
 	func testSingleArticleTitleLoadingAndBack() {
-		let app = titleApp(["UI_TESTING_STALL_DETAIL_REQUESTS"])
+		let app = titleApp(["UI_TESTING_HOLD_TITLE_DETAIL"])
 		tapTitleRow(app, "article.row.2")
 		XCTAssertTrue(app.progressIndicators.firstMatch.waitForExistence(timeout: limitUI))
+		checkTitleGate(app, expected: "held=1;pending=1;cancelled=0;released=0", route: "title-loading-gate")
 		let traits = saveTitleEvidence(app, route: "title-loading")
 		checkArticleHeader(app, title: "Test artykuł", route: "title-loading", traits: traits)
+		XCTAssertTrue(app.progressIndicators.firstMatch.exists, "Loader nadal czeka na jawne anulowanie")
 		tapBackButton(in: app)
 		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "news.list").firstMatch.exists)
+		checkTitleGate(app, expected: "held=1;pending=0;cancelled=1;released=0", route: "title-loading-cancelled")
+		XCTAssertFalse(app.progressIndicators.firstMatch.exists)
 		tapTitleRow(app, "article.row.2")
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-after-loading-back")
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "news.list").firstMatch.exists)
 	}
 
 	func testSingleArticleTitleRetry() {

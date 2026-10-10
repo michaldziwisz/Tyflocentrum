@@ -444,16 +444,78 @@ struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 		}
 	}
 
+	/// Aparatura DEBUG: zawiesza zadanie loadera przed timeoutami API, nie wątek.
+	/// Anulowanie widoku usuwa kontynuację; następne wejście pobiera zwykłą treść.
+	actor ArticleTitleRequestGate {
+		static let shared = ArticleTitleRequestGate()
+		static var enabled: Bool {
+			let args = ProcessInfo.processInfo.arguments
+			return args.contains("UI_TESTING") && args.contains("UI_TESTING_ARTICLE_TITLE") && args.contains("UI_TESTING_HOLD_TITLE_DETAIL")
+		}
+
+		private var didHold = false
+		private var pending: CheckedContinuation<Void, Error>?
+		private var activeID: UUID?
+		private var cancelled = 0
+		private var released = 0
+
+		func waitOnce() async throws {
+			try Task.checkCancellation()
+			guard !didHold else { return }
+			didHold = true
+			let id = UUID()
+			activeID = id
+			try await withTaskCancellationHandler {
+				try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+					pending = continuation
+					if Task.isCancelled { cancel(id) }
+				}
+			} onCancel: {
+				Task { await self.cancel(id) }
+			}
+		}
+
+		private func cancel(_ id: UUID) {
+			guard activeID == id, let continuation = pending else { return }
+			pending = nil; activeID = nil; cancelled += 1
+			continuation.resume(throwing: CancellationError())
+		}
+
+		func release() {
+			guard let continuation = pending else { return }
+			pending = nil; activeID = nil; released += 1
+			continuation.resume()
+		}
+
+		func status() -> String {
+			"held=\(didHold ? 1 : 0);pending=\(pending == nil ? 0 : 1);cancelled=\(cancelled);released=\(released)"
+		}
+	}
+
 	/// Odczyt rzeczywistych obiektów UIAccessibility w działającym UI SwiftUI.
 	/// Nie konstruuje zastępczych etykiet ani nagłówków i nie symuluje VoiceOver.
 	private struct ArticleTitleAXControl: View {
 		@State private var snapshot = "[]"
+		@State private var gateStatus = ""
 		var body: some View {
 			if ArticleTitleUITestData.enabled {
 				Button("Pomiar AX") { snapshot = Self.capture() }
 					.accessibilityIdentifier("titleTest.capture")
 					.accessibilityValue(snapshot)
 					.font(.caption)
+				if ArticleTitleRequestGate.enabled {
+					Button("Stan oczekiwania") {
+						Task { gateStatus = await ArticleTitleRequestGate.shared.status() }
+					}
+					.accessibilityIdentifier("titleTest.gateSnapshot")
+					.accessibilityValue(gateStatus)
+					.font(.caption)
+					Button("Zwolnij odpowiedź") {
+						Task { await ArticleTitleRequestGate.shared.release() }
+					}
+					.accessibilityIdentifier("titleTest.release")
+					.font(.caption)
+				}
 			}
 		}
 

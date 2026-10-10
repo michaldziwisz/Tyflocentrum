@@ -89,6 +89,10 @@ struct DetailLoaderView: View {
 
 		do {
 			let cachePolicy: URLRequest.CachePolicy = manualRetry ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
+			#if DEBUG
+				// Tylko aparatura UI: nie uruchamia zegara API przed jawnym zwolnieniem.
+				if ArticleTitleRequestGate.enabled { try await ArticleTitleRequestGate.shared.waitOnce() }
+			#endif
 			let loaded = try await fetch(summary.id, cachePolicy)
 			guard !Task.isCancelled else { return }
 			guard activeRequestID == requestID, taskID == triggeringTaskID else {

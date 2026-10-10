@@ -18,4 +18,19 @@ Rzeczywisty pomiar RED jest na commicie `0a9889bf93fea4b8f6156b078b32d3cf5c5b8d2
 
 Pełną bramkę uruchamia `bash scripts/build-unsigned-ipa.sh` na macOS z Xcode. Lokalny Swift/Linux i lint nie zastępują tego przebiegu. Workflow zachowuje dokładny SHA, `.xcresult`, summary/tests JSON, drzewa AX oraz screenshoty. Test pojedynczej drogi na symulatorze można wybrać argumentem `-only-testing:TyflocentrumUITests/TyflocentrumSmokeTests/testSingleArticleTitleNews` przy zwykłym `xcodebuild test`.
 
+Aparatura ładowania `UI_TESTING_HOLD_TITLE_DETAIL` zawiesza zadanie prawdziwego
+`DetailLoaderView` przez asynchroniczną kontynuację, przed wywołaniem API.
+Jest to hook wyłącznie `#if DEBUG` i trzech jawnych flag UI_TESTING, bez zmiany
+kodu Release, timeoutów, cache ani API. Wstecz anuluje zadanie, usuwa kontynuację
+i pozwala przy następnym wejściu pobrać treść. Test odczytuje stan oczekiwania
+i licznik anulowań oraz rzeczywisty ProgressIndicator. Przycisk DEBUG pozwala
+też jawnie zwolnić odpowiedź. Dawny stall URLProtocol nie był deterministyczny,
+ponieważ API po 12 s ponawiało próbę i dostawało już treść.
+
+Długie etykiety są wyszukiwane predykatem po pełnym label, bez limitu skróconego
+selektora XCUI. Systemowy arkusz jest wykrywany jako ActivityListView i zamykany
+przez jego rzeczywisty PopoverDismissRegion (punkt poza aktualną ramką popovera)
+lub gest na nagłówku arkusza. Test wymaga zniknięcia arkusza przed Wstecz.
+To obsługa dotykowa XCUI, nie test gestu VoiceOver.
+
 Granica pomiaru: SwiftUI/XCUI i obiekty UIAccessibility na symulatorze, nie odsłuch fizycznego VoiceOver. Poprawka nie zmienia wersji i nie publikuje aplikacji.
