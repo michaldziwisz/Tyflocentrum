@@ -25,28 +25,15 @@ struct DetailLoaderView: View {
 		ZStack {
 			if let article {
 				DetailedArticleView(article: article, favoriteOrigin: favoriteOrigin)
-			} else if let message = errorMessage {
-				VStack(alignment: .leading, spacing: 12) {
-					Text(message)
-						.foregroundColor(.secondary)
-
-					Button("Spróbuj ponownie") {
-						errorMessage = nil
-						retryCount += 1
-					}
-					.accessibilityHint("Ponawia pobieranie danych.")
-					.accessibilityIdentifier("postDetail.retry")
-					.disabled(isLoading)
-					.accessibilityHidden(isLoading)
-				}
-				.frame(maxWidth: .infinity, alignment: .leading)
-				.padding()
 			} else {
-				ProgressView("Ładowanie…")
-					.frame(maxWidth: .infinity, maxHeight: .infinity)
+				VStack(alignment: .leading, spacing: 16) {
+					ArticleHeaderView(title: summary.title.plainText, date: summary.asPodcastStub().formattedDate)
+					pendingContent
+				}
+				.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 			}
 		}
-		.navigationTitle(summary.title.plainText)
+		.navigationTitle("")
 		.navigationBarTitleDisplayMode(.inline)
 		.task(id: taskID) {
 			await load(triggeringTaskID: taskID, manualRetry: retryCount > 0)
@@ -54,6 +41,30 @@ struct DetailLoaderView: View {
 		.onDisappear {
 			activeRequestID = nil
 			isLoading = false
+		}
+	}
+
+	@ViewBuilder
+	private var pendingContent: some View {
+		if let message = errorMessage {
+			VStack(alignment: .leading, spacing: 12) {
+				Text(message)
+					.foregroundColor(.secondary)
+
+				Button("Spróbuj ponownie") {
+					errorMessage = nil
+					retryCount += 1
+				}
+				.accessibilityHint("Ponawia pobieranie danych.")
+				.accessibilityIdentifier("postDetail.retry")
+				.disabled(isLoading)
+				.accessibilityHidden(isLoading)
+			}
+			.frame(maxWidth: .infinity, alignment: .leading)
+			.padding()
+		} else {
+			ProgressView("Ładowanie…")
+				.frame(maxWidth: .infinity, maxHeight: .infinity)
 		}
 	}
 
@@ -78,6 +89,10 @@ struct DetailLoaderView: View {
 
 		do {
 			let cachePolicy: URLRequest.CachePolicy = manualRetry ? .reloadIgnoringLocalCacheData : .useProtocolCachePolicy
+			#if DEBUG
+				// Tylko aparatura UI: nie uruchamia zegara API przed jawnym zwolnieniem.
+				if ArticleTitleRequestGate.enabled { try await ArticleTitleRequestGate.shared.waitOnce() }
+			#endif
 			let loaded = try await fetch(summary.id, cachePolicy)
 			guard !Task.isCancelled else { return }
 			guard activeRequestID == requestID, taskID == triggeringTaskID else {

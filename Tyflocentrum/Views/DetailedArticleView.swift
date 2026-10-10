@@ -9,6 +9,27 @@ import Foundation
 import SwiftUI
 import UIKit
 
+/// Tytuł i data są odrębnymi elementami, również podczas pobierania detalu.
+struct ArticleHeaderView: View {
+	let title: String
+	let date: String
+
+	var body: some View {
+		VStack(alignment: .leading, spacing: 6) {
+			Text(title)
+				.font(.title3.weight(.semibold))
+				.fixedSize(horizontal: false, vertical: true)
+				.accessibilityAddTraits(.isHeader)
+				.accessibilityIdentifier("articleDetail.header")
+			Text(date)
+				.font(.subheadline)
+				.foregroundColor(.secondary)
+				.accessibilityIdentifier("articleDetail.date")
+		}
+		.padding([.horizontal, .top])
+	}
+}
+
 struct DetailedArticleView: View {
 	let article: Podcast
 	let favoriteOrigin: FavoriteArticleOrigin
@@ -41,18 +62,7 @@ struct DetailedArticleView: View {
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 16) {
-			VStack(alignment: .leading, spacing: 6) {
-				Text(article.title.plainText)
-					.font(.title3.weight(.semibold))
-
-				Text(article.formattedDate)
-					.font(.subheadline)
-					.foregroundColor(.secondary)
-			}
-			.accessibilityElement(children: .combine)
-			.accessibilityAddTraits(.isHeader)
-			.accessibilityIdentifier("articleDetail.header")
-			.padding([.horizontal, .top])
+			ArticleHeaderView(title: article.title.plainText, date: article.formattedDate)
 
 			ShareLink(
 				item: article.guid.plainText,
@@ -71,7 +81,7 @@ struct DetailedArticleView: View {
 			)
 			.frame(maxWidth: .infinity, maxHeight: .infinity)
 		}
-		.navigationTitle(article.title.plainText)
+		.navigationTitle("")
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbar {
 			ToolbarItem(placement: .navigationBarTrailing) {

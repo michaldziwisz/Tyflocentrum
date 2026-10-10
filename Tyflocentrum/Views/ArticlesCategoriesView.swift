@@ -407,7 +407,7 @@ private struct TyfloSwiatMagazineIssueView: View {
 				)
 			}
 		}
-		.navigationTitle(issueSummary.title.plainText)
+		.navigationTitle(issue != nil && tocItems.isEmpty ? "" : issueSummary.title.plainText)
 		.navigationBarTitleDisplayMode(.inline)
 		.toolbar {
 			if let pdfURL, tocItems.isEmpty {
