@@ -499,22 +499,24 @@ struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 		@State private var gateStatus = ""
 		var body: some View {
 			if ArticleTitleUITestData.enabled {
-				Button("Pomiar AX") { snapshot = Self.capture() }
-					.accessibilityIdentifier("titleTest.capture")
-					.accessibilityValue(snapshot)
-					.font(.caption)
-				if ArticleTitleRequestGate.enabled {
-					Button("Stan oczekiwania") {
-						Task { gateStatus = await ArticleTitleRequestGate.shared.status() }
+				HStack {
+					Button("Pomiar AX") { snapshot = Self.capture() }
+						.accessibilityIdentifier("titleTest.capture")
+						.accessibilityValue(snapshot)
+						.font(.caption)
+					if ArticleTitleRequestGate.enabled {
+						Button("Stan oczekiwania") {
+							Task { gateStatus = await ArticleTitleRequestGate.shared.status() }
+						}
+						.accessibilityIdentifier("titleTest.gateSnapshot")
+						.accessibilityValue(gateStatus)
+						.font(.caption)
+						Button("Zwolnij odpowiedź") {
+							Task { await ArticleTitleRequestGate.shared.release() }
+						}
+						.accessibilityIdentifier("titleTest.release")
+						.font(.caption)
 					}
-					.accessibilityIdentifier("titleTest.gateSnapshot")
-					.accessibilityValue(gateStatus)
-					.font(.caption)
-					Button("Zwolnij odpowiedź") {
-						Task { await ArticleTitleRequestGate.shared.release() }
-					}
-					.accessibilityIdentifier("titleTest.release")
-					.font(.caption)
 				}
 			}
 		}

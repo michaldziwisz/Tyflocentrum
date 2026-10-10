@@ -23,7 +23,8 @@ Aparatura ładowania `UI_TESTING_HOLD_TITLE_DETAIL` zawiesza zadanie prawdziwego
 Jest to hook wyłącznie `#if DEBUG` i trzech jawnych flag UI_TESTING, bez zmiany
 kodu Release, timeoutów, cache ani API. Wstecz anuluje zadanie, usuwa kontynuację
 i pozwala przy następnym wejściu pobrać treść. Test odczytuje stan oczekiwania
-i licznik anulowań oraz rzeczywisty ProgressIndicator. Przycisk DEBUG pozwala
+i licznik anulowań oraz rzeczywisty ActivityIndicator (taką rolę pokazał AX iOS,
+nie ProgressIndicator). Przycisk DEBUG pozwala
 też jawnie zwolnić odpowiedź. Dawny stall URLProtocol nie był deterministyczny,
 ponieważ API po 12 s ponawiało próbę i dostawało już treść.
 
@@ -31,6 +32,10 @@ Długie etykiety są wyszukiwane predykatem po pełnym label, bez limitu skróco
 selektora XCUI. Systemowy arkusz jest wykrywany jako ActivityListView i zamykany
 przez jego rzeczywisty PopoverDismissRegion (punkt poza aktualną ramką popovera)
 lub gest na nagłówku arkusza. Test wymaga zniknięcia arkusza przed Wstecz.
+Po D2: pierwszy popover nie zamknął się po jednym dotknięciu. Test dopuszcza
+najwyżej dwa dotknięcia rzeczywistego regionu z ponownym odczytem jego ramki,
+bez osłabienia końcowej asercji zniknięcia i bez zmiany timeoutu. Kontrolki DEBUG
+są w jednym wierszu, aby nie nachodziły na pasek kart.
 To obsługa dotykowa XCUI, nie test gestu VoiceOver.
 
 Granica pomiaru: SwiftUI/XCUI i obiekty UIAccessibility na symulatorze, nie odsłuch fizycznego VoiceOver. Poprawka nie zmienia wersji i nie publikuje aplikacji.

@@ -152,12 +152,25 @@ final class TyflocentrumSmokeTests: XCTestCase {
 			if dismiss.exists {
 				// Region obejmuje też popover. Punkt wybieramy nad aktualnym arkuszem,
 				// wewnątrz rzeczywistego regionu zamknięcia, nie ze stałych ekranu.
-				let region = dismiss.frame
-				let frame = sheet.frame
-				let point = CGPoint(x: frame.midX, y: (region.minY + frame.minY) / 2)
-				XCTAssertTrue(region.contains(point) && !frame.contains(point))
-				let origin = dismiss.coordinate(withNormalizedOffset: .zero)
-				origin.withOffset(CGVector(dx: point.x - region.minX, dy: point.y - region.minY)).tap()
+				// D2: pierwszy popover nie zamknął się po jednym dotknięciu.
+				// Najwyżej dwa rzeczywiste dotknięcia, każde z nowym odczytem ramki.
+				// Końcowa asercja zniknięcia pozostaje obowiązkowa.
+				for attempt in 0 ..< 2 {
+					guard sheet.exists else { break }
+					let region = dismiss.frame
+					let frame = sheet.frame
+					let gap = frame.minY - region.minY
+					XCTAssertGreaterThan(gap, 0)
+					let fraction: CGFloat = attempt == 0 ? 0.1 : 0.5
+					let point = CGPoint(x: frame.midX, y: frame.minY - gap * fraction)
+					XCTAssertTrue(region.contains(point) && !frame.contains(point))
+					let coordinates = XCTAttachment(string: "attempt=\(attempt + 1);region=\(region);sheet=\(frame);point=\(point)")
+					coordinates.name = "\(route)-dismiss-point-\(attempt + 1)"; coordinates.lifetime = .keepAlways; add(coordinates)
+					let origin = dismiss.coordinate(withNormalizedOffset: .zero)
+					origin.withOffset(CGVector(dx: point.x - region.minX, dy: point.y - region.minY)).tap()
+					let gone = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: sheet)
+					if XCTWaiter.wait(for: [gone], timeout: 2) == .completed { break }
+				}
 			} else {
 				// Wariant prezentacji arkusza zamiast popovera, gest na jego nagłówku.
 				let top = sheet.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.02))
@@ -286,15 +299,17 @@ final class TyflocentrumSmokeTests: XCTestCase {
 	func testSingleArticleTitleLoadingAndBack() {
 		let app = titleApp(["UI_TESTING_HOLD_TITLE_DETAIL"])
 		tapTitleRow(app, "article.row.2")
-		XCTAssertTrue(app.progressIndicators.firstMatch.waitForExistence(timeout: limitUI))
+		let loader = app.activityIndicators.matching(NSPredicate(format: "label == %@", "Ładowanie…")).firstMatch
+		XCTAssertTrue(loader.waitForExistence(timeout: limitUI))
+		XCTAssertEqual(String(describing: loader.value ?? ""), "1", "Aktywny natywny ActivityIndicator")
 		checkTitleGate(app, expected: "held=1;pending=1;cancelled=0;released=0", route: "title-loading-gate")
 		let traits = saveTitleEvidence(app, route: "title-loading")
 		checkArticleHeader(app, title: "Test artykuł", route: "title-loading", traits: traits)
-		XCTAssertTrue(app.progressIndicators.firstMatch.exists, "Loader nadal czeka na jawne anulowanie")
+		XCTAssertTrue(loader.exists, "Loader nadal czeka na jawne anulowanie")
 		tapBackButton(in: app)
 		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "news.list").firstMatch.exists)
 		checkTitleGate(app, expected: "held=1;pending=0;cancelled=1;released=0", route: "title-loading-cancelled")
-		XCTAssertFalse(app.progressIndicators.firstMatch.exists)
+		XCTAssertFalse(loader.exists)
 		tapTitleRow(app, "article.row.2")
 		checkSingleArticleTitle(app, title: "Test artykuł", route: "title-after-loading-back")
 		tapBackButton(in: app)
