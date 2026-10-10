@@ -458,7 +458,7 @@ struct MagicTapHostingView<Content: View>: UIViewControllerRepresentable {
 					             "id": (object as? UIAccessibilityIdentification)?.accessibilityIdentifier ?? "",
 					             "header": object.accessibilityTraits.contains(.header),
 					             "traits": object.accessibilityTraits.rawValue,
-					             "frame": NSStringFromCGRect(frame)])
+					             "frame": NSCoder.string(for: frame)])
 				}
 				if let elements = object.accessibilityElements {
 					for case let child as NSObject in elements {
