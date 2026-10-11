@@ -627,7 +627,10 @@ private final class UITestURLProtocol: URLProtocol {
 		#endif
 		var headers: [String: String]?
 		#if DEBUG
-			if CommentsUITestData.matches(request) { headers = ["X-WP-Total": "3", "X-WP-TotalPages": "1"] }
+			if CommentsUITestData.matches(request) {
+				let total = ProcessInfo.processInfo.arguments.contains("UI_TESTING_COMMENTS_EMPTY") ? "0" : "3"
+				headers = ["X-WP-Total": total, "X-WP-TotalPages": "1"]
+			}
 		#endif
 		let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: headers)!
 		client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)

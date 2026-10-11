@@ -1136,11 +1136,15 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "Drugi akapit komentarza.")).firstMatch.exists)
 		XCTAssertTrue(web.links["Źródło"].exists)
 		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "11 października 2026, 10:15")).firstMatch.exists)
-		XCTAssertEqual(app.webViews.count, 1, "Jedna powierzchnia przewijania zamiast webview w każdym wierszu")
+		// XCUI wystawia trzy zagnieżdżone warstwy WebView jednego WKWebView.
+		XCTAssertEqual(app.webViews.matching(identifier: "comments.content").count, 1, "Jeden renderer listy komentarzy")
+		XCTAssertEqual(web.staticTexts.matching(NSPredicate(format: "label == %@", "Pierwszy akapit komentarza.")).count, 1)
 		XCTAssertFalse(web.staticTexts["ATAK"].exists)
 		saveCommentsEvidence(app, name: evidenceName + "-start")
 
-		let unsafeLink = web.links["Niedozwolony odnośnik"].firstMatch
+		// Przy wyłączonym JavaScript WebKit wystawia ten anchor jako zwykły tekst.
+		XCTAssertFalse(web.links["Niedozwolony odnośnik"].exists)
+		let unsafeLink = web.staticTexts.matching(NSPredicate(format: "label == %@", "Niedozwolony odnośnik")).firstMatch
 		for _ in 0 ..< 5 {
 			if unsafeLink.isHittable { break }
 			web.swipeUp()
@@ -1153,9 +1157,13 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let reply = web.staticTexts.matching(NSPredicate(format: "label == %@", "Odpowiedź na komentarz nr 1001: Anna & Piotr")).firstMatch
 		XCTAssertTrue(reply.exists)
 		let tail = web.staticTexts.matching(NSPredicate(format: "label == %@", "Koniec długiego komentarza.")).firstMatch
-		for _ in 0 ..< 30 {
+		for _ in 0 ..< 60 {
 			if tail.isHittable { break }
-			web.swipeUp()
+			if tail.frame.maxY < web.frame.minY {
+				web.swipeDown(velocity: .slow)
+			} else {
+				web.swipeUp(velocity: .slow)
+			}
 		}
 		XCTAssertTrue(tail.isHittable, "Koniec długiego komentarza musi być czytelny przez przewijanie, bez Rozwiń")
 		let last = web.staticTexts.matching(NSPredicate(format: "label == %@", "Ostatni komentarz dyskusji.")).firstMatch
@@ -1167,8 +1175,11 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "Odpowiedź na komentarz nr 999")).firstMatch.exists)
 		XCTAssertFalse(app.buttons["Rozwiń"].exists)
 		saveCommentsEvidence(app, name: evidenceName + "-end")
+		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "Wersja komentarzy: 1")).firstMatch.exists)
 		app.buttons["comments.refresh"].tap()
-		XCTAssertTrue(last.waitForExistence(timeout: limitUI))
+		let refreshed = web.staticTexts.matching(NSPredicate(format: "label == %@", "Wersja komentarzy: 2")).firstMatch
+		XCTAssertTrue(refreshed.waitForExistence(timeout: limitUI))
+		XCTAssertTrue(last.exists)
 		XCTAssertTrue(app.navigationBars["Komentarze"].exists)
 		tapBackButton(in: app)
 		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch.waitForExistence(timeout: limitUI))

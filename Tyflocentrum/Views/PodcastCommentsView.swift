@@ -45,6 +45,7 @@ struct PodcastCommentsView: View {
 			}
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity)
+		.accessibilityElement(children: .contain)
 		.accessibilityIdentifier("comments.list")
 		.task {
 			await viewModel.loadIfNeeded(fetchComments, timeoutSeconds: requestTimeoutSeconds)

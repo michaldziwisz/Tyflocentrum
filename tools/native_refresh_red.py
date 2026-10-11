@@ -6,6 +6,7 @@ klienta metadanych ani widoki list. Wymaga nowego katalogu wyjściowego.
 """
 import argparse
 import hashlib
+import importlib.util
 import json
 from pathlib import Path
 import re
@@ -28,6 +29,7 @@ with tarfile.open(archive) as tar:
     tar.extractall(source, filter='data')
 # App zmienia tylko przygotowanie danych i kontrole DEBUG, nie modele/widoki.
 fixtures = ['Tyflocentrum/ContentTimeUITestData.swift',
+            'Tyflocentrum/CommentsUITestData.swift',
             'Tyflocentrum/TyflocentrumApp.swift',
             'TyflocentrumUITests/TyflocentrumSmokeTests.swift']
 manifest = []
@@ -35,7 +37,26 @@ for relative in fixtures:
     data = (repo / relative).read_bytes()
     (source / relative).write_bytes(data)
     manifest.append({'path': relative, 'sha256': hashlib.sha256(data).hexdigest()})
-(out / 'fixture-manifest.json').write_text(json.dumps({'base': BASE, 'copied': manifest}, indent=2))
+# App odwołuje się do nowej aparatury DEBUG. Kopia samego App bez wpisu
+# zależności do Sources dawałaby błąd kompilacji zamiast kontrolnego RED.
+# Nie kopiujemy projektu kandydata: nadal kompilujemy stare modele i widoki.
+spec = importlib.util.spec_from_file_location('registration', repo / 'tools/dodaj_pliki_do_projektu.py')
+assert spec is not None and spec.loader is not None
+registration = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(registration)
+project = source / 'Tyflocentrum.xcodeproj/project.pbxproj'
+text = project.read_text()
+relative = 'Tyflocentrum/CommentsUITestData.swift'
+name = Path(relative).name
+assert name + ' in Sources' not in text
+ref = registration.identyfikator(relative, 'ref')
+build = registration.identyfikator(relative, 'build')
+text = registration.wstaw_po_naglowku(text, 'PBXBuildFile', f'\t\t{build} /* {name} in Sources */ = {{isa = PBXBuildFile; fileRef = {ref} /* {name} */; }};')
+text = registration.wstaw_po_naglowku(text, 'PBXFileReference', f'\t\t{ref} /* {name} */ = {{isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = {name}; sourceTree = "<group>"; }};')
+text = registration.wstaw_do_listy(text, registration.GRUPA_GLOWNA, f'\t\t\t\t{ref} /* {name} */,')
+text = registration.wstaw_do_listy(text, registration.FAZA_APLIKACJA, f'\t\t\t\t{build} /* {name} in Sources */,')
+project.write_text(text)
+(out / 'fixture-manifest.json').write_text(json.dumps({'base': BASE, 'copied': manifest, 'registered_debug_dependency': relative}, indent=2))
 devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
 candidates = [(tuple(map(int, re.findall(r'\d+', runtime))), device['udid'])
               for runtime, entries in devices.items() if 'iOS' in runtime
