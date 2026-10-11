@@ -1108,6 +1108,31 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapBackButton(in: app)
 	}
 
+	func testCommentsShowFullBodiesWithoutOpeningRows() {
+		let app = openComments()
+		let body = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", "Świetny odcinek!")).firstMatch
+		XCTAssertTrue(body.waitForExistence(timeout: limitUI), "Pełny komentarz musi być na liście bez otwierania wiersza")
+		XCTAssertTrue(app.navigationBars["Komentarze"].exists)
+		let evidence = XCTAttachment(string: app.debugDescription)
+		evidence.name = "comments-inline-ax"; evidence.lifetime = .keepAlways; add(evidence)
+		let image = XCTAttachment(screenshot: app.screenshot())
+		image.name = "comments-inline"; image.lifetime = .keepAlways; add(image)
+	}
+
+	private func openComments(arguments: [String] = []) -> XCUIApplication {
+		let app = makeApp(additionalLaunchArguments: arguments)
+		app.launch()
+		app.tabBars.buttons["Nowości"].tap()
+		let podcast = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcast.waitForExistence(timeout: limitUI))
+		podcast.tap()
+		let summary = app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch
+		XCTAssertTrue(summary.waitForExistence(timeout: limitUI))
+		summary.tap()
+		XCTAssertTrue(app.navigationBars["Komentarze"].waitForExistence(timeout: limitUI))
+		return app
+	}
+
 	func testPodcastDetailShowsCommentsAndCanOpenThem() {
 		let app = makeApp()
 		app.launch()
