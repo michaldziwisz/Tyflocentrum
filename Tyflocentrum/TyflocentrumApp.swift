@@ -604,6 +604,10 @@ private final class UITestURLProtocol: URLProtocol {
 			return
 		}
 
+		#if DEBUG
+			if CommentsUITestData.shouldStall(request) { return }
+		#endif
+
 		if Self.shouldStallNewsRequests(for: request) {
 			return
 		}
@@ -621,7 +625,11 @@ private final class UITestURLProtocol: URLProtocol {
 		#else
 			let data = Self.daneDoZrzutu(rawData)
 		#endif
-		let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: nil)!
+		var headers: [String: String]?
+		#if DEBUG
+			if CommentsUITestData.matches(request) { headers = ["X-WP-Total": "3", "X-WP-TotalPages": "1"] }
+		#endif
+		let response = HTTPURLResponse(url: url, statusCode: statusCode, httpVersion: nil, headerFields: headers)!
 		client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
 		client?.urlProtocol(self, didLoad: data)
 		client?.urlProtocolDidFinishLoading(self)
@@ -829,6 +837,10 @@ private final class UITestURLProtocol: URLProtocol {
 				#"[{"id":1,"date":"2026-01-20T00:59:40","title":{"rendered":"Test podcast"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=1"},"link":"https://tyflopodcast.net/?p=1"},{"id":3,"date":"2026-01-21T00:59:40","title":{"rendered":"Test podcast 2"},"excerpt":{"rendered":"Excerpt"},"content":{"rendered":"Content"},"guid":{"rendered":"https://tyflopodcast.net/?p=3"},"link":"https://tyflopodcast.net/?p=3"}]"#.data(using: .utf8) ?? Data("[]".utf8)
 			)
 		}
+
+		#if DEBUG
+			if let response = CommentsUITestData.response(for: request) { return response }
+		#endif
 
 		if url.host == "tyflopodcast.net", url.path.contains("/wp-json/wp/v2/comments") {
 			let components = URLComponents(url: url, resolvingAgainstBaseURL: false)

@@ -20,35 +20,43 @@ struct PodcastCommentsView: View {
 	}
 
 	var body: some View {
-		List {
-			AsyncListStatusSection(
-				errorMessage: viewModel.errorMessage,
-				isLoading: viewModel.isLoading,
-				hasLoaded: viewModel.hasLoaded,
-				isEmpty: viewModel.items.isEmpty,
-				emptyMessage: "Brak komentarzy.",
-				retryAction: { await viewModel.refresh(fetchComments, timeoutSeconds: requestTimeoutSeconds) },
-				retryIdentifier: "comments.retry",
-				isRetryDisabled: viewModel.isLoading,
-				retryHint: "Ponawia pobieranie komentarzy."
-			)
+		VStack(spacing: 0) {
+			if viewModel.items.isEmpty || viewModel.errorMessage != nil {
+				AsyncListStatusSection(
+					errorMessage: viewModel.errorMessage,
+					isLoading: viewModel.isLoading,
+					hasLoaded: viewModel.hasLoaded,
+					isEmpty: viewModel.items.isEmpty,
+					emptyMessage: "Brak komentarzy.",
+					retryAction: { await viewModel.refresh(fetchComments, timeoutSeconds: requestTimeoutSeconds) },
+					retryIdentifier: "comments.retry",
+					isRetryDisabled: viewModel.isLoading,
+					retryHint: "Ponawia pobieranie komentarzy."
+				)
+				.padding()
+			}
 
-			ForEach(viewModel.items) { comment in
-				NavigationLink {
-					PodcastCommentDetailView(authorName: comment.authorName, htmlBody: comment.content.rendered)
-				} label: {
-					PodcastCommentRowView(authorName: comment.authorName)
-				}
-				.accessibilityRemoveTraits(.isButton)
-				.accessibilityIdentifier("comment.row.\(comment.id)")
+			if !viewModel.items.isEmpty {
+				SafeHTMLView(
+					htmlBody: CommentHTMLDocument.body(comments: viewModel.items),
+					baseURL: URL(string: "https://tyflopodcast.net"),
+					accessibilityIdentifier: "comments.content"
+				)
 			}
 		}
+		.frame(maxWidth: .infinity, maxHeight: .infinity)
 		.accessibilityIdentifier("comments.list")
-		.refreshable {
-			await viewModel.refresh(fetchComments, timeoutSeconds: requestTimeoutSeconds)
-		}
 		.task {
 			await viewModel.loadIfNeeded(fetchComments, timeoutSeconds: requestTimeoutSeconds)
+		}
+		.toolbar {
+			Button {
+				Task { await viewModel.refresh(fetchComments, timeoutSeconds: requestTimeoutSeconds) }
+			} label: {
+				Label("Odśwież komentarze", systemImage: "arrow.clockwise")
+			}
+			.accessibilityIdentifier("comments.refresh")
+			.disabled(viewModel.isLoading)
 		}
 		.navigationTitle("Komentarze")
 		.navigationBarTitleDisplayMode(.inline)
@@ -57,35 +65,5 @@ struct PodcastCommentsView: View {
 
 	private func fetchComments() async throws -> [Comment] {
 		try await api.fetchComments(forPostID: postID)
-	}
-}
-
-private struct PodcastCommentRowView: View {
-	let authorName: String
-
-	var body: some View {
-		HStack {
-			Text(authorName)
-				.foregroundColor(.primary)
-			Spacer()
-		}
-		.accessibilityElement(children: .ignore)
-		.accessibilityLabel(authorName)
-		.accessibilityHint("Dwukrotnie stuknij, aby przeczytać komentarz.")
-	}
-}
-
-private struct PodcastCommentDetailView: View {
-	let authorName: String
-	let htmlBody: String
-
-	var body: some View {
-		SafeHTMLView(
-			htmlBody: htmlBody,
-			baseURL: URL(string: "https://tyflopodcast.net"),
-			accessibilityIdentifier: "comment.content"
-		)
-		.navigationTitle(authorName)
-		.navigationBarTitleDisplayMode(.inline)
 	}
 }
