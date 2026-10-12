@@ -1108,6 +1108,136 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		tapBackButton(in: app)
 	}
 
+	func testCommentsShowFullBodiesWithoutOpeningRows() {
+		let app = openComments()
+		let body = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", "Świetny odcinek!")).firstMatch
+		XCTAssertTrue(body.waitForExistence(timeout: limitUI), "Pełny komentarz musi być na liście bez otwierania wiersza")
+		XCTAssertTrue(app.navigationBars["Komentarze"].exists)
+		let evidence = XCTAttachment(string: app.debugDescription)
+		evidence.name = "comments-inline-ax"; evidence.lifetime = .keepAlways; add(evidence)
+		let image = XCTAttachment(screenshot: app.screenshot())
+		image.name = "comments-inline"; image.lifetime = .keepAlways; add(image)
+	}
+
+	func testCommentsKeepParagraphsLinksReplyContextAndLongTail() {
+		checkExtendedComments(extraArguments: [], evidenceName: "comments-normal")
+	}
+
+	func testCommentsRemainReadableWithAccessibilityTextSize() {
+		checkExtendedComments(extraArguments: ["-UIPreferredContentSizeCategoryName", "UICTContentSizeCategoryAccessibilityXXXL"], evidenceName: "comments-large-text")
+	}
+
+	private func checkExtendedComments(extraArguments: [String], evidenceName: String) {
+		let app = openComments(arguments: ["UI_TESTING_COMMENTS"] + extraArguments)
+		let web = app.webViews["comments.content"].firstMatch
+		XCTAssertTrue(web.waitForExistence(timeout: limitUI))
+		let first = web.staticTexts.matching(NSPredicate(format: "label == %@", "Pierwszy akapit komentarza.")).firstMatch
+		XCTAssertTrue(first.waitForExistence(timeout: limitUI))
+		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "Drugi akapit komentarza.")).firstMatch.exists)
+		XCTAssertTrue(web.links["Źródło"].exists)
+		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "11 października 2026, 10:15")).firstMatch.exists)
+		// XCUI wystawia trzy zagnieżdżone warstwy WebView jednego WKWebView.
+		XCTAssertEqual(app.webViews.matching(identifier: "comments.content").count, 1, "Jeden renderer listy komentarzy")
+		XCTAssertEqual(web.staticTexts.matching(NSPredicate(format: "label == %@", "Pierwszy akapit komentarza.")).count, 1)
+		XCTAssertFalse(web.staticTexts["ATAK"].exists)
+		saveCommentsEvidence(app, name: evidenceName + "-start")
+
+		// Przy wyłączonym JavaScript WebKit wystawia ten anchor jako zwykły tekst.
+		XCTAssertFalse(web.links["Niedozwolony odnośnik"].exists)
+		let unsafeLink = web.staticTexts.matching(NSPredicate(format: "label == %@", "Niedozwolony odnośnik")).firstMatch
+		for _ in 0 ..< 5 {
+			if unsafeLink.isHittable { break }
+			web.swipeUp()
+		}
+		XCTAssertTrue(unsafeLink.isHittable)
+		unsafeLink.tap()
+		XCTAssertTrue(app.navigationBars["Komentarze"].exists)
+		XCTAssertFalse(app.staticTexts["ATAK"].exists)
+
+		let reply = web.staticTexts.matching(NSPredicate(format: "label == %@", "Odpowiedź na komentarz nr 1001: Anna & Piotr")).firstMatch
+		XCTAssertTrue(reply.exists)
+		let tail = web.staticTexts.matching(NSPredicate(format: "label == %@", "Koniec długiego komentarza.")).firstMatch
+		for _ in 0 ..< 60 {
+			if tail.isHittable { break }
+			if tail.frame.maxY < web.frame.minY {
+				web.swipeDown(velocity: .slow)
+			} else {
+				web.swipeUp(velocity: .slow)
+			}
+		}
+		XCTAssertTrue(tail.isHittable, "Koniec długiego komentarza musi być czytelny przez przewijanie, bez Rozwiń")
+		let last = web.staticTexts.matching(NSPredicate(format: "label == %@", "Ostatni komentarz dyskusji.")).firstMatch
+		for _ in 0 ..< 8 {
+			if last.isHittable { break }
+			web.swipeUp()
+		}
+		XCTAssertTrue(last.isHittable)
+		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "Odpowiedź na komentarz nr 999")).firstMatch.exists)
+		XCTAssertFalse(app.buttons["Rozwiń"].exists)
+		saveCommentsEvidence(app, name: evidenceName + "-end")
+		XCTAssertTrue(web.staticTexts.matching(NSPredicate(format: "label == %@", "Wersja komentarzy: 1")).firstMatch.exists)
+		app.buttons["comments.refresh"].tap()
+		let refreshed = web.staticTexts.matching(NSPredicate(format: "label == %@", "Wersja komentarzy: 2")).firstMatch
+		XCTAssertTrue(refreshed.waitForExistence(timeout: limitUI))
+		XCTAssertTrue(last.exists)
+		XCTAssertTrue(app.navigationBars["Komentarze"].exists)
+		tapBackButton(in: app)
+		XCTAssertTrue(app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch.waitForExistence(timeout: limitUI))
+	}
+
+	func testCommentsEmptyState() {
+		let app = openComments(arguments: ["UI_TESTING_COMMENTS", "UI_TESTING_COMMENTS_EMPTY"])
+		XCTAssertTrue(app.staticTexts["Brak komentarzy."].waitForExistence(timeout: limitUI))
+		XCTAssertEqual(app.webViews.count, 0)
+		XCTAssertTrue(app.buttons["comments.refresh"].exists)
+		saveCommentsEvidence(app, name: "comments-empty")
+	}
+
+	func testCommentsErrorThenRetryLoadsReadableBody() {
+		let app = openComments(arguments: ["UI_TESTING_COMMENTS", "UI_TESTING_COMMENTS_ERROR"])
+		let retry = app.buttons["comments.retry"]
+		XCTAssertTrue(retry.waitForExistence(timeout: limitUI))
+		saveCommentsEvidence(app, name: "comments-error")
+		retry.tap()
+		let text = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", "Pierwszy akapit komentarza.")).firstMatch
+		XCTAssertTrue(text.waitForExistence(timeout: limitUI))
+		XCTAssertFalse(retry.exists)
+		saveCommentsEvidence(app, name: "comments-recovered")
+	}
+
+	func testCommentsLoadingThenTimeoutCanRetry() {
+		let app = openComments(arguments: ["UI_TESTING_COMMENTS", "UI_TESTING_COMMENTS_STALL"])
+		XCTAssertTrue(app.activityIndicators.firstMatch.waitForExistence(timeout: limitUI))
+		saveCommentsEvidence(app, name: "comments-loading")
+		let retry = app.buttons["comments.retry"]
+		XCTAssertTrue(retry.waitForExistence(timeout: limitUI))
+		retry.tap()
+		let text = app.webViews.staticTexts.matching(NSPredicate(format: "label == %@", "Pierwszy akapit komentarza.")).firstMatch
+		XCTAssertTrue(text.waitForExistence(timeout: limitUI))
+		saveCommentsEvidence(app, name: "comments-timeout-recovered")
+	}
+
+	private func saveCommentsEvidence(_ app: XCUIApplication, name: String) {
+		let text = XCTAttachment(string: app.debugDescription)
+		text.name = name + "-ax"; text.lifetime = .keepAlways; add(text)
+		let image = XCTAttachment(screenshot: app.screenshot())
+		image.name = name; image.lifetime = .keepAlways; add(image)
+	}
+
+	private func openComments(arguments: [String] = []) -> XCUIApplication {
+		let app = makeApp(additionalLaunchArguments: arguments)
+		app.launch()
+		app.tabBars.buttons["Nowości"].tap()
+		let podcast = app.descendants(matching: .any).matching(identifier: "podcast.row.1").firstMatch
+		XCTAssertTrue(podcast.waitForExistence(timeout: limitUI))
+		podcast.tap()
+		let summary = app.descendants(matching: .any).matching(identifier: "podcastDetail.commentsSummary").firstMatch
+		XCTAssertTrue(summary.waitForExistence(timeout: limitUI))
+		summary.tap()
+		XCTAssertTrue(app.navigationBars["Komentarze"].waitForExistence(timeout: limitUI))
+		return app
+	}
+
 	func testPodcastDetailShowsCommentsAndCanOpenThem() {
 		let app = makeApp()
 		app.launch()
@@ -1130,12 +1260,10 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		let commentsList = app.descendants(matching: .any).matching(identifier: "comments.list").firstMatch
 		XCTAssertTrue(commentsList.waitForExistence(timeout: limitUI))
 
-		let commentRow = app.descendants(matching: .any).matching(identifier: "comment.row.1001").firstMatch
-		XCTAssertTrue(commentRow.waitForExistence(timeout: limitUI))
-		commentRow.tap()
-
-		let commentContent = app.descendants(matching: .any).matching(identifier: "comment.content").firstMatch
+		let commentContent = app.webViews["comments.content"].firstMatch
 		XCTAssertTrue(commentContent.waitForExistence(timeout: limitUI))
+		XCTAssertTrue(commentContent.staticTexts.matching(NSPredicate(format: "label == %@", "Świetny odcinek!")).firstMatch.waitForExistence(timeout: limitUI))
+		XCTAssertTrue(app.navigationBars["Komentarze"].exists)
 	}
 
 	func testPodcastDetailActionsWorkWithLargeContent() {
