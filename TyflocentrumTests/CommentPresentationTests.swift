@@ -43,7 +43,60 @@ final class CommentPresentationTests: XCTestCase {
 	func testReplyNamesLoadedParentRegardlessOfOrder() {
 		let html = CommentHTMLDocument.body(comments: [comment(2, parent: 1), comment(1, author: "Anna & Piotr")])
 		XCTAssertTrue(html.contains("Odpowiedź na komentarz nr 1: Anna &amp; Piotr"))
-		XCTAssertLessThan(html.range(of: "id=\"comment-2\"")!.lowerBound, html.range(of: "id=\"comment-1\"")!.lowerBound)
+		// Od wymagania „najstarsze na górze” odpowiedź stoi pod komentarzem nadrzędnym.
+		XCTAssertLessThan(html.range(of: "id=\"comment-1\"")!.lowerBound, html.range(of: "id=\"comment-2\"")!.lowerBound)
+	}
+
+	private func ids(_ comments: [Comment]) -> [Int] {
+		CommentHTMLDocument.displayOrder(comments).map(\.id)
+	}
+
+	func testNewestFirstPayloadIsShownOldestFirst() {
+		// Domyślna kolejność WordPressa: najnowsze najpierw.
+		let payload = [
+			comment(3, date: "2026-10-11T12:00:00"),
+			comment(2, date: "2026-10-11T11:00:00"),
+			comment(1, date: "2026-10-11T10:00:00"),
+		]
+		XCTAssertEqual(ids(payload), [1, 2, 3])
+		let html = CommentHTMLDocument.body(comments: payload)
+		let first = html.range(of: "id=\"comment-1\"")!.lowerBound
+		let last = html.range(of: "id=\"comment-3\"")!.lowerBound
+		XCTAssertLessThan(first, last)
+	}
+
+	func testRepliesFollowTheirParentOldestFirst() {
+		let payload = [
+			comment(5, parent: 1, date: "2026-10-11T15:00:00"),
+			comment(4, date: "2026-10-11T14:00:00"),
+			comment(3, parent: 1, date: "2026-10-11T13:00:00"),
+			comment(2, parent: 3, date: "2026-10-11T13:30:00"),
+			comment(1, date: "2026-10-11T10:00:00"),
+		]
+		XCTAssertEqual(ids(payload), [1, 3, 2, 5, 4])
+	}
+
+	func testUndatedAfterDatedAndEqualDatesReverseSource() {
+		let payload = [
+			comment(9),
+			comment(8, date: "2026-10-11T10:00:00"),
+			comment(7, date: "2026-10-11T10:00:00"),
+			comment(6),
+		]
+		// Daty przed brakiem daty; remisy i brak dat odwracają kolejność serwera.
+		XCTAssertEqual(ids(payload), [7, 8, 6, 9])
+	}
+
+	func testOrphanReplyBecomesThreadAndNothingIsLost() {
+		let payload = [
+			comment(3, parent: 999, date: "2026-10-11T09:00:00"),
+			comment(2, parent: 1, date: "2026-10-11T11:00:00"),
+			comment(1, parent: 2, date: "2026-10-11T10:00:00"),
+		]
+		let result = ids(payload)
+		XCTAssertEqual(result.first, 3)
+		XCTAssertEqual(Set(result), [1, 2, 3])
+		XCTAssertEqual(result.count, 3)
 	}
 
 	func testReplyOutsideLoadedPortionHasExplicitFallback() {

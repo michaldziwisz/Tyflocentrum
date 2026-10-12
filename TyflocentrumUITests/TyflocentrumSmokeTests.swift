@@ -1140,6 +1140,10 @@ final class TyflocentrumSmokeTests: XCTestCase {
 		XCTAssertEqual(app.webViews.matching(identifier: "comments.content").count, 1, "Jeden renderer listy komentarzy")
 		XCTAssertEqual(web.staticTexts.matching(NSPredicate(format: "label == %@", "Pierwszy akapit komentarza.")).count, 1)
 		XCTAssertFalse(web.staticTexts["ATAK"].exists)
+		// Najstarsze na górze: fixture przychodzi jak z WordPressa, najnowsze najpierw.
+		let newestText = web.staticTexts.matching(NSPredicate(format: "label == %@", "Ostatni komentarz dyskusji.")).firstMatch
+		XCTAssertTrue(newestText.exists)
+		XCTAssertLessThan(first.frame.minY, newestText.frame.minY, "Najstarszy komentarz musi być nad najnowszym")
 		saveCommentsEvidence(app, name: evidenceName + "-start")
 
 		// Przy wyłączonym JavaScript WebKit wystawia ten anchor jako zwykły tekst.

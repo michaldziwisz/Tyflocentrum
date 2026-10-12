@@ -49,11 +49,12 @@
 			lock.unlock()
 			let longBody = (1 ... 18).map { "<p>Akapit \($0): Długi komentarz zachowuje akapity, polskie znaki i pełną treść bez rozwijania.</p>" }.joined() + "<p>Koniec długiego komentarza.</p>"
 			let items: [[String: Any]] = [
-				["id": 1001, "post": 1, "parent": 0, "author_name": "Anna & Piotr", "date": "2026-10-11T10:15:00",
-				 "content": ["rendered": "<p>Pierwszy akapit komentarza.</p><p>Drugi akapit komentarza.</p><p><a href=\"https://example.com\">Źródło</a></p><a href=\"javascript:document.body.innerHTML='ATAK'\">Niedozwolony odnośnik</a><script>document.body.innerHTML='ATAK';</script>"]],
+				// Kolejność jak z WordPressa: najnowsze najpierw. Aplikacja ma pokazać najstarsze na górze.
+				["id": 1003, "post": 1, "parent": 999, "author_name": "Ostatni autor", "content": ["rendered": "<p>Ostatni komentarz dyskusji.</p><p>Wersja komentarzy: \(revision)</p>"]],
 				["id": 1002, "post": 1, "parent": 1001, "author_name": "Ewa", "date": "2026-10-11T11:15:00",
 				 "content": ["rendered": longBody]],
-				["id": 1003, "post": 1, "parent": 999, "author_name": "Ostatni autor", "content": ["rendered": "<p>Ostatni komentarz dyskusji.</p><p>Wersja komentarzy: \(revision)</p>"]],
+				["id": 1001, "post": 1, "parent": 0, "author_name": "Anna & Piotr", "date": "2026-10-11T10:15:00",
+				 "content": ["rendered": "<p>Pierwszy akapit komentarza.</p><p>Drugi akapit komentarza.</p><p><a href=\"https://example.com\">Źródło</a></p><a href=\"javascript:document.body.innerHTML='ATAK'\">Niedozwolony odnośnik</a><script>document.body.innerHTML='ATAK';</script>"]],
 			]
 			return (200, (try? JSONSerialization.data(withJSONObject: items)) ?? Data("[]".utf8))
 		}
