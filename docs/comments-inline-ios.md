@@ -10,6 +10,12 @@ SafeHTMLView nie został przebudowany. Zachowuje wyłączenie JavaScript, CSP, f
 
 Usunięto prywatne PodcastCommentRowView i PodcastCommentDetailView, których jedyną rolą było dodatkowe przejście do odczytu. Nie było innych konsumentów. Szczegół podcastu nadal otwiera wspólny ekran Komentarze; osadzanie całej dyskusji pod odtwarzaczem jest osobnym zakresem.
 
+## Kolejność: najstarsze na górze
+
+WordPress domyślnie zwraca komentarze od najnowszego. `CommentHTMLDocument.displayOrder` układa je tak jak wersja Windows (`PodcastCommentThreadBuilder`): wątki od najstarszego, odpowiedzi bezpośrednio pod komentarzem nadrzędnym, również od najstarszej. Komentarz z datą stoi przed komentarzem bez daty; przy równych lub brakujących datach odwracana jest kolejność serwera. Odpowiedź do komentarza spoza pobranej porcji zaczyna własny wątek. Sortowanie odbywa się po stronie aplikacji, bez zmiany zapytania API, więc nie zależy od konfiguracji serwisu ani od cache odpowiedzi. Uszkodzony cykl rodziców nie usuwa żadnego komentarza z listy.
+
+Testy: `testNewestFirstPayloadIsShownOldestFirst`, `testRepliesFollowTheirParentOldestFirst`, `testUndatedAfterDatedAndEqualDatesReverseSource`, `testOrphanReplyBecomesThreadAndNothingIsLost` oraz zaktualizowany `testReplyNamesLoadedParentRegardlessOfOrder`. Na zachowaniu bazy (kolejność serwera) 5 z 12 testów modelu oblewa, z poprawką 12/12. Fixture UI podaje dane w kolejności WordPressa, a test natywny sprawdza w drzewie WebKita, że najstarszy komentarz jest nad najnowszym.
+
 ## Granice
 
 Pozostaje dotychczasowe pobieranie do 100 komentarzy. Ta zmiana prezentacji nie dodaje paginacji ani publikowania odpowiedzi. Dla rodzica spoza pobranej porcji kontekst zawiera numer komentarza, bez wymyślania jego autora. Brak lub błędna data nie blokuje treści i nie daje zmyślonej daty. Wartość WordPress `date` jest lokalnym czasem serwisu, zachowywanym bez przesunięcia do strefy telefonu.

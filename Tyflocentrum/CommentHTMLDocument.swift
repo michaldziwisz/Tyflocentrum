@@ -4,9 +4,66 @@ import Foundation
 /// pozostają osobnymi elementami WebKita; cała lista ma tylko jeden scroll.
 /// Treść przechodzi przez istniejący SafeHTMLView z CSP i wyłączonym JavaScript.
 enum CommentHTMLDocument {
+	/// Kolejność wyświetlania zgodna z Windows (PodcastCommentThreadBuilder): wątki od
+	/// najstarszego, odpowiedzi tuż pod komentarzem nadrzędnym, również od najstarszej.
+	/// Komentarz z datą przed komentarzem bez daty. Przy równych lub brakujących datach
+	/// odwracamy kolejność źródła, bo WordPress domyślnie zwraca najnowsze najpierw.
+	/// Odpowiedź do komentarza spoza pobranej porcji staje się początkiem wątku.
+	static func displayOrder(_ comments: [Comment]) -> [Comment] {
+		guard comments.count > 1 else { return comments }
+		var sourceIndex: [Int: Int] = [:]
+		for (index, comment) in comments.enumerated() where sourceIndex[comment.id] == nil {
+			sourceIndex[comment.id] = index
+		}
+		let timestamps = Dictionary(comments.map { ($0.id, $0.publishedAt) }, uniquingKeysWith: { first, _ in first })
+
+		func precedes(_ left: Comment, _ right: Comment) -> Bool {
+			let leftDate = timestamps[left.id] ?? nil
+			let rightDate = timestamps[right.id] ?? nil
+			if let leftDate, let rightDate, leftDate != rightDate {
+				return leftDate < rightDate
+			}
+			if (leftDate == nil) != (rightDate == nil) {
+				return leftDate != nil
+			}
+			let leftIndex = sourceIndex[left.id] ?? 0
+			let rightIndex = sourceIndex[right.id] ?? 0
+			if leftIndex != rightIndex {
+				return leftIndex > rightIndex
+			}
+			return left.id < right.id
+		}
+
+		let loadedIDs = Set(comments.map(\.id))
+		var children: [Int: [Comment]] = [:]
+		for comment in comments where comment.parent != 0 && loadedIDs.contains(comment.parent) {
+			children[comment.parent, default: []].append(comment)
+		}
+		let roots = comments.filter { $0.parent == 0 || !loadedIDs.contains($0.parent) }
+
+		var ordered: [Comment] = []
+		ordered.reserveCapacity(comments.count)
+		var visited = Set<Int>()
+		func append(_ comment: Comment) {
+			guard visited.insert(comment.id).inserted else { return }
+			ordered.append(comment)
+			for child in (children[comment.id] ?? []).sorted(by: precedes) {
+				append(child)
+			}
+		}
+		for root in roots.sorted(by: precedes) {
+			append(root)
+		}
+		// Cykl rodziców w uszkodzonych danych: nic nie może zniknąć z listy.
+		for comment in comments.sorted(by: precedes) where !visited.contains(comment.id) {
+			append(comment)
+		}
+		return ordered
+	}
+
 	static func body(comments: [Comment]) -> String {
 		let authors = Dictionary(comments.map { ($0.id, $0.authorName) }, uniquingKeysWith: { first, _ in first })
-		let rows = comments.map { comment in
+		let rows = displayOrder(comments).map { comment in
 			let date = comment.formattedDate.map { "<p class=\"comment-meta\">\(escape($0))</p>" } ?? ""
 			var reply = ""
 			if comment.parent > 0 {

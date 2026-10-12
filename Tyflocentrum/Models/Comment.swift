@@ -29,6 +29,16 @@ struct Comment: Codable, Identifiable {
 	}
 
 	var formattedDate: String? {
+		guard let parsed = publishedAt else { return nil }
+		let output = DateFormatter()
+		output.locale = Locale(identifier: "pl_PL")
+		output.timeZone = TimeZone(secondsFromGMT: 0)
+		output.dateFormat = "d MMMM yyyy, HH:mm"
+		return output.string(from: parsed)
+	}
+
+	/// Data publikacji do porównań kolejności; nil przy braku lub błędnym zapisie.
+	var publishedAt: Date? {
 		guard let date else { return nil }
 		// WordPress „date” to lokalny czas serwisu, bez offsetu. Nie przesuwamy
 		// go do strefy telefonu; GMT służy wyłącznie do zachowania tych samych pól.
@@ -38,10 +48,6 @@ struct Comment: Codable, Identifiable {
 		parser.dateFormat = "yyyy-MM-dd'T'HH:mm:ss"
 		parser.isLenient = false
 		guard let parsed = parser.date(from: date), parser.string(from: parsed) == date else { return nil }
-		let output = DateFormatter()
-		output.locale = Locale(identifier: "pl_PL")
-		output.timeZone = TimeZone(secondsFromGMT: 0)
-		output.dateFormat = "d MMMM yyyy, HH:mm"
-		return output.string(from: parsed)
+		return parsed
 	}
 }
